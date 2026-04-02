@@ -1,0 +1,19 @@
+---
+description: CI/CD, containers, IaC, workflows
+globs:
+  - "**/Dockerfile*"
+  - "**/docker-compose*.yml"
+  - "**/.github/workflows/**"
+  - "**/*.tf"
+  - "**/*.tfvars.example"
+  - "**/helm/**"
+alwaysApply: false
+---
+
+# Infrastructure & dev tools
+
+- Secrets only via CI/Git OIDC or vault — not plaintext in terraform state without encryption design.
+- Pin image digests or tags per policy; non-root containers; minimal attack surface.
+- CI: fail on high CVE where policy says so; cache keys must be deterministic.
+- Web3: RPC URLs and indexer endpoints are configuration, not repo secrets; document rotation.
+- Use `devinfra-engineer` persona for platform changes.

@@ -1,0 +1,16 @@
+---
+description: Core context + portfolio archetypes pointer (Bitlysis)
+alwaysApply: true
+---
+
+# Project context
+
+Before substantive edits:
+
+1. Standards: `.cursor/.agents/AGENT.md` (see **§18 Project archetypes** for your project type).
+2. Versions & archetype: `.cursor/tech-stack.md` (set **Archetype** line per repo).
+3. Docs: `.cursor/.docs/`
+4. Personas: `.cursor/.agents/.agents/README.md`
+5. Prefer existing repo patterns over generic templates.
+
+**Rule packs (file-scoped):** `web3-defi`, `data-science`, `ai-agents-llm`, `browser-extension`, `game-web`, `infrastructure-devops` — see each `.mdc` under `.cursor/rules/`.

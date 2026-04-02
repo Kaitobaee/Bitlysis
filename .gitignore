@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# R / renv
+packages/r-pipeline/renv/library/
+packages/r-pipeline/renv/local/
+packages/r-pipeline/renv/cellar/
+packages/r-pipeline/renv/staging/
+*.Rproj.user
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+apps/web/.turbo
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+tmp/
+temp/
+uploads/
+services/api/data/
+
+# Test / coverage
+coverage/
+.nyc_output/
