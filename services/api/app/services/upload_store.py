@@ -7,15 +7,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
 from fastapi import HTTPException, UploadFile
 
 from app.config import Settings
 from app.schemas.job import JobStatus
+from app.schemas.profiling import ProfilingSummary
 from app.services.file_magic import validate_saved_file_magic
+from app.services.profiling import profile_file
+from app.services.provenance import build_run_manifest, write_manifest
 
 ALLOWED_SUFFIXES = frozenset({".csv", ".xlsx", ".xlsm"})
-READ_PREVIEW_ROWS = 200
+PROFILING_ENGINE_VERSION = 1
 
 
 @dataclass
@@ -27,6 +29,8 @@ class StoredUpload:
     size_bytes: int
     columns: list[str]
     row_preview_count: int
+    profiling: ProfilingSummary
+    manifest_stored_as: str
 
 
 def _safe_basename(name: str | None) -> str:
@@ -91,10 +95,8 @@ async def save_and_validate_upload(
         dest.unlink(missing_ok=True)
         raise
 
-    columns: list[str]
-    preview_rows: int
     try:
-        columns, preview_rows = _read_preview(dest, suffix)
+        prof = profile_file(dest, suffix, settings.profiling_max_rows)
     except Exception:
         dest.unlink(missing_ok=True)
         raise HTTPException(
@@ -103,6 +105,31 @@ async def save_and_validate_upload(
         ) from None
 
     ts = datetime.now(UTC).isoformat()
+    manifest_rel = f"{job_id}.manifest.json"
+    manifest_abs = settings.upload_dir / manifest_rel
+    manifest_body = build_run_manifest(job_id, PROFILING_ENGINE_VERSION)
+    manifest_body["profiling_sample"] = {
+        "row_count_profiled": prof.row_count_in_profile,
+        "profiled_row_cap": prof.profiled_row_cap,
+        "column_count": len(prof.columns),
+        "encoding_used": prof.encoding_used,
+        "sheet_used": prof.sheet_used,
+        "transformations": prof.transformations,
+    }
+    write_manifest(manifest_abs, manifest_body)
+
+    summary = ProfilingSummary(
+        engine_version=PROFILING_ENGINE_VERSION,
+        row_count_profiled=prof.row_count_in_profile,
+        profiled_row_cap=prof.profiled_row_cap,
+        encoding_used=prof.encoding_used,
+        sheet_used=prof.sheet_used,
+        sheet_names=prof.sheet_names,
+        duplicate_row_count_sample=prof.duplicate_row_count,
+        column_count=len(prof.columns),
+        transformations=prof.transformations,
+    )
+
     meta = {
         "job_id": job_id,
         "original_filename": original,
@@ -112,10 +139,17 @@ async def save_and_validate_upload(
         "uploaded_at": ts,
         "status": JobStatus.uploaded.value,
         "status_updated_at": ts,
-        "columns": columns,
-        "row_preview_count": preview_rows,
+        "columns": prof.columns,
+        "row_preview_count": prof.row_count_in_profile,
         "error": None,
         "result_summary": None,
+        "profiling": summary.model_dump(),
+        "profiling_detail": {
+            "column_profiles": prof.column_profiles,
+        },
+        "manifest_stored_as": manifest_rel,
+        "profiling_engine_version": PROFILING_ENGINE_VERSION,
+        "profiled_at": ts,
     }
     meta_path = settings.upload_dir / f"{job_id}.meta.json"
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -127,29 +161,8 @@ async def save_and_validate_upload(
         stored_path=rel,
         absolute_path=dest,
         size_bytes=size,
-        columns=columns,
-        row_preview_count=preview_rows,
+        columns=prof.columns,
+        row_preview_count=prof.row_count_in_profile,
+        profiling=summary,
+        manifest_stored_as=manifest_rel,
     )
-
-
-def _read_preview(path: Path, suffix: str) -> tuple[list[str], int]:
-    if suffix == ".csv":
-        last_err: Exception | None = None
-        for encoding in ("utf-8", "utf-8-sig", "cp1252", "latin-1"):
-            try:
-                df = pd.read_csv(
-                    path,
-                    nrows=READ_PREVIEW_ROWS,
-                    encoding=encoding,
-                    low_memory=False,
-                )
-                cols = [str(c) for c in df.columns.tolist()]
-                return cols, len(df.index)
-            except Exception as e:  # noqa: BLE001 - gom lỗi đọc file
-                last_err = e
-        raise last_err or RuntimeError("csv read failed")
-    if suffix in {".xlsx", ".xlsm"}:
-        df = pd.read_excel(path, nrows=READ_PREVIEW_ROWS, engine="openpyxl")
-        cols = [str(c) for c in df.columns.tolist()]
-        return cols, len(df.index)
-    raise ValueError(f"unsupported suffix {suffix}")

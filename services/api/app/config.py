@@ -39,6 +39,13 @@ class Settings(BaseSettings):
         description="Sliding window (giây) cho rate limit upload",
     )
 
+    profiling_max_rows: int = Field(
+        default=10_000,
+        ge=50,
+        le=500_000,
+        description="Số dòng tối đa đọc cho profiling (cap bộ nhớ)",
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]

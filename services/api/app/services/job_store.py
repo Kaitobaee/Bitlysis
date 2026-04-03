@@ -7,8 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from app.config import Settings
 from app.schemas.job import JobDetail, JobError, JobStatus
+from app.schemas.profiling import ProfilingSummary
 
 
 def meta_path(settings: Settings, job_id: str) -> Path:
@@ -46,6 +49,12 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
         status = JobStatus(raw_status)
     except ValueError:
         status = JobStatus.uploaded
+    prof = None
+    if isinstance(raw.get("profiling"), dict):
+        try:
+            prof = ProfilingSummary.model_validate(raw["profiling"])
+        except ValidationError:
+            prof = None
     return JobDetail(
         job_id=str(raw["job_id"]),
         status=status,
@@ -58,6 +67,9 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
         status_updated_at=raw.get("status_updated_at"),
         error=error_model,
         result_summary=raw.get("result_summary"),
+        profiling=prof,
+        manifest_stored_as=raw.get("manifest_stored_as"),
+        profiling_detail=raw.get("profiling_detail"),
     )
 
 
@@ -74,14 +86,16 @@ def delete_job(settings: Settings, job_id: str) -> bool:
     if raw is None:
         return False
     upload_root = settings.upload_dir.resolve()
-    stored = raw.get("stored_as")
-    if stored:
-        data_path = (upload_root / str(stored)).resolve()
+    for key in ("stored_as", "manifest_stored_as"):
+        name = raw.get(key)
+        if not name:
+            continue
+        p = (upload_root / str(name)).resolve()
         try:
-            data_path.relative_to(upload_root)
+            p.relative_to(upload_root)
         except ValueError:
             meta_path(settings, job_id).unlink(missing_ok=True)
             return True
-        data_path.unlink(missing_ok=True)
+        p.unlink(missing_ok=True)
     meta_path(settings, job_id).unlink(missing_ok=True)
     return True

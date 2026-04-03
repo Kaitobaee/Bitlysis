@@ -22,4 +22,6 @@ async def upload_file(
         size_bytes=stored.size_bytes,
         columns=stored.columns,
         row_preview_count=stored.row_preview_count,
+        profiling=stored.profiling,
+        manifest_stored_as=stored.manifest_stored_as,
     )

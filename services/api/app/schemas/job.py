@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.profiling import ProfilingSummary
+
 
 class JobStatus(StrEnum):
     uploaded = "uploaded"
@@ -34,6 +36,18 @@ class JobDetail(BaseModel):
     result_summary: dict[str, Any] | None = Field(
         default=None,
         description="Tóm tắt kết quả (stub hoặc sau phân tích thật)",
+    )
+    profiling: ProfilingSummary | None = Field(
+        default=None,
+        description="Tóm tắt profiling Phase 3 (chi tiết cột trong meta)",
+    )
+    manifest_stored_as: str | None = Field(
+        default=None,
+        description="Tên file run_manifest.json trong upload_dir",
+    )
+    profiling_detail: dict[str, Any] | None = Field(
+        default=None,
+        description="Chi tiết profiling (column_profiles, …) — có thể lớn",
     )
 
 
