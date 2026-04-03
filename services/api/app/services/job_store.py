@@ -55,6 +55,7 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
             prof = ProfilingSummary.model_validate(raw["profiling"])
         except ValidationError:
             prof = None
+    a_spec = raw.get("analysis_spec")
     return JobDetail(
         job_id=str(raw["job_id"]),
         status=status,
@@ -70,6 +71,7 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
         profiling=prof,
         manifest_stored_as=raw.get("manifest_stored_as"),
         profiling_detail=raw.get("profiling_detail"),
+        analysis_spec=a_spec if isinstance(a_spec, dict) else None,
     )
 
 

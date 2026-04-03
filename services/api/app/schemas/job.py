@@ -49,6 +49,10 @@ class JobDetail(BaseModel):
         default=None,
         description="Chi tiết profiling (column_profiles, …) — có thể lớn",
     )
+    analysis_spec: dict[str, Any] | None = Field(
+        default=None,
+        description="Spec JSON đã gửi khi POST analyze (Phase 4)",
+    )
 
 
 class AnalyzeAccepted(BaseModel):

@@ -2,8 +2,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.config import Settings, get_settings
 from app.schemas.job import AnalyzeAccepted, JobDetail, JobStatus
+from app.schemas.stats import AnalyzeRequest
 from app.services import job_store
-from app.services.analyze_tasks import run_analyze_stub
+from app.services.analyze_tasks import run_analyze
 
 router = APIRouter(tags=["jobs"])
 
@@ -27,6 +28,7 @@ def get_job(
 async def start_analyze(
     job_id: str,
     background_tasks: BackgroundTasks,
+    spec: AnalyzeRequest,
     settings: Settings = Depends(get_settings),
 ) -> AnalyzeAccepted:
     raw = job_store.read_raw_meta(settings, job_id)
@@ -39,12 +41,17 @@ async def start_analyze(
             status_code=409,
             detail=f"Job không thể chạy analyze ở trạng thái: {st}",
         )
+    spec_dump = spec.model_dump(mode="json")
     job_store.patch_meta(
         settings,
         job_id,
-        {"status": JobStatus.analyzing.value, "error": None},
+        {
+            "status": JobStatus.analyzing.value,
+            "error": None,
+            "analysis_spec": spec_dump,
+        },
     )
-    background_tasks.add_task(run_analyze_stub, settings, job_id)
+    background_tasks.add_task(run_analyze, settings, job_id, spec_dump)
     return AnalyzeAccepted(job_id=job_id, status=JobStatus.analyzing)
 
 
