@@ -21,7 +21,7 @@ API:
 ```bash
 cd services/api
 pip install -e ".[dev]"
-ruff check app tests
+ruff check app tests scripts
 pytest tests -q
 ```
 

@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-Đã chấp nhận (Phase 0 — policy; TTL/DELETE triển khai phase sau).
+Đã chấp nhận và **triển khai Phase 2**: `DELETE /v1/jobs/{id}`, sweep định kỳ theo `RETENTION_*`, cấu hình trong [`services/api/.env.example`](../../services/api/.env.example).
 
 ## Bối cảnh
 

@@ -19,6 +19,26 @@ class Settings(BaseSettings):
         description="Max upload size in bytes (default ~50 MiB)",
     )
 
+    retention_enabled: bool = Field(default=True, description="Bật sweep xóa job quá hạn")
+    retention_hours: int = Field(default=168, ge=1, description="TTL upload (giờ)")
+    retention_sweep_interval_seconds: int = Field(
+        default=3600,
+        ge=60,
+        description="Khoảng cách chạy sweep (giây)",
+    )
+
+    upload_rate_limit_enabled: bool = Field(default=True)
+    upload_rate_limit_max_requests: int = Field(
+        default=60,
+        ge=1,
+        description="Số POST /v1/upload tối đa mỗi IP window",
+    )
+    upload_rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        description="Sliding window (giây) cho rate limit upload",
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]

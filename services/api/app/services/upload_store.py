@@ -11,6 +11,8 @@ import pandas as pd
 from fastapi import HTTPException, UploadFile
 
 from app.config import Settings
+from app.schemas.job import JobStatus
+from app.services.file_magic import validate_saved_file_magic
 
 ALLOWED_SUFFIXES = frozenset({".csv", ".xlsx", ".xlsm"})
 READ_PREVIEW_ROWS = 200
@@ -83,6 +85,12 @@ async def save_and_validate_upload(
         dest.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail=f"Lưu file thất bại: {e}") from e
 
+    try:
+        validate_saved_file_magic(dest, suffix)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+
     columns: list[str]
     preview_rows: int
     try:
@@ -94,15 +102,20 @@ async def save_and_validate_upload(
             detail="Không đọc được dữ liệu (file hỏng, sai định dạng, hoặc encoding).",
         ) from None
 
+    ts = datetime.now(UTC).isoformat()
     meta = {
         "job_id": job_id,
         "original_filename": original,
         "stored_as": dest_name,
         "size_bytes": size,
         "content_type": file.content_type,
-        "uploaded_at": datetime.now(UTC).isoformat(),
+        "uploaded_at": ts,
+        "status": JobStatus.uploaded.value,
+        "status_updated_at": ts,
         "columns": columns,
         "row_preview_count": preview_rows,
+        "error": None,
+        "result_summary": None,
     }
     meta_path = settings.upload_dir / f"{job_id}.meta.json"
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")

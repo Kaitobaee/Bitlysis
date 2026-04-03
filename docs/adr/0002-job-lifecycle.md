@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-Đã chấp nhận (Phase 0 governance — mô tả hợp đồng; triển khai endpoint theo phase sau).
+Đã chấp nhận và **triển khai Phase 1** trong repo: prefix `/v1`, `GET /v1/jobs/{id}`, `POST /v1/jobs/{id}/analyze` (202 + background stub), header `X-Request-Id`, body lỗi chuẩn hoá.
 
 ## Bối cảnh
 

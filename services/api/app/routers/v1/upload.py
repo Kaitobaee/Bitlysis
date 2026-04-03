@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.config import Settings, get_settings
+from app.schemas.job import JobStatus
 from app.schemas.upload import UploadResponse
 from app.services.upload_store import save_and_validate_upload
 
@@ -15,6 +16,7 @@ async def upload_file(
     stored = await save_and_validate_upload(file, settings)
     return UploadResponse(
         job_id=stored.job_id,
+        status=JobStatus.uploaded,
         filename=stored.original_filename,
         stored_path=stored.stored_path,
         size_bytes=stored.size_bytes,
