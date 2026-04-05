@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,6 +45,74 @@ class Settings(BaseSettings):
         ge=50,
         le=500_000,
         description="Số dòng tối đa đọc cho profiling (cap bộ nhớ)",
+    )
+
+    r_subprocess_timeout_seconds: int = Field(
+        default=180,
+        ge=15,
+        le=3600,
+        description="Timeout Rscript Phase 5 (Cronbach/EFA/PLS)",
+    )
+    r_package_root: Path | None = Field(
+        default=None,
+        description="Thư mục packages/r-pipeline; mặc định suy ra từ repo",
+    )
+
+    # Phase 7 — OpenRouter (ADR 0004)
+    openrouter_api_key: str | None = Field(default=None, description="Bearer key; chỉ env")
+    openrouter_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="Base URL OpenRouter-compatible",
+    )
+    openrouter_model: str = Field(
+        default="openai/gpt-4o-mini",
+        description="Model id OpenRouter — eval golden không phụ thuộc biến này",
+    )
+    openrouter_http_referer: str = Field(
+        default="https://github.com/bitlysis/bitlysis",
+        description="HTTP-Referer header (OpenRouter khuyến nghị)",
+    )
+    openrouter_app_title: str = Field(default="Bitlysis API", description="X-Title header")
+    openrouter_json_mode: bool = Field(
+        default=True,
+        description="Bật response_format json_object khi model hỗ trợ",
+    )
+    llm_enabled: bool = Field(default=True, description="Tắt để luôn rule-based")
+    llm_timeout_seconds: float = Field(default=45.0, ge=5.0, le=120.0)
+    llm_max_hypotheses: int = Field(default=10, ge=1, le=15)
+    app_environment: Literal["development", "production", "test"] = Field(
+        default="development",
+        description="production: không log nội dung prompt (PII)",
+    )
+    llm_log_prompts: bool = Field(
+        default=False,
+        description="Chỉ bật local; kết hợp app_environment!=production mới log excerpt",
+    )
+
+    # Phase 8 — export ZIP
+    export_zip_heavy_threshold_bytes: int = Field(
+        default=5_242_880,
+        ge=1,
+        description="ZIP lớn hơn ngưỡng này chỉ khi job đã ở phase exporting (ge=1 cho test/CI)",
+    )
+    export_max_zip_bytes: int = Field(
+        default=104_857_600,
+        ge=1_048_576,
+        description="Từ chối nếu ZIP vượt quá (bytes)",
+    )
+    export_data_max_rows: int = Field(
+        default=100_000,
+        ge=100,
+        le=500_000,
+        description="Giới hạn dòng sheet data_clean",
+    )
+    export_include_plotly: bool = Field(
+        default=True,
+        description="Thử Plotly→PNG (kaleido); tắt nếu CI không cài kaleido",
+    )
+    export_docx_template_path: Path | None = Field(
+        default=None,
+        description="Template .docx tùy chọn; None = tạo tài liệu mặc định",
     )
 
     @property

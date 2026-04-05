@@ -53,6 +53,10 @@ class JobDetail(BaseModel):
         default=None,
         description="Spec JSON đã gửi khi POST analyze (Phase 4)",
     )
+    export_stored_as: str | None = Field(
+        default=None,
+        description="Tên file ZIP export trong upload_dir (Phase 8)",
+    )
 
 
 class AnalyzeAccepted(BaseModel):

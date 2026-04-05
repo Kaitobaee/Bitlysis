@@ -1,0 +1,15 @@
+Package: bitlysis.rpipeline
+Title: Bitlysis R Pipeline (Cronbach, EFA, PLS-SEM)
+Version: 0.1.0
+Authors@R: person("Bitlysis", email = NA, role = c("aut", "cre"))
+Description: Headless JSON CLI for multivariate analyses; called from FastAPI via Rscript.
+License: MIT + file LICENSE
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Imports:
+    jsonlite (>= 1.8.8),
+    psych (>= 2.4.3),
+    seminr (>= 2.3.2)
+Suggests:
+    testthat (>= 3.2.0)
+Config/testthat/edition: 3

@@ -1,0 +1,23 @@
+{
+  "parse_cases": [
+    {
+      "id": "minimal_valid",
+      "expect_hypothesis_ids": ["H1"],
+      "raw_text": "{\"schema_version\":1,\"hypotheses\":[{\"hypothesis_id\":\"H1\",\"statement_vi\":\"Kiểm tra biến x\",\"variables_involved\":[\"x\"],\"suggested_test_kind\":\"other\"}],\"notes\":null}"
+    },
+    {
+      "id": "markdown_fence",
+      "expect_hypothesis_ids": ["H2"],
+      "raw_text": "```json\n{\"schema_version\":1,\"hypotheses\":[{\"hypothesis_id\":\"H2\",\"statement_vi\":\"Tương quan\",\"variables_involved\":[\"a\",\"b\"],\"suggested_test_kind\":\"correlation\"}]}\n```"
+    },
+    {
+      "id": "two_items",
+      "expect_hypothesis_ids": ["Ha", "Hb"],
+      "raw_text": "{\"schema_version\":1,\"hypotheses\":[{\"hypothesis_id\":\"Ha\",\"statement_vi\":\"Một\",\"variables_involved\":[\"u\"],\"suggested_test_kind\":\"compare_groups\"},{\"hypothesis_id\":\"Hb\",\"statement_vi\":\"Hai\",\"variables_involved\":[\"v\"],\"suggested_test_kind\":\"regression\"}]}"
+    }
+  ],
+  "rule_based": {
+    "columns": ["age", "income", "region"],
+    "expected_hypothesis_ids": ["H_rule_01", "H_rule_02", "H_rule_03", "H_rule_pair_01"]
+  }
+}

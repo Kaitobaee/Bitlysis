@@ -12,6 +12,8 @@ from app.error_handlers import register_error_handlers
 from app.logging_conf import configure_logging, log_event
 from app.middleware.request_id import RequestIdMiddleware
 from app.middleware.upload_rate_limit import UploadRateLimitMiddleware
+from app.routers.v1.export_router import router as v1_export_router
+from app.routers.v1.hypotheses import router as v1_hypotheses_router
 from app.routers.v1.jobs import router as v1_jobs_router
 from app.routers.v1.upload import router as v1_upload_router
 from app.services.retention import sweep_expired_jobs
@@ -60,6 +62,8 @@ app.add_middleware(
 v1 = APIRouter(prefix="/v1")
 v1.include_router(v1_upload_router)
 v1.include_router(v1_jobs_router)
+v1.include_router(v1_hypotheses_router)
+v1.include_router(v1_export_router)
 app.include_router(v1)
 
 

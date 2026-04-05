@@ -64,3 +64,35 @@ def build_run_manifest(
 
 def write_manifest(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def merge_manifest_with_export(base: dict[str, Any]) -> dict[str, Any]:
+    """Nhúng metadata Phase 8 vào run_manifest (bản copy trong ZIP)."""
+    import copy
+
+    m = copy.deepcopy(base)
+    export_pkgs: dict[str, str] = {}
+    for label, dist_name in (
+        ("matplotlib", "matplotlib"),
+        ("plotly", "plotly"),
+        ("kaleido", "kaleido"),
+        ("reportlab", "reportlab"),
+        ("python-docx", "python-docx"),
+        ("openpyxl", "openpyxl"),
+        ("pandas", "pandas"),
+    ):
+        if (v := _pkg_ver(dist_name)) is not None:
+            export_pkgs[label] = v
+    m["export"] = {
+        "phase": 8,
+        "package_versions": export_pkgs,
+        "zip_layout": [
+            "run_manifest.json",
+            "docs/charts/matplotlib_series.png",
+            "docs/charts/plotly_series.png",
+            "docs/tables/summary_tables.pdf",
+            "docs/report.docx",
+            "docs/data/workbook.xlsx",
+        ],
+    }
+    return m

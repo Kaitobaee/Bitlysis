@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "csv_path": "examples/random_sample.csv",
+  "analyses": [
+    {
+      "type": "cronbach_alpha",
+      "scale_id": "trust",
+      "items": ["x1", "x2", "x3"]
+    },
+    {
+      "type": "efa",
+      "variables": ["x1", "x2", "x3", "x4", "x5"],
+      "n_factors": 2,
+      "min_n": 30
+    },
+    {
+      "type": "pls_sem",
+      "min_n": 50,
+      "min_items_per_construct": 2,
+      "min_constructs": 2,
+      "constructs": [
+        { "name": "ETA", "mode": "reflective", "indicators": ["x1", "x2", "x3"] },
+        { "name": "KSI", "mode": "reflective", "indicators": ["y1", "y2", "y3"] }
+      ],
+      "paths": [{ "from": "KSI", "to": "ETA" }]
+    }
+  ]
+}

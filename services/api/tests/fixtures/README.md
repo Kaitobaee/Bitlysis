@@ -8,6 +8,7 @@ Dữ liệu **giả lập**, dùng cho pytest và kiểm thử ingestion. **Khô
 | `sample_cp1252.csv` | CSV Windows-1252 (kiểm tra encoding) |
 | `sample_clean.xlsx` | Excel một sheet, bảng đơn giản |
 | `sample_multi_sheet_merged.xlsx` | Hai sheet, có ô merge (kiểm tra edge case Excel) |
+| `timeseries_eu.csv` | Phase 6 — ngày `dd/mm/yyyy` + cột `sales` (chuỗi thời gian) |
 
 Tạo lại file `.xlsx` (nếu đổi schema):
 

@@ -15,13 +15,23 @@ dependencies = [
   "numpy>=2.0.0",
   "scipy>=1.14.0",
   "statsmodels>=0.14.0",
+  "httpx>=0.27.0",
+  "matplotlib>=3.8.0",
+  "plotly>=5.18.0",
+  "reportlab>=4.0.0",
+  "python-docx>=1.1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
-  "httpx>=0.27.0",
   "ruff>=0.8.0",
+]
+timeseries = [
+  "prophet>=1.1.6",
+]
+export_viz = [
+  "kaleido>=0.2.1",
 ]
 
 [build-system]

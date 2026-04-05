@@ -72,6 +72,7 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
         manifest_stored_as=raw.get("manifest_stored_as"),
         profiling_detail=raw.get("profiling_detail"),
         analysis_spec=a_spec if isinstance(a_spec, dict) else None,
+        export_stored_as=raw.get("export_stored_as"),
     )
 
 
@@ -88,7 +89,7 @@ def delete_job(settings: Settings, job_id: str) -> bool:
     if raw is None:
         return False
     upload_root = settings.upload_dir.resolve()
-    for key in ("stored_as", "manifest_stored_as"):
+    for key in ("stored_as", "manifest_stored_as", "export_stored_as"):
         name = raw.get(key)
         if not name:
             continue

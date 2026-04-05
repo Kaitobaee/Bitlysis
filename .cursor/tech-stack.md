@@ -51,6 +51,9 @@ Ghi rõ để rule/persona đúng: **Consumer Web2** | **Consumer Web3** | **DeF
 ```text
 pnpm install && pnpm lint:web && pnpm build:web
 cd services/api && pip install -e ".[dev]" && ruff check app tests scripts && pytest tests -q
+# Phase 6 timeseries: tests/test_timeseries_engine.py + fixtures/timeseries_eu.csv
+# Phase 7 LLM: eval/golden/hypothesis_llm_golden.json + tests/test_llm_golden.py, test_hypothesis_router.py
+# Phase 8 export: tests/test_export_zip_integration.py (ZIP + openpyxl sheet count)
 # CI: .github/workflows/ci.yml (push/PR main|master)
-# R: Rscript -e "testthat::test_local()" khi có test trong packages/r-pipeline
+# R (Phase 5): cd packages/r-pipeline && Rscript tools/ci_install.R && Rscript -e "testthat::test_dir('tests/testthat')"
 ```

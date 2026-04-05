@@ -64,7 +64,42 @@ class CategoricalAssociationSpec(BaseModel):
     variable_b: str
 
 
+class RPipelineSpec(BaseModel):
+    """Gọi R CLI (Cronbach α, EFA, PLS-SEM có gate). Mỗi phần tử analyses là list gửi thẳng tới R."""
+
+    kind: Literal["r_pipeline"] = "r_pipeline"
+    analyses: list[dict[str, Any]] = Field(
+        min_length=1,
+        description='Ví dụ {"type":"cronbach_alpha","scale_id":"s","items":["x1","x2"]}',
+    )
+
+
+class TimeSeriesSpec(BaseModel):
+    """Phase 6 — dự báo chuỗi thời gian (ETS / ARIMA / Prophet tùy chọn), MAPE & RMSE."""
+
+    kind: Literal["timeseries_forecast"] = "timeseries_forecast"
+    value_column: str = Field(description="Cột số cần dự báo")
+    date_column: str | None = Field(
+        default=None,
+        description="Cột ngày; null = tự detect (thử dayfirst US/EU + ISO mixed)",
+    )
+    method: Literal["auto", "ets", "arima", "prophet"] = Field(
+        default="auto",
+        description="auto: thử ETS rồi ARIMA; prophet nếu cài gói prophet và method/prophet",
+    )
+    horizon: int = Field(default=7, ge=1, le=366, description="Số bước dự báo tương lai")
+    holdout_periods: int | None = Field(
+        default=None,
+        ge=2,
+        description="Số điểm cuối giữ lại để đo MAPE/RMSE; null = tự chọn theo độ dài chuỗi",
+    )
+
+
 AnalyzeRequest = Annotated[
-    CompareGroupsNumericSpec | RegressionOLSSpec | CategoricalAssociationSpec,
+    CompareGroupsNumericSpec
+    | RegressionOLSSpec
+    | CategoricalAssociationSpec
+    | RPipelineSpec
+    | TimeSeriesSpec,
     Field(discriminator="kind"),
 ]
