@@ -51,6 +51,9 @@ temp/
 uploads/
 services/api/data/
 
+# Local datasets (không đẩy lên remote)
+datasets/
+
 # Test / coverage
 coverage/
 .nyc_output/
