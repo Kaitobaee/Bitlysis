@@ -54,6 +54,7 @@ cd services/api && pip install -e ".[dev]" && ruff check app tests scripts && py
 # Phase 6 timeseries: tests/test_timeseries_engine.py + fixtures/timeseries_eu.csv
 # Phase 7 LLM: eval/golden/hypothesis_llm_golden.json + tests/test_llm_golden.py, test_hypothesis_router.py
 # Phase 8 export: tests/test_export_zip_integration.py (ZIP + openpyxl sheet count)
+# Phase 9 frontend: apps/web — upload/poll/analyze, messages/vi.json + en.json, sonner toasts; E2E tay: apps/web/README.md
 # CI: .github/workflows/ci.yml (push/PR main|master)
 # R (Phase 5): cd packages/r-pipeline && Rscript tools/ci_install.R && Rscript -e "testthat::test_dir('tests/testthat')"
 ```

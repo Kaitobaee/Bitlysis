@@ -1,10 +1,22 @@
+import { Suspense } from "react";
+
+import { HomeWorkspace } from "@/components/home-workspace";
+
+function WorkspaceFallback() {
+  return (
+    <div className="swiss-page">
+      <div className="swiss-container py-24">
+        <div className="h-10 w-48 animate-pulse bg-[var(--skeleton)]" />
+        <div className="mt-8 h-32 w-full max-w-xl animate-pulse bg-[var(--skeleton)]" />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Bitlysis</h1>
-      <p className="mt-2 text-zinc-600">
-        Frontend Next.js — kết nối API sau khi backend sẵn sàng.
-      </p>
-    </main>
+    <Suspense fallback={<WorkspaceFallback />}>
+      <HomeWorkspace />
+    </Suspense>
   );
 }

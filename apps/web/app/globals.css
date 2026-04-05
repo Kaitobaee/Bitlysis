@@ -1,1 +1,52 @@
 @import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+}
+
+:root {
+  --fg: #161615;
+  --muted: #5a5a58;
+  --border: #e4e2dc;
+  --surface: #ffffff;
+  --surface-muted: #f3f2ee;
+  --accent: #0f766e;
+  --accent-soft: #e6f4f2;
+  --skeleton: #e0ddd6;
+  --amber-fg: #92400e;
+  --page-bg: #faf9f6;
+}
+
+body {
+  background-color: var(--page-bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+}
+
+.text-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.swiss-page {
+  min-height: 100vh;
+  background-image: linear-gradient(
+      var(--border) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+  background-color: var(--page-bg);
+}
+
+.swiss-container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 72rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}

@@ -1,0 +1,69 @@
+{
+  "app": {
+    "title": "Bitlysis",
+    "tagline": "Tải dữ liệu, chạy phân tích, theo dõi trạng thái — giao diện tối giản, dữ liệu là trung tâm."
+  },
+  "lang": {
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "upload": {
+    "label": "Tệp dữ liệu",
+    "hint": "CSV, XLSX hoặc XLSM — tối đa theo cấu hình API.",
+    "cta": "Chọn tệp",
+    "dropping": "Thả để tải lên",
+    "uploading": "Đang tải lên…"
+  },
+  "job": {
+    "id": "Mã job",
+    "status": "Trạng thái",
+    "filename": "Tên tệp",
+    "columns": "Cột",
+    "rowsSample": "Dòng (mẫu)",
+    "polling": "Đang cập nhật trạng thái…",
+    "analyze": "Chạy phân tích",
+    "analyzing": "Đang phân tích…",
+    "reset": "Làm mới",
+    "openApi": "Mở tài liệu API",
+    "copyId": "Sao chép mã",
+    "copied": "Đã sao chép",
+    "needTwoColumns": "Cần ít nhất hai cột để chạy phân tích mặc định (liên kết hai biến phân loại). Thêm cột hoặc dùng API với spec tùy chỉnh.",
+    "exportZip": "Tải gói ZIP",
+    "exporting": "Đang chuẩn bị tệp…"
+  },
+  "status": {
+    "uploaded": "Đã tải lên",
+    "profiling": "Đang profile",
+    "analyzing": "Đang phân tích",
+    "exporting": "Đang xuất",
+    "succeeded": "Hoàn tất",
+    "failed": "Thất bại"
+  },
+  "result": {
+    "title": "Kết quả (dữ liệu có cấu trúc)",
+    "empty": "Chưa có kết quả. Chạy phân tích hoặc đợi job hoàn tất.",
+    "engine": "Engine",
+    "chartNote": "Dữ liệu biểu đồ (JSON) — dùng cho tích hợp hoặc export.",
+    "tableHypothesis": "Bảng giả thuyết"
+  },
+  "toast": {
+    "uploadOk": "Tải lên thành công. Job đã được tạo.",
+    "uploadErr": "Không tải lên được. Kiểm tra định dạng, dung lượng và CORS/API.",
+    "analyzeOk": "Phân tích đã bắt đầu. Đang chờ kết quả…",
+    "analyzeErr": "Không gửi được yêu cầu phân tích.",
+    "pollErr": "Không đọc được trạng thái job.",
+    "jobNotFound": "Job không tồn tại hoặc đã hết hạn (retention). Tải lên lại.",
+    "rateLimit": "Quá nhiều lần tải lên. Đợi vài phút rồi thử lại.",
+    "network": "Lỗi mạng. Kiểm tra NEXT_PUBLIC_API_URL và kết nối.",
+    "exportOk": "Đã tải xuống ZIP.",
+    "exportErr": "Không tải được ZIP. Với ZIP lớn, có thể cần gọi export/start trước (xem API)."
+  },
+  "errors": {
+    "guideTitle": "Gợi ý xử lý",
+    "checkApiUrl": "Đặt NEXT_PUBLIC_API_URL trỏ tới API (ví dụ staging). Khởi động lại dev server sau khi sửa .env.local.",
+    "checkCors": "Đảm bảo API_CORS_ORIGINS trên server chứa origin frontend (ví dụ http://localhost:3000).",
+    "checkDocs": "Xem /docs trên API để kiểm tra endpoint và mã lỗi.",
+    "requestId": "Mã trace",
+    "openConsole": "Mở DevTools → Network để xem chi tiết response."
+  }
+}

@@ -1,5 +1,22 @@
 import type { Metadata } from "next";
+import { Inter, Newsreader } from "next/font/google";
+
+import { Providers } from "@/components/providers";
+
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Bitlysis",
@@ -12,9 +29,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased">
-        {children}
+    <html
+      lang="vi"
+      className={`${inter.variable} ${newsreader.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

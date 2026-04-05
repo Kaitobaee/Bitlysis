@@ -1,0 +1,69 @@
+{
+  "app": {
+    "title": "Bitlysis",
+    "tagline": "Upload data, run analysis, track status — minimal UI, data first."
+  },
+  "lang": {
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "upload": {
+    "label": "Data file",
+    "hint": "CSV, XLSX, or XLSM — max size is set on the API.",
+    "cta": "Choose file",
+    "dropping": "Drop to upload",
+    "uploading": "Uploading…"
+  },
+  "job": {
+    "id": "Job ID",
+    "status": "Status",
+    "filename": "Filename",
+    "columns": "Columns",
+    "rowsSample": "Rows (sample)",
+    "polling": "Refreshing status…",
+    "analyze": "Run analysis",
+    "analyzing": "Analyzing…",
+    "reset": "Start over",
+    "openApi": "Open API docs",
+    "copyId": "Copy ID",
+    "copied": "Copied",
+    "needTwoColumns": "At least two columns are required for the default analysis (categorical association). Add a column or call the API with a custom spec.",
+    "exportZip": "Download ZIP",
+    "exporting": "Preparing file…"
+  },
+  "status": {
+    "uploaded": "Uploaded",
+    "profiling": "Profiling",
+    "analyzing": "Analyzing",
+    "exporting": "Exporting",
+    "succeeded": "Succeeded",
+    "failed": "Failed"
+  },
+  "result": {
+    "title": "Structured results",
+    "empty": "No results yet. Run analysis or wait for the job to finish.",
+    "engine": "Engine",
+    "chartNote": "Chart payload (JSON) — for integration or export.",
+    "tableHypothesis": "Hypothesis table"
+  },
+  "toast": {
+    "uploadOk": "Upload complete. Job created.",
+    "uploadErr": "Upload failed. Check format, size, and CORS/API.",
+    "analyzeOk": "Analysis started. Waiting for results…",
+    "analyzeErr": "Could not start analysis.",
+    "pollErr": "Could not read job status.",
+    "jobNotFound": "Job not found or expired (retention). Upload again.",
+    "rateLimit": "Too many uploads. Wait and try again.",
+    "network": "Network error. Check NEXT_PUBLIC_API_URL and connectivity.",
+    "exportOk": "ZIP downloaded.",
+    "exportErr": "Could not download ZIP. Large ZIPs may require export/start first (see API)."
+  },
+  "errors": {
+    "guideTitle": "What to try",
+    "checkApiUrl": "Set NEXT_PUBLIC_API_URL to your API (e.g. staging). Restart the dev server after editing .env.local.",
+    "checkCors": "Ensure API_CORS_ORIGINS on the server includes your frontend origin (e.g. http://localhost:3000).",
+    "checkDocs": "Open /docs on the API for endpoints and error codes.",
+    "requestId": "Trace ID",
+    "openConsole": "Open DevTools → Network for the full response."
+  }
+}
