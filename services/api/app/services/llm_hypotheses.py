@@ -1,4 +1,7 @@
-"""OpenRouter chat → JSON cố định → Pydantic; timeout; fallback rule-based; không log PII production."""
+"""OpenRouter chat → JSON cố định → Pydantic.
+
+Có timeout, fallback rule-based, và không log PII ở production.
+"""
 
 from __future__ import annotations
 
@@ -17,9 +20,13 @@ logger = logging.getLogger(__name__)
 
 SourceKind = Literal["openrouter", "fallback", "disabled_no_key"]
 
-_JSON_FENCE = re.compile(r"^\s*```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
+_JSON_FENCE = re.compile(
+    r"^\s*```(?:json)?\s*\n?(.*?)\n?```\s*$",
+    re.DOTALL | re.IGNORECASE,
+)
 
-SYSTEM_PROMPT = """Bạn là trợ lý thống kê cho nền tảng phân tích dữ liệu. Chỉ trả về MỘT object JSON hợp lệ, không markdown, không giải thích ngoài JSON.
+SYSTEM_PROMPT = """Bạn là trợ lý thống kê cho nền tảng phân tích dữ liệu.
+Chỉ trả về MỘT object JSON hợp lệ, không markdown, không giải thích ngoài JSON.
 Schema bắt buộc:
 {
   "schema_version": 1,
@@ -28,7 +35,8 @@ Schema bắt buộc:
       "hypothesis_id": "chuỗi ngắn duy nhất, ví dụ H1",
       "statement_vi": "một giả thuyết nghiên cứu bằng tiếng Việt, không bịa số liệu",
       "variables_involved": ["tên_cột", "..."],
-      "suggested_test_kind": "compare_groups | regression | correlation | timeseries | categorical | other"
+            "suggested_test_kind":
+                "compare_groups | regression | correlation | timeseries | categorical | other"
     }
   ],
   "notes": "tùy chọn, ngắn"
@@ -52,7 +60,11 @@ def validate_llm_hypothesis_json(data: dict[str, Any]) -> LLMHypothesisResponse:
     return LLMHypothesisResponse.model_validate(data)
 
 
-def rule_based_hypotheses(columns: list[str], *, max_hypotheses: int = 8) -> LLMHypothesisResponse:
+def rule_based_hypotheses(
+    columns: list[str],
+    *,
+    max_hypotheses: int = 8,
+) -> LLMHypothesisResponse:
     """Gợi ý cố định theo tên cột — không gọi LLM."""
     cols = [str(c).strip() for c in columns if c and str(c).strip()][:24]
     if not cols:
@@ -75,7 +87,8 @@ def rule_based_hypotheses(columns: list[str], *, max_hypotheses: int = 8) -> LLM
             SuggestedHypothesis(
                 hypothesis_id=f"H_rule_{i + 1:02d}",
                 statement_vi=(
-                    f"Khảo sát phân bố hoặc vai trò của biến «{c}» trong bối cảnh các biến khác của bảng."
+                    f"Khảo sát phân bố hoặc vai trò của biến «{c}» "
+                    "trong bối cảnh các biến khác của bảng."
                 ),
                 variables_involved=[c],
                 suggested_test_kind="other",

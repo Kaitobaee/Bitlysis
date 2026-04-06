@@ -42,6 +42,10 @@ def patch_meta(
 
 
 def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
+    job_id = str(raw.get("job_id") or "").strip()
+    if not job_id:
+        msg = "Job meta missing job_id"
+        raise ValueError(msg)
     err = raw.get("error")
     error_model = JobError(**err) if isinstance(err, dict) and "message" in err else None
     raw_status = str(raw.get("status", JobStatus.uploaded.value))
@@ -57,7 +61,7 @@ def raw_to_job_detail(raw: dict[str, Any]) -> JobDetail:
             prof = None
     a_spec = raw.get("analysis_spec")
     return JobDetail(
-        job_id=str(raw["job_id"]),
+        job_id=job_id,
         status=status,
         filename=str(raw.get("original_filename", "")),
         stored_path=str(raw.get("stored_as", "")),
@@ -80,7 +84,10 @@ def get_job_detail(settings: Settings, job_id: str) -> JobDetail | None:
     raw = read_raw_meta(settings, job_id)
     if raw is None:
         return None
-    return raw_to_job_detail(raw)
+    try:
+        return raw_to_job_detail(raw)
+    except (ValidationError, ValueError, TypeError):
+        return None
 
 
 def delete_job(settings: Settings, job_id: str) -> bool:

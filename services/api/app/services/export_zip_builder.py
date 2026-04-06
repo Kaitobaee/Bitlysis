@@ -58,7 +58,11 @@ def build_export_zip_bytes(
     base_manifest = _load_base_manifest(settings, raw, job_id)
     merged = merge_manifest_with_export(base_manifest)
     cols = list(raw.get("columns") or [])
-    result_summary = raw.get("result_summary") if isinstance(raw.get("result_summary"), dict) else None
+    result_summary = (
+        raw.get("result_summary")
+        if isinstance(raw.get("result_summary"), dict)
+        else None
+    )
     orig_name = str(raw.get("original_filename", "upload"))
 
     with TemporaryDirectory() as td:

@@ -1,4 +1,7 @@
-"""Phase 6 — chuỗi thời gian: detect cột ngày (đa locale), ETS/ARIMA/Prophet, MAPE/RMSE, JSON chart."""
+"""Phase 6 — chuỗi thời gian.
+
+Detect cột ngày (đa locale), ETS/ARIMA/Prophet, MAPE/RMSE, JSON chart.
+"""
 
 from __future__ import annotations
 
@@ -23,9 +26,20 @@ def _prophet_available() -> bool:
 def _parse_dates_multi_locale(s: pd.Series) -> tuple[pd.Series, str]:
     """Trả về (datetime_series, strategy_label) với tỷ lệ parse cao nhất."""
     strategies: list[tuple[str, dict[str, Any]]] = [
-        ("iso_utc", {"errors": "coerce", "utc": True}),
-        ("dayfirst_true", {"errors": "coerce", "utc": True, "dayfirst": True}),
-        ("dayfirst_false", {"errors": "coerce", "utc": True, "dayfirst": False}),
+        ("iso_utc", {"errors": "coerce", "utc": True, "format": "ISO8601"}),
+        (
+            "dayfirst_true",
+            {"errors": "coerce", "utc": True, "dayfirst": True, "format": "mixed"},
+        ),
+        (
+            "dayfirst_false",
+            {
+                "errors": "coerce",
+                "utc": True,
+                "dayfirst": False,
+                "format": "mixed",
+            },
+        ),
     ]
     best = (pd.Series(pd.NaT, index=s.index, dtype="datetime64[ns, UTC]"), "", -1.0)
     for label, kw in strategies:
@@ -121,7 +135,10 @@ def _default_holdout(n: int, requested: int | None) -> int:
 
 
 def _infer_step_timedelta(dates: pd.DatetimeIndex) -> pd.Timedelta:
-    """Khoảng cách thời gian trung vị giữa các điểm (pandas 2.x không cast TimedeltaIndex → float)."""
+    """Khoảng cách thời gian trung vị giữa các điểm.
+
+    pandas 2.x không cast TimedeltaIndex sang float trực tiếp.
+    """
     if len(dates) < 2:
         return pd.Timedelta(days=1)
     # Chuẩn hóa int64 ns để tránh .astype(float) trên TimedeltaIndex (TypeError).
@@ -355,7 +372,10 @@ def run_timeseries_analysis(df: pd.DataFrame, spec: TimeSeriesSpec) -> dict[str,
             fitted_full = _fitted_statsmodels(fit_full_m, n)
             future_y = _forecast_statsmodels(fit_full_m, spec.horizon)
         except Exception as e2:  # noqa: BLE001
-            warnings.append(f"Khớp lại trên toàn chuỗi lỗi ({e2!s}) — chỉ hiển thị metrics holdout.")
+            warnings.append(
+                f"Khớp lại trên toàn chuỗi lỗi ({e2!s}) "
+                "— chỉ hiển thị metrics holdout."
+            )
             fitted_full = np.full(n, np.nan)
             future_y = np.array([], dtype=float)
 

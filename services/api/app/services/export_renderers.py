@@ -13,6 +13,71 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def _short_value(value: Any, limit: int = 420) -> str:
+    if isinstance(value, dict):
+        important_keys = [
+            "kind",
+            "method",
+            "decision",
+            "p_value",
+            "effect_size",
+            "alpha",
+            "degrees_of_freedom",
+        ]
+        compact = {k: value.get(k) for k in important_keys if k in value}
+        if not compact:
+            compact = value
+        txt = json.dumps(compact, ensure_ascii=False)
+    elif isinstance(value, list):
+        if value and isinstance(value[0], dict):
+            txt = json.dumps(value[:3], ensure_ascii=False)
+            if len(value) > 3:
+                txt += f" ... (+{len(value) - 3} items)"
+        else:
+            txt = json.dumps(value[:20], ensure_ascii=False)
+            if len(value) > 20:
+                txt += f" ... (+{len(value) - 20} items)"
+    else:
+        txt = str(value)
+    return txt if len(txt) <= limit else f"{txt[:limit]}..."
+
+
+def _resolve_pdf_fonts() -> tuple[str, str]:
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    candidates = [
+        Path("C:/Windows/Fonts/arial.ttf"),
+        Path("C:/Windows/Fonts/Arial.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/Library/Fonts/Arial Unicode.ttf"),
+    ]
+    bold_candidates = [
+        Path("C:/Windows/Fonts/arialbd.ttf"),
+        Path("C:/Windows/Fonts/Arial Bold.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        Path("/Library/Fonts/Arial Bold.ttf"),
+    ]
+
+    for p in candidates:
+        if p.is_file():
+            pdfmetrics.registerFont(TTFont("BitlysisSans", str(p)))
+            normal = "BitlysisSans"
+            break
+    else:
+        normal = "Helvetica"
+
+    for p in bold_candidates:
+        if p.is_file():
+            pdfmetrics.registerFont(TTFont("BitlysisSansBold", str(p)))
+            bold = "BitlysisSansBold"
+            break
+    else:
+        bold = "Helvetica-Bold"
+
+    return normal, bold
+
+
 def render_matplotlib_series_png(df: pd.DataFrame, out_path: Path) -> bool:
     """Line chart cột số đầu tiên → PNG (Agg)."""
     import matplotlib
@@ -68,17 +133,15 @@ def render_plotly_series_png(df: pd.DataFrame, out_path: Path) -> bool:
 def render_summary_tables_pdf(result_summary: dict[str, Any] | None, out_path: Path) -> None:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    rows: list[list[str]] = [["Khóa", "Giá trị (rút gọn)"]]
+    rows: list[list[Any]] = [["Khóa", "Giá trị (rút gọn)"]]
     if result_summary:
         for k, v in list(result_summary.items())[:50]:
-            if isinstance(v, (dict, list)):
-                cell = json.dumps(v, ensure_ascii=False)[:900]
-            else:
-                cell = str(v)[:900]
+            cell = _short_value(v, limit=520)
             rows.append([str(k), cell])
     else:
         rows.append(["result_summary", "(trống)"])
@@ -86,18 +149,61 @@ def render_summary_tables_pdf(result_summary: dict[str, Any] | None, out_path: P
     doc = SimpleDocTemplate(str(out_path), pagesize=A4)
     story: list[Any] = []
     styles = getSampleStyleSheet()
-    story.append(Paragraph("Bitlysis — Tóm tắt kết quả (bảng)", styles["Title"]))
+    normal_font, bold_font = _resolve_pdf_fonts()
+    title_style = ParagraphStyle(
+        "BitlysisTitle",
+        parent=styles["Title"],
+        fontName=bold_font,
+        fontSize=18,
+        leading=22,
+    )
+    cell_style = ParagraphStyle(
+        "BitlysisCell",
+        parent=styles["BodyText"],
+        fontName=normal_font,
+        fontSize=8,
+        leading=10,
+        wordWrap="CJK",
+    )
+    header_style = ParagraphStyle(
+        "BitlysisHeader",
+        parent=styles["BodyText"],
+        fontName=bold_font,
+        fontSize=8,
+        textColor=colors.whitesmoke,
+    )
+
+    story.append(Paragraph("Bitlysis - Tom tat ket qua (bang)", title_style))
     story.append(Spacer(1, 12))
-    t = Table(rows, colWidths=[120, 380])
+
+    table_rows: list[list[Any]] = []
+    for i, (k, v) in enumerate(rows):
+        if i == 0:
+            table_rows.append([
+                Paragraph(str(k), header_style),
+                Paragraph(str(v), header_style),
+            ])
+        else:
+            table_rows.append([
+                Paragraph(str(k), cell_style),
+                Paragraph(str(v), cell_style),
+            ])
+
+    t = Table(table_rows, colWidths=[125, 370], repeatRows=1)
     t.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                ("FONTNAME", (0, 1), (-1, -1), normal_font),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ],
         ),
     )

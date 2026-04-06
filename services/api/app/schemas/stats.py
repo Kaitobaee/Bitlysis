@@ -65,7 +65,10 @@ class CategoricalAssociationSpec(BaseModel):
 
 
 class RPipelineSpec(BaseModel):
-    """Gọi R CLI (Cronbach α, EFA, PLS-SEM có gate). Mỗi phần tử analyses là list gửi thẳng tới R."""
+    """Gọi R CLI (Cronbach α, EFA, PLS-SEM có gate).
+
+    Mỗi phần tử analyses là list gửi thẳng tới R.
+    """
 
     kind: Literal["r_pipeline"] = "r_pipeline"
     analyses: list[dict[str, Any]] = Field(

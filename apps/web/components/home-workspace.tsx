@@ -229,162 +229,170 @@ export function HomeWorkspace() {
         <LanguageSwitch />
       </header>
 
-      <main className="swiss-container grid gap-12 py-12 lg:grid-cols-2">
-        <section className="space-y-6">
-          <h2 className="text-label text-[var(--muted)]">{t("upload.label")}</h2>
-          <UploadZone disabled={uploading} onFile={onUpload} />
-          {!apiBase.trim() && (
-            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 px-4 py-3">
-              NEXT_PUBLIC_API_URL chưa đặt. {t("errors.checkApiUrl")}
-            </p>
-          )}
-        </section>
-
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-label text-[var(--muted)]">{t("job.status")}</h2>
-            <div className="flex flex-wrap gap-2">
-              <a
-                className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)] underline-offset-4 hover:underline"
-                href={apiBase ? `${apiBase.replace(/\/$/, "")}/docs` : "#"}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {t("job.openApi")}
-              </a>
-              {job && (
-                <button
-                  type="button"
-                  onClick={onReset}
-                  className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] hover:text-[var(--fg)]"
-                >
-                  {t("job.reset")}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {!job && (
-            <p className="border border-[var(--border)] bg-[var(--surface-muted)] p-8 text-sm text-[var(--muted)]">
-              {t("result.empty")}
-            </p>
-          )}
-
-          {job && (
-            <div className="border border-[var(--border)] bg-[var(--surface)] p-8">
-              <div className="flex flex-wrap items-baseline justify-between gap-4">
-                <div>
-                  <p className="text-label text-[var(--muted)]">{t("job.id")}</p>
-                  <p className="mt-1 font-mono text-sm break-all">{job.job_id}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onCopyId}
-                  className="shrink-0 border border-[var(--border)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-[var(--surface-muted)]"
-                >
-                  {t("job.copyId")}
-                </button>
-              </div>
-              <dl className="mt-8 grid gap-6 sm:grid-cols-2">
-                <div>
-                  <dt className="text-label text-[var(--muted)]">
-                    {t("job.status")}
-                  </dt>
-                  <dd className="mt-2 flex items-center gap-2 text-lg font-semibold text-[var(--fg)]">
-                    {statusLabel(t, job.status)}
-                    {isBusyStatus(job.status) && (
-                      <span
-                        className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--accent)]"
-                        aria-hidden
-                      />
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label text-[var(--muted)]">
-                    {t("job.filename")}
-                  </dt>
-                  <dd className="mt-2 text-sm text-[var(--fg)]">{job.filename}</dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-label text-[var(--muted)]">
-                    {t("job.columns")}
-                  </dt>
-                  <dd className="mt-2 font-mono text-xs leading-relaxed text-[var(--fg)]">
-                    {job.columns.join(", ")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label text-[var(--muted)]">
-                    {t("job.rowsSample")}
-                  </dt>
-                  <dd className="mt-2 font-mono text-sm">{job.row_preview_count}</dd>
-                </div>
-              </dl>
-
-              {job.error && (
-                <div className="mt-8 border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-                  <p className="font-semibold">{job.error.code}</p>
-                  <p className="mt-1">{job.error.message}</p>
-                </div>
-              )}
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={!canRunAnalyze}
-                  onClick={onAnalyze}
-                  className="border border-[var(--fg)] bg-[var(--fg)] px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40 hover:opacity-90"
-                >
-                  {busyAnalyze ? t("job.analyzing") : t("job.analyze")}
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    busyExport || !job || job.status !== "succeeded"
-                  }
-                  onClick={onExport}
-                  className="border border-[var(--border)] bg-transparent px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-[var(--fg)] disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--surface-muted)]"
-                >
-                  {busyExport ? t("job.exporting") : t("job.exportZip")}
-                </button>
-              </div>
-              {job.columns.length < 2 && (
-                <p className="mt-3 text-xs text-[var(--amber-fg)]">
-                  {t("job.needTwoColumns")}
+      <main className="space-y-0">
+        <div className="swiss-container space-y-10 py-12">
+          <div className="grid gap-12 lg:grid-cols-2">
+            <section className="space-y-6">
+              <h2 className="text-label text-[var(--muted)]">{t("upload.label")}</h2>
+              <UploadZone disabled={uploading} onFile={onUpload} />
+              {!apiBase.trim() && (
+                <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 px-4 py-3">
+                  NEXT_PUBLIC_API_URL chưa đặt. {t("errors.checkApiUrl")}
                 </p>
               )}
+            </section>
 
-              {showInlineSkeleton && (
-                <div
-                  className="mt-8 space-y-3 border-t border-[var(--border)] pt-8"
-                  aria-busy="true"
-                  aria-live="polite"
+            <section className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-label text-[var(--muted)]">{t("job.status")}</h2>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)] underline-offset-4 hover:underline"
+                  href={apiBase ? `${apiBase.replace(/\/$/, "")}/docs` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  <p className="text-label text-[var(--muted)]">
-                    {t("job.polling")}
-                  </p>
-                  <div className="h-2 w-full animate-pulse bg-[var(--skeleton)]" />
-                  <div className="h-2 w-4/5 animate-pulse bg-[var(--skeleton)]" />
-                  <div className="h-24 w-full animate-pulse bg-[var(--skeleton)]" />
-                </div>
-              )}
+                  {t("job.openApi")}
+                </a>
+                {job && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] hover:text-[var(--fg)]"
+                  >
+                    {t("job.reset")}
+                  </button>
+                )}
+              </div>
             </div>
-          )}
 
-          {job && job.status === "succeeded" && (
-            <div className="border border-[var(--border)] bg-[var(--surface)] p-8">
-              <h2 className="text-label mb-6 text-[var(--muted)]">
-                {t("result.title")}
-              </h2>
+            {!job && (
+              <p className="border border-[var(--border)] bg-[var(--surface-muted)] p-8 text-sm text-[var(--muted)]">
+                {t("result.empty")}
+              </p>
+            )}
+
+            {job && (
+              <div className="border border-[var(--border)] bg-[var(--surface)] p-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-4">
+                  <div>
+                    <p className="text-label text-[var(--muted)]">{t("job.id")}</p>
+                    <p className="mt-1 font-mono text-sm break-all">{job.job_id}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onCopyId}
+                    className="shrink-0 border border-[var(--border)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-[var(--surface-muted)]"
+                  >
+                    {t("job.copyId")}
+                  </button>
+                </div>
+                <dl className="mt-8 grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-label text-[var(--muted)]">
+                      {t("job.status")}
+                    </dt>
+                    <dd className="mt-2 flex items-center gap-2 text-lg font-semibold text-[var(--fg)]">
+                      {statusLabel(t, job.status)}
+                      {isBusyStatus(job.status) && (
+                        <span
+                          className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--accent)]"
+                          aria-hidden
+                        />
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-label text-[var(--muted)]">
+                      {t("job.filename")}
+                    </dt>
+                    <dd className="mt-2 text-sm text-[var(--fg)]">{job.filename}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-label text-[var(--muted)]">
+                      {t("job.columns")}
+                    </dt>
+                    <dd className="mt-2 font-mono text-xs leading-relaxed text-[var(--fg)]">
+                      {job.columns.join(", ")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-label text-[var(--muted)]">
+                      {t("job.rowsSample")}
+                    </dt>
+                    <dd className="mt-2 font-mono text-sm">{job.row_preview_count}</dd>
+                  </div>
+                </dl>
+
+                {job.error && (
+                  <div className="mt-8 border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                    <p className="font-semibold">{job.error.code}</p>
+                    <p className="mt-1">{job.error.message}</p>
+                  </div>
+                )}
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    disabled={!canRunAnalyze}
+                    onClick={onAnalyze}
+                    className="border border-[var(--fg)] bg-[var(--fg)] px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40 hover:opacity-90"
+                  >
+                    {busyAnalyze ? t("job.analyzing") : t("job.analyze")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      busyExport || !job || job.status !== "succeeded"
+                    }
+                    onClick={onExport}
+                    className="border border-[var(--border)] bg-transparent px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-[var(--fg)] disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--surface-muted)]"
+                  >
+                    {busyExport ? t("job.exporting") : t("job.exportZip")}
+                  </button>
+                </div>
+                {job.columns.length < 2 && (
+                  <p className="mt-3 text-xs text-[var(--amber-fg)]">
+                    {t("job.needTwoColumns")}
+                  </p>
+                )}
+
+                {showInlineSkeleton && (
+                  <div
+                    className="mt-8 space-y-3 border-t border-[var(--border)] pt-8"
+                    aria-busy="true"
+                    aria-live="polite"
+                  >
+                    <p className="text-label text-[var(--muted)]">
+                      {t("job.polling")}
+                    </p>
+                    <div className="h-2 w-full animate-pulse bg-[var(--skeleton)]" />
+                    <div className="h-2 w-4/5 animate-pulse bg-[var(--skeleton)]" />
+                    <div className="h-24 w-full animate-pulse bg-[var(--skeleton)]" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            </section>
+          </div>
+        </div>
+
+        {job && job.status === "succeeded" && (
+          <section className="w-full bg-[var(--surface)] p-8 lg:p-12">
+            <h2 className="text-label mb-8 text-[var(--muted)] px-0 lg:px-12 max-w-screen">
+              {t("result.title")}
+            </h2>
+            <div className="px-0 lg:px-12">
               <ResultSummary
+                jobId={job.job_id}
                 summary={
                   job.result_summary as Record<string, unknown> | null
                 }
               />
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
