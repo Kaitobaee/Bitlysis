@@ -1,0 +1,12 @@
+{
+  "targets": {
+    "release": {
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "noAssert": false
+    }
+  },
+  "options": {
+    "exportRuntime": true
+  }
+}

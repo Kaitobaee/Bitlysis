@@ -14,6 +14,16 @@
     "dropping": "Thả để tải lên",
     "uploading": "Đang tải lên…"
   },
+  "preview": {
+    "title": "Xem trước (client, WASM)",
+    "scanning": "Đang quét byte & giải mã (worker + WASM)…",
+    "kind": "Loại",
+    "encoding": "Encoding (ước lượng)",
+    "bytes": "Byte đọc mẫu",
+    "magic": "Magic / ZIP",
+    "disclaimer": "Chỉ xem trước cục bộ; không thay thế profiling/phân tích trên server. Kích thước bundle WASM: xem public/wasm-bundle-sizes.json.",
+    "warnToast": "Cảnh báo xem trước"
+  },
   "job": {
     "id": "Mã job",
     "status": "Trạng thái",

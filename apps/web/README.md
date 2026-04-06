@@ -39,3 +39,10 @@ Mở <http://localhost:3000>. Đảm bảo `API_CORS_ORIGINS` trên API chứa `
 | `components/result-summary.tsx` | Hiển thị `result_summary` dạng dữ liệu (ẩn key narrative/LLM) |
 
 Phân tích mặc định: `categorical_association` với hai cột đầu — đủ cho demo; spec khác dùng API trực tiếp.
+
+## Phase 10 — WASM (preview client)
+
+- **AssemblyScript** (`packages/asm-wasm/assembly/index.ts`) → `pnpm wasm:build` (trong `apps/web`) sinh `public/wasm/preview_core.wasm` (quét byte NUL trong mẫu ~512 KiB).
+- **Decode / ước lượng encoding / parse dòng CSV** chạy trong **Web Worker** (fallback main thread) bằng TypeScript — **không** fork engine thống kê Python.
+- Kích thước WASM ghi trong **`public/wasm-bundle-sizes.json`** (cập nhật bởi `pnpm wasm:record`, gọi tự động trong `prebuild`).
+- Dev: `pnpm dev` (webpack; Turbopack có thể lệch với WASM/worker). Build: `pnpm build:web` (chạy `wasm:build` trước).

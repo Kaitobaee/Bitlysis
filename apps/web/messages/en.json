@@ -14,6 +14,16 @@
     "dropping": "Drop to upload",
     "uploading": "Uploading…"
   },
+  "preview": {
+    "title": "Client preview (WASM)",
+    "scanning": "Scanning bytes & decoding (worker + WASM)…",
+    "kind": "Kind",
+    "encoding": "Encoding (heuristic)",
+    "bytes": "Sample bytes read",
+    "magic": "Magic / ZIP",
+    "disclaimer": "Local preview only; does not replace server profiling/analysis. WASM bundle sizes: see public/wasm-bundle-sizes.json.",
+    "warnToast": "Preview warning"
+  },
   "job": {
     "id": "Job ID",
     "status": "Status",

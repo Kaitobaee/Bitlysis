@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { FilePreviewPanel } from "@/components/file-preview-panel";
 import { LanguageSwitch } from "@/components/language-switch";
 import { ResultSummary } from "@/components/result-summary";
 import { UploadZone } from "@/components/upload-zone";
@@ -23,6 +24,8 @@ import {
   pollJobUntil,
   PollTimeoutError,
 } from "@/lib/poll-job";
+import { runFilePreview } from "@/lib/preview/run-preview";
+import type { FilePreviewData } from "@/lib/preview/types";
 import { toastApiError } from "@/lib/toast-error";
 import type { JobDetail, JobStatus } from "@/lib/types";
 
@@ -51,6 +54,9 @@ export function HomeWorkspace() {
   const [uploading, setUploading] = useState(false);
   const [busyAnalyze, setBusyAnalyze] = useState(false);
   const [busyExport, setBusyExport] = useState(false);
+  const [filePreview, setFilePreview] = useState<FilePreviewData | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewFileLabel, setPreviewFileLabel] = useState<string | null>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
 
   const syncUrlJob = useCallback(
@@ -94,6 +100,25 @@ export function HomeWorkspace() {
           duration: 12_000,
         });
         return;
+      }
+      setFilePreview(null);
+      setPreviewFileLabel(file.name);
+      setPreviewBusy(true);
+      try {
+        const prev = await runFilePreview(file);
+        if (prev.ok) {
+          setFilePreview(prev.data);
+          if (prev.data.warnings.length > 0) {
+            toast.message(t("preview.warnToast"), {
+              description: prev.data.warnings.slice(0, 5).join("; "),
+              duration: 8000,
+            });
+          }
+        }
+      } catch {
+        /* preview best-effort */
+      } finally {
+        setPreviewBusy(false);
       }
       setUploading(true);
       try {
@@ -196,6 +221,8 @@ export function HomeWorkspace() {
   const onReset = useCallback(() => {
     pollAbortRef.current?.abort();
     setJob(null);
+    setFilePreview(null);
+    setPreviewFileLabel(null);
     syncUrlJob(null);
   }, [syncUrlJob]);
 
@@ -232,7 +259,12 @@ export function HomeWorkspace() {
       <main className="swiss-container grid gap-12 py-12 lg:grid-cols-2">
         <section className="space-y-6">
           <h2 className="text-label text-[var(--muted)]">{t("upload.label")}</h2>
-          <UploadZone disabled={uploading} onFile={onUpload} />
+          <UploadZone disabled={uploading || previewBusy} onFile={onUpload} />
+          <FilePreviewPanel
+            preview={filePreview}
+            busy={previewBusy}
+            fileLabel={previewFileLabel}
+          />
           {!apiBase.trim() && (
             <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 px-4 py-3">
               NEXT_PUBLIC_API_URL chưa đặt. {t("errors.checkApiUrl")}

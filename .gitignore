@@ -36,6 +36,9 @@ packages/r-pipeline/renv/staging/
 apps/web/.next/
 apps/web/out/
 apps/web/.turbo
+# AS glue if someone runs asc with --bindings (we only ship .wasm)
+apps/web/public/wasm/preview_core.js
+apps/web/public/wasm/preview_core.d.ts
 
 # IDE / OS
 .idea/
