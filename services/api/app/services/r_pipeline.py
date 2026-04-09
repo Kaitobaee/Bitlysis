@@ -18,6 +18,43 @@ from app.config import Settings
 logger = logging.getLogger(__name__)
 
 
+def _parse_json_from_stdout(stdout: str) -> dict[str, Any] | None:
+    text = (stdout or "").strip()
+    if not text:
+        return None
+
+    # Prefer the last valid JSON line: some scripts print progress metadata
+    # and then the final payload as a separate JSON object.
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    for line in reversed(lines):
+        if not (line.startswith("{") and line.endswith("}")):
+            continue
+        try:
+            obj = json.loads(line)
+            if isinstance(obj, dict):
+                return obj
+        except json.JSONDecodeError:
+            continue
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Some R packages may print messages before/after payload; try to recover
+    # by scanning for a JSON object tail in stdout.
+    first = text.find("{")
+    last = text.rfind("}")
+    if first == -1 or last == -1 or last <= first:
+        return None
+
+    candidate = text[first : last + 1]
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
+
+
 def _repo_root() -> Path:
     # Bitlysis/services/api/app/services/r_pipeline.py → repo root = parents[4]
     return Path(__file__).resolve().parents[4]
@@ -29,7 +66,13 @@ def resolve_r_package_root(settings: Settings) -> Path:
     return (_repo_root() / "packages" / "r-pipeline").resolve()
 
 
-def resolve_rscript() -> str:
+def resolve_rscript(settings: Settings) -> str:
+    configured = settings.bitlysis_rscript_path
+    if configured is not None:
+        path = str(configured).strip()
+        if path:
+            return path
+
     path = os.environ.get("BITLYSIS_RSCRIPT_PATH") or ""
     if path.strip():
         return path.strip()
@@ -55,7 +98,7 @@ def run_r_pipeline_json(
         msg = f"Thiếu R CLI: {cli}"
         raise FileNotFoundError(msg)
 
-    rscript = resolve_rscript()
+    rscript = resolve_rscript(settings)
     csv_path: str | None = None
     req_path: str | None = None
     try:
@@ -112,9 +155,10 @@ def run_r_pipeline_json(
         stderr = proc.stderr or ""
         stdout = proc.stdout or ""
         if proc.stdout:
-            try:
-                parsed: dict[str, Any] = json.loads(stdout.strip())
-            except json.JSONDecodeError:
+            parsed_candidate = _parse_json_from_stdout(stdout)
+            if parsed_candidate is not None:
+                parsed = parsed_candidate
+            else:
                 parsed = {
                     "ok": False,
                     "engine": "bitlysis_r_pipeline",

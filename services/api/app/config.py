@@ -57,6 +57,10 @@ class Settings(BaseSettings):
         default=None,
         description="Thư mục packages/r-pipeline; mặc định suy ra từ repo",
     )
+    bitlysis_rscript_path: Path | None = Field(
+        default=None,
+        description="Đường dẫn đầy đủ tới Rscript.exe nếu không có trên PATH",
+    )
 
     # Phase 7 — OpenRouter (ADR 0004)
     openrouter_api_key: str | None = Field(default=None, description="Bearer key; chỉ env")

@@ -35,3 +35,12 @@ export type UploadResponse = {
   columns: string[];
   row_preview_count: number;
 };
+
+export type QuickChartPayload = {
+  kind: "bar" | "pie" | "line" | "area" | "donut";
+  title: string;
+  column: string;
+  labels: string[];
+  values: number[];
+  total: number;
+};

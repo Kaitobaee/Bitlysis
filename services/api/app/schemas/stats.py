@@ -74,6 +74,18 @@ class RPipelineSpec(BaseModel):
     )
 
 
+class FullAutoAnalysisSpec(BaseModel):
+    """Phân tích tổng quát toàn bộ dữ liệu; ưu tiên R cho khối numeric nếu có Rscript."""
+
+    kind: Literal["full_auto_analysis"] = "full_auto_analysis"
+    prefer_r: bool = Field(
+        default=True,
+        description="Ưu tiên chạy R cho khối numeric nếu Rscript có sẵn",
+    )
+    max_categorical_pairs: int = Field(default=8, ge=1, le=50)
+    max_group_comparisons: int = Field(default=12, ge=1, le=100)
+
+
 class TimeSeriesSpec(BaseModel):
     """Phase 6 — dự báo chuỗi thời gian (ETS / ARIMA / Prophet tùy chọn), MAPE & RMSE."""
 
@@ -100,6 +112,7 @@ AnalyzeRequest = Annotated[
     | RegressionOLSSpec
     | CategoricalAssociationSpec
     | RPipelineSpec
+    | FullAutoAnalysisSpec
     | TimeSeriesSpec,
     Field(discriminator="kind"),
 ]

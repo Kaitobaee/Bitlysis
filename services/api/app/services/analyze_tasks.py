@@ -8,9 +8,10 @@ from typing import Any
 from pydantic import TypeAdapter
 
 from app.config import Settings
-from app.schemas.stats import AnalyzeRequest, RPipelineSpec, TimeSeriesSpec
+from app.schemas.stats import AnalyzeRequest, FullAutoAnalysisSpec, RPipelineSpec, TimeSeriesSpec
 from app.services import job_store
 from app.services.job_data import load_job_dataframe
+from app.services.auto_analysis import run_full_auto_analysis
 from app.services.r_pipeline import run_r_pipeline_json
 from app.services.stats_engine import run_stats_analysis
 from app.services.timeseries_engine import run_timeseries_analysis
@@ -75,6 +76,19 @@ def run_analyze(settings: Settings, job_id: str, spec_payload: dict[str, Any]) -
                         "code": "r_pipeline_failed",
                         "message": str(parsed.get("error", "R pipeline lỗi"))[:2000],
                     },
+                },
+            )
+            return
+
+        if isinstance(spec, FullAutoAnalysisSpec):
+            summary = run_full_auto_analysis(settings, df, spec)
+            job_store.patch_meta(
+                settings,
+                job_id,
+                {
+                    "status": "succeeded",
+                    "result_summary": summary,
+                    "error": None,
                 },
             )
             return

@@ -1,4 +1,4 @@
-import type { JobDetail, UploadResponse } from "@/lib/types";
+import type { JobDetail, QuickChartPayload, UploadResponse } from "@/lib/types";
 
 const base = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -100,4 +100,24 @@ export async function postExportZip(jobId: string): Promise<Blob> {
   );
   if (!res.ok) throw await readError(res);
   return res.blob();
+}
+
+export async function getQuickChart(
+  jobId: string,
+  column: string,
+  chartType: "bar" | "pie" | "line" | "area" | "donut",
+): Promise<QuickChartPayload> {
+  const qs = new URLSearchParams({
+    column,
+    chart_type: chartType,
+    max_items: "12",
+  });
+  const res = await fetch(
+    `${base()}/v1/jobs/${encodeURIComponent(jobId)}/charts/quick?${qs.toString()}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
+  return parseJson<QuickChartPayload>(res);
 }
