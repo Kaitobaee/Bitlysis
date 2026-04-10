@@ -77,25 +77,35 @@ export async function runFilePreview(
   opts?: {
     maxDataRows?: number;
     workerTimeoutMs?: number;
+    totalTimeoutMs?: number;
     preferWorker?: boolean;
   },
 ): Promise<PreviewResult> {
   const maxDataRows = opts?.maxDataRows ?? PREVIEW_MAX_DATA_ROWS_DEFAULT;
   const workerTimeoutMs = opts?.workerTimeoutMs ?? 4000;
+  const totalTimeoutMs = opts?.totalTimeoutMs ?? 12_000;
   const preferWorker = opts?.preferWorker ?? true;
   const slice = file.slice(0, PREVIEW_MAX_BYTES);
   const ab = await slice.arrayBuffer();
   const bytes = new Uint8Array(ab);
 
-  if (preferWorker && typeof Worker !== "undefined") {
-    const wResult = await Promise.race([
-      runWorkerPreview(file.name, bytes, maxDataRows),
-      sleep(workerTimeoutMs).then(
-        (): PreviewResult => ({ ok: false, message: "worker_timeout" }),
-      ),
-    ]);
-    if (wResult.ok) return wResult;
-  }
+  const run = async (): Promise<PreviewResult> => {
+    if (preferWorker && typeof Worker !== "undefined") {
+      const wResult = await Promise.race([
+        runWorkerPreview(file.name, bytes, maxDataRows),
+        sleep(workerTimeoutMs).then(
+          (): PreviewResult => ({ ok: false, message: "worker_timeout" }),
+        ),
+      ]);
+      if (wResult.ok) return wResult;
+    }
+    return runOnMainThread(file.name, bytes, maxDataRows);
+  };
 
-  return runOnMainThread(file.name, bytes, maxDataRows);
+  return Promise.race([
+    run(),
+    sleep(totalTimeoutMs).then(
+      (): PreviewResult => ({ ok: false, message: "preview_timeout" }),
+    ),
+  ]);
 }

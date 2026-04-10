@@ -12,6 +12,7 @@ from app.schemas.export_phase import ExportStartAccepted
 from app.schemas.job import JobStatus
 from app.services import job_store
 from app.services.export_zip_builder import build_export_zip_bytes
+from app.services.export_renderers import render_matplotlib_series_png
 from app.services.job_data import load_job_dataframe
 
 router = APIRouter(tags=["export"])
@@ -134,4 +135,37 @@ def download_last_export_zip(
         path=str(path),
         filename=f"{job_id}_export.zip",
         media_type="application/zip",
+    )
+
+
+@router.get("/jobs/{job_id}/charts/matplotlib")
+def preview_matplotlib_chart(
+    job_id: str,
+    settings: Settings = Depends(get_settings),
+) -> FileResponse:
+    """Render chart preview directly for UI (without downloading ZIP)."""
+    raw = job_store.read_raw_meta(settings, job_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="Job không tồn tại")
+    try:
+        df = load_job_dataframe(settings, raw)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    rel = f"{job_id}.matplotlib_preview.png"
+    out = (settings.upload_dir / rel).resolve()
+    root = settings.upload_dir.resolve()
+    out.relative_to(root)
+
+    ok = render_matplotlib_series_png(df, out)
+    if not ok or not out.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Không có cột số phù hợp để vẽ biểu đồ matplotlib.",
+        )
+
+    return FileResponse(
+        path=str(out),
+        filename=f"{job_id}_matplotlib_series.png",
+        media_type="image/png",
     )

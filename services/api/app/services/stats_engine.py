@@ -22,6 +22,96 @@ from app.schemas.stats import (
 )
 
 
+def build_basic_analysis(df: pd.DataFrame) -> dict[str, Any]:
+    """Các output cơ bản luôn có nếu dữ liệu đủ điều kiện."""
+    out: dict[str, Any] = {
+        "descriptive_stats": [],
+        "missing_values": [],
+        "outliers": [],
+        "correlation_matrix": {},
+    }
+
+    if df.empty:
+        return out
+
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    numeric_series: dict[str, pd.Series] = {}
+
+    for col in df.columns.tolist():
+        s_num = pd.to_numeric(df[col], errors="coerce")
+        valid = int(s_num.notna().sum())
+        ratio = valid / max(int(len(df)), 1)
+        # Nhận diện cột số kể cả khi pandas đọc thành object (CSV/Excel hỗn hợp).
+        if valid > 0 and (col in numeric_cols or ratio >= 0.8):
+            numeric_series[col] = s_num
+
+    numeric_names = list(numeric_series.keys())
+
+    # Descriptive statistics
+    for col in numeric_names:
+        s = numeric_series[col]
+        if s.notna().sum() == 0:
+            continue
+        out["descriptive_stats"].append(
+            {
+                "column": col,
+                "count": int(s.notna().sum()),
+                "mean": float(s.mean()),
+                "std": float(s.std(ddof=1)) if s.notna().sum() > 1 else None,
+                "min": float(s.min()),
+                "max": float(s.max()),
+                "skewness": float(s.skew()) if s.notna().sum() > 2 else None,
+                "kurtosis": float(s.kurt()) if s.notna().sum() > 3 else None,
+            },
+        )
+
+    # Missing values
+    n = max(int(len(df)), 1)
+    for col in df.columns.tolist():
+        miss = int(df[col].isna().sum())
+        out["missing_values"].append(
+            {
+                "column": str(col),
+                "missing_count": miss,
+                "missing_pct": float(miss / n),
+            },
+        )
+
+    # Outlier table (IQR rule)
+    for col in numeric_names:
+        s = numeric_series[col].dropna()
+        if s.shape[0] < 4:
+            continue
+        q1 = float(s.quantile(0.25))
+        q3 = float(s.quantile(0.75))
+        iqr = q3 - q1
+        if iqr <= 0:
+            outlier_count = 0
+        else:
+            lo = q1 - 1.5 * iqr
+            hi = q3 + 1.5 * iqr
+            outlier_count = int(((s < lo) | (s > hi)).sum())
+        out["outliers"].append(
+            {
+                "column": col,
+                "iqr": iqr,
+                "outlier_count": outlier_count,
+                "outlier_pct": float(outlier_count / max(int(s.shape[0]), 1)),
+            },
+        )
+
+    # Correlation matrix
+    if len(numeric_names) >= 2:
+        corr_df = pd.DataFrame({k: numeric_series[k] for k in numeric_names})
+        corr = corr_df.corr(numeric_only=True)
+        out["correlation_matrix"] = {
+            str(r): {str(c): (None if pd.isna(v) else float(v)) for c, v in vals.items()}
+            for r, vals in corr.to_dict(orient="index").items()
+        }
+
+    return out
+
+
 def _decision(
     p: float | None,
     alpha: float = 0.05,
@@ -408,6 +498,25 @@ def analyze_categorical_association(
         parametric_path=False,
         fallback=None,
     )
+
+    row_labels = [str(x) for x in ct.index.tolist()]
+    series = []
+    for col in ct.columns.tolist():
+        values = [int(v) for v in ct[col].to_list()]
+        series.append({
+            "key": str(col),
+            "label": str(col),
+            "values": values,
+        })
+
+    chart = {
+        "kind": "categorical_association",
+        "x_key": a,
+        "y_key": "count",
+        "x_labels": row_labels,
+        "series": series,
+    }
+
     return {
         "decision_trace": trace.model_dump(),
         "hypothesis_table": hypothesis_rows,
@@ -417,6 +526,7 @@ def analyze_categorical_association(
             "degrees_of_freedom": int(dof),
             "low_expected_count_cells": low_exp,
         },
+        "chart": chart,
     }
 
 

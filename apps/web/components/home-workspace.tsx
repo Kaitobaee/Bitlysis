@@ -283,22 +283,21 @@ export function HomeWorkspace() {
       setFilePreview(null);
       setPreviewFileLabel(file.name);
       setPreviewBusy(true);
-      try {
-        const prev = await runFilePreview(file);
-        if (prev.ok) {
-          setFilePreview(prev.data);
-          if (prev.data.warnings.length > 0) {
-            toast.message(t("preview.warnToast"), {
-              description: prev.data.warnings.slice(0, 5).join("; "),
-              duration: 8000,
-            });
+      void runFilePreview(file)
+        .then((prev) => {
+          if (prev.ok) {
+            setFilePreview(prev.data);
+            if (prev.data.warnings.length > 0) {
+              toast.message(t("preview.warnToast"), {
+                description: prev.data.warnings.slice(0, 5).join("; "),
+                duration: 8000,
+              });
+            }
           }
-        }
-      } catch {
-        /* preview best-effort */
-      } finally {
-        setPreviewBusy(false);
-      }
+        })
+        .catch(() => {})
+        .finally(() => setPreviewBusy(false));
+
       setUploading(true);
       try {
         const res = await uploadFile(file);
@@ -447,7 +446,9 @@ export function HomeWorkspace() {
         <LanguageSwitch />
       </header>
 
-      <main className="swiss-container grid gap-12 py-12 lg:grid-cols-2">
+      <main className="space-y-0">
+        <div className="swiss-container space-y-10 py-12">
+          <div className="grid gap-12 lg:grid-cols-2">
         <section className="space-y-6">
           <h2 className="text-label text-(--muted)">{t("upload.label")}</h2>
           <UploadZone disabled={uploading || previewBusy} onFile={onUpload} />
@@ -590,9 +591,13 @@ export function HomeWorkspace() {
           )}
 
         </section>
+          </div>
+        </div>
 
         {job && job.status === "succeeded" && (
-          <section className="space-y-6 lg:col-span-2">
+          <>
+            <section className="w-full border-t border-(--border) py-10 lg:py-12">
+              <div className="swiss-container">
             <div className="overflow-hidden rounded-[28px] border border-(--border) bg-[linear-gradient(180deg,rgba(245,242,235,0.96),rgba(255,255,255,0.94))] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
               <div className="space-y-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -722,17 +727,22 @@ export function HomeWorkspace() {
                 </div>
               </div>
             </div>
-            <div className="border border-(--border) bg-(--surface) p-8">
-              <h2 className="text-label mb-6 text-(--muted)">
+              </div>
+            </section>
+            <section className="w-full bg-(--surface) p-8 lg:p-12">
+              <h2 className="text-label mb-8 text-(--muted) max-w-screen px-0 lg:px-12">
                 {t("result.title")}
               </h2>
-              <ResultSummary
-                summary={
-                  job.result_summary as Record<string, unknown> | null
-                }
-              />
-            </div>
-          </section>
+              <div className="px-0 lg:px-12">
+                <ResultSummary
+                  jobId={job.job_id}
+                  summary={
+                    job.result_summary as Record<string, unknown> | null
+                  }
+                />
+              </div>
+            </section>
+          </>
         )}
       </main>
     </div>
