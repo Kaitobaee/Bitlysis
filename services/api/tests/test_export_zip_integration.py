@@ -57,6 +57,14 @@ def export_client(tmp_path: Path):
     app.dependency_overrides.clear()
 
 
+def test_matplotlib_chart_preview_endpoint_returns_png(export_client):
+    client, jid, _tmp = export_client
+    r = client.get(f"/v1/jobs/{jid}/charts/matplotlib")
+    assert r.status_code == 200, r.text
+    assert r.headers.get("content-type", "").startswith("image/png")
+    assert len(r.content) > 500
+
+
 def test_export_zip_contains_docs_layout_and_excel_sheets(export_client):
     client, jid, _tmp = export_client
     r = client.post(f"/v1/jobs/{jid}/export")

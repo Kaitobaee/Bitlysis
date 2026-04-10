@@ -28,6 +28,7 @@ Tất cả endpoint dưới prefix **`/v1`**. Header **`X-Request-Id`** được
 | `POST` | `/v1/jobs/{job_id}/hypothesis-suggestions` | **200** — gợi ý giả thuyết (Phase 7: OpenRouter + validate JSON / fallback). |
 | `POST` | `/v1/jobs/{job_id}/export/start` | **202** — bắt buộc trước khi tải ZIP **nặng** (chuyển job sang `exporting`). |
 | `POST` | `/v1/jobs/{job_id}/export` | **200** — tạo ZIP (matplotlib/plotly PNG, PDF bảng, docx, Excel `data_clean` + `results_raw`, `run_manifest.json`); trả file. |
+| `GET` | `/v1/jobs/{job_id}/charts/matplotlib` | **200** — PNG biểu đồ matplotlib (cột số đầu tiên trong file job) để nhúng / hiển thị UI; **404** nếu không có cột số. |
 | `GET` | `/v1/jobs/{job_id}/export/download` | **200** — tải lại ZIP đã build (`export_stored_as` trong meta). |
 | `DELETE` | `/v1/jobs/{job_id}` | **204** — xóa file upload + meta (Phase 2 / ADR 0003). |
 
@@ -55,4 +56,15 @@ File dữ liệu và `{job_id}.meta.json` nằm trong `UPLOAD_DIR` (mặc địn
 
 ## Biến môi trường
 
-Xem `.env.example` (copy thành `.env`). `API_CORS_ORIGINS` là danh sách URL frontend, phân tách bằng dấu phẩy.
+Xem `.env.example` (copy thành `.env`). `API_CORS_ORIGINS` là danh sách URL frontend, phân tách bằng dấu phẩy. `API_TRUSTED_HOSTS` (tùy chọn): bật `TrustedHostMiddleware` khi production; nên gồm `127.0.0.1,localhost` nếu dùng `HEALTHCHECK` Docker nội bộ.
+
+## Docker & triển khai (Phase 11)
+
+Xây từ **root monorepo** (cần `packages/r-pipeline`):
+
+```bash
+cd ../..   # repo root
+docker build -t bitlysis-api .
+```
+
+Blueprint Render, Vercel, cold start: [`docs/DEPLOY-RENDER-VERCEL.md`](../../docs/DEPLOY-RENDER-VERCEL.md). Checklist bảo mật: [`docs/security-auditor-checklist.md`](../../docs/security-auditor-checklist.md). Methodology user-facing: [`docs/Methodology.md`](../../docs/Methodology.md).

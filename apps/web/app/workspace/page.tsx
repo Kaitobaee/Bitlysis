@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { HomeWorkspace } from "@/components/home-workspace";
+import { HomeWorkspaceLoader } from "@/components/home-workspace-loader";
 
 function WorkspaceFallback() {
   return (
@@ -16,7 +16,7 @@ function WorkspaceFallback() {
 export default function WorkspacePage() {
   return (
     <Suspense fallback={<WorkspaceFallback />}>
-      <HomeWorkspace />
+      <HomeWorkspaceLoader />
     </Suspense>
   );
 }

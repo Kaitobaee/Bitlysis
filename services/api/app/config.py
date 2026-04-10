@@ -14,6 +14,12 @@ class Settings(BaseSettings):
 
     api_cors_origins: str = "http://localhost:3000"
 
+    # Phase 11–12 — hardening (để trống = tắt TrustedHost)
+    api_trusted_hosts: str = Field(
+        default="",
+        description="Danh sách Host header (comma); production: api.example.com,*.onrender.com",
+    )
+
     upload_dir: Path = Field(default=Path("./data/uploads"))
     max_upload_bytes: int = Field(
         default=52_428_800,
@@ -122,6 +128,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]
+
+    @property
+    def trusted_hosts_list(self) -> list[str]:
+        return [h.strip() for h in self.api_trusted_hosts.split(",") if h.strip()]
 
 
 settings = Settings()

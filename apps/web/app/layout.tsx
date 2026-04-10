@@ -34,7 +34,7 @@ export default function RootLayout({
       className={`${inter.variable} ${newsreader.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen antialiased">
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

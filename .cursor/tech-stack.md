@@ -56,6 +56,8 @@ cd services/api && pip install -e ".[dev]" && ruff check app tests scripts && py
 # Phase 8 export: tests/test_export_zip_integration.py (ZIP + openpyxl sheet count)
 # Phase 9 frontend: apps/web — upload/poll/analyze, messages/vi.json + en.json, sonner toasts; E2E tay: apps/web/README.md
 # Phase 10 WASM: packages/asm-wasm (AssemblyScript) → public/wasm/preview_core.wasm; worker file-preview; wasm-bundle-sizes.json
+# Phase 11 infra: Dockerfile (layers R/Python), docker-compose profile pls, render.yaml, docs/DEPLOY-RENDER-VERCEL.md
+# Phase 12: docs/security-auditor-checklist.md, docs/Methodology.md, SecurityHeadersMiddleware, apps/web/vercel.json
 # CI: .github/workflows/ci.yml (push/PR main|master)
 # R (Phase 5): cd packages/r-pipeline && Rscript tools/ci_install.R && Rscript -e "testthat::test_dir('tests/testthat')"
 ```
