@@ -1,0 +1,23 @@
+# Phase 11 — Render Blueprint (staging/production).
+# Thay service name / branch và gán secrets trên dashboard (OPENROUTER_API_KEY, …).
+# Staging URL ví dụ: https://bitlysis-api-staging.onrender.com
+
+services:
+  - type: web
+    name: bitlysis-api-staging
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENVIRONMENT
+        value: production
+      - key: API_CORS_ORIGINS
+        sync: false
+      - key: API_TRUSTED_HOSTS
+        sync: false
+      - key: UPLOAD_DIR
+        value: /data/uploads

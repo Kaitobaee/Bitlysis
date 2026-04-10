@@ -1,0 +1,42 @@
+# Phase 11 — local stack. Profile `pls`: bản sao API với giới hạn RAM cao hơn (tránh OOM PLS-SEM / R nặng).
+# Dùng: docker compose up
+# PLS worker: docker compose --profile pls up -d
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    ports:
+      - "8000:8000"
+    environment:
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - bitlysis-uploads:/data/uploads
+
+  api-pls-worker:
+    profiles:
+      - pls
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pls-worker
+    ports:
+      - "8001:8000"
+    environment:
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      UPLOAD_DIR: /data/uploads
+      BITLYSIS_PLS_WORKER_ROLE: "1"
+    volumes:
+      - bitlysis-uploads:/data/uploads
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+volumes:
+  bitlysis-uploads:
