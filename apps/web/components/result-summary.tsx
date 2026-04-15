@@ -157,6 +157,13 @@ function asRows(value: unknown): Record<string, unknown>[] {
   return value.filter((v): v is Record<string, unknown> => !!asRecord(v));
 }
 
+function firstHypothesisRow(analysis: unknown): Record<string, unknown> | null {
+  const a = asRecord(analysis);
+  if (!a) return null;
+  const rows = asRows(a.hypothesis_table);
+  return rows.length ? rows[0] : null;
+}
+
 function pickKeys(
   source: Record<string, unknown> | null,
   keys: string[],
@@ -168,6 +175,31 @@ function pickKeys(
       out[k] = source[k];
     }
   }
+  return out;
+}
+
+function normalizeRBlock(
+  block: Record<string, unknown> | null,
+  locale: Locale,
+): Record<string, unknown> {
+  if (!block) return {};
+  const out: Record<string, unknown> = {
+    ...pickKeys(block, ["available", "preferred", "returncode", "stderr", "results"]),
+  };
+
+  const returnCode = Number(block.returncode);
+  const hasResults = hasData(block.results);
+  const rawError = typeof block.error === "string" ? block.error.trim() : "";
+
+  if (Number.isFinite(returnCode) && returnCode === 0 && hasResults) {
+    out.status =
+      locale === "vi"
+        ? "R chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR."
+        : "R completed successfully with results; warnings (if any) are in STDERR.";
+  } else if (rawError) {
+    out.error = rawError;
+  }
+
   return out;
 }
 
@@ -396,18 +428,27 @@ function HypothesisTable({
     new Set(rows.flatMap((row) => Object.keys(row).filter((k) => !shouldOmitKey(k)))),
   );
   if (!keys.length) return null;
+  const tableRows = rows.slice(0, 100);
+
   return (
-    <div className="mt-6 overflow-x-auto w-full">
+    <div className="mt-6 space-y-2 overflow-x-auto w-full">
       <p className="text-label mb-3 text-[var(--muted)]">
         {t("result.tableHypothesis")}
       </p>
-      <table className="w-full border-collapse text-left text-sm">
+      {rows.length > tableRows.length ? (
+        <p className="text-xs text-[var(--muted)]">
+          {locale === "vi"
+            ? `Hiển thị ${tableRows.length}/${rows.length} dòng để đảm bảo hiệu năng.`
+            : `Showing ${tableRows.length}/${rows.length} rows for performance.`}
+        </p>
+      ) : null}
+      <table className="min-w-[960px] w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--border)]">
             {keys.map((k) => (
               <th
                 key={k}
-                className="py-2 pr-4 text-xs font-semibold text-[var(--muted)]"
+                className="py-2 pr-4 text-xs font-semibold text-[var(--muted)] align-top"
               >
                 {keyLabel(k, locale)}
               </th>
@@ -415,10 +456,10 @@ function HypothesisTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
+          {tableRows.map((row, i) => (
             <tr key={i} className="border-b border-[var(--border)]">
               {keys.map((k) => (
-                <td key={k} className="py-2 pr-4 align-top text-xs">
+                <td key={k} className="py-2 pr-4 align-top text-xs whitespace-normal break-words">
                   {formatByKey(k, row[k], locale)}
                 </td>
               ))}
@@ -709,6 +750,110 @@ function DiagnosticsBlock({
   );
 }
 
+function buildAiInsights(
+  summary: Record<string, unknown> | null,
+  locale: Locale,
+): { headline: string; bullets: string[] } {
+  const empty =
+    locale === "vi"
+      ? {
+          headline: "AI chưa đủ dữ liệu để phân tích",
+          bullets: ["Hãy chạy phân tích để hệ thống tạo kết quả có cấu trúc trước khi diễn giải."],
+        }
+      : {
+          headline: "AI needs more data",
+          bullets: ["Run analysis first so structured results are available for interpretation."],
+        };
+
+  if (!summary) return empty;
+
+  const root = asRecord(summary);
+  const analysisSections = asRecord(root?.analysis_sections);
+  const nestedBlocks = [
+    ...asRows(analysisSections?.categorical_associations),
+    ...asRows(analysisSections?.mixed_group_comparisons),
+  ]
+    .map((x) => asRecord(x.analysis))
+    .filter((x): x is Record<string, unknown> => !!x);
+
+  const table = Array.isArray(root?.hypothesis_table)
+    ? (root?.hypothesis_table as Record<string, unknown>[])
+    : nestedBlocks.flatMap((block) =>
+        Array.isArray(block.hypothesis_table)
+          ? (block.hypothesis_table as Record<string, unknown>[])
+          : [],
+      );
+  const diagnostics =
+    asRecord(root?.diagnostics) ??
+    nestedBlocks.map((b) => asRecord(b.diagnostics)).find((x) => !!x) ??
+    {};
+  const results = asRecord(root?.results);
+  const warnings = Array.isArray(root?.warnings)
+    ? (root?.warnings as unknown[]).map((x) => String(x)).filter(Boolean)
+    : [];
+
+  const significant = table.filter((r) => String(r.decision ?? "") === "reject_h0").length;
+  const tested = table.length;
+  const nonsignificant = Math.max(0, tested - significant);
+  const method = String(diagnostics?.selected_method ?? diagnostics?.method ?? "").trim();
+
+  const hasForecast = Boolean(results?.forecast || root?.forecast);
+  const mape = Number(results?.mape ?? root?.mape ?? Number.NaN);
+  const rmse = Number(results?.rmse ?? root?.rmse ?? Number.NaN);
+
+  const bullets: string[] = [];
+
+  if (tested > 0) {
+    bullets.push(
+      locale === "vi"
+        ? `Đã kiểm định ${tested} giả thuyết: ${significant} có ý nghĩa thống kê, ${nonsignificant} chưa đủ bằng chứng.`
+        : `Tested ${tested} hypotheses: ${significant} significant, ${nonsignificant} not significant.`,
+    );
+  }
+
+  if (method) {
+    bullets.push(
+      locale === "vi"
+        ? `Phương pháp nổi bật được hệ thống chọn: ${method}.`
+        : `Primary selected method: ${method}.`,
+    );
+  }
+
+  if (hasForecast) {
+    const mapeTxt = Number.isFinite(mape) ? mape.toFixed(3) : "n/a";
+    const rmseTxt = Number.isFinite(rmse) ? rmse.toFixed(3) : "n/a";
+    bullets.push(
+      locale === "vi"
+        ? `Có kết quả dự báo: MAPE=${mapeTxt}, RMSE=${rmseTxt}.`
+        : `Forecast output available: MAPE=${mapeTxt}, RMSE=${rmseTxt}.`,
+    );
+  }
+
+  if (warnings.length) {
+    bullets.push(
+      locale === "vi"
+        ? `Cảnh báo dữ liệu/phương pháp: ${warnings[0]}`
+        : `Data/method warning: ${warnings[0]}`,
+    );
+  }
+
+  if (!bullets.length) {
+    bullets.push(
+      locale === "vi"
+        ? "Kết quả đã sẵn sàng; mở các khối bên dưới để xem bảng thống kê và biểu đồ chi tiết."
+        : "Results are ready; expand sections below for detailed tables and charts.",
+    );
+  }
+
+  return {
+    headline:
+      locale === "vi"
+        ? "AI phân tích từ output thống kê"
+        : "AI interpretation from statistical output",
+    bullets,
+  };
+}
+
 type Props = {
   jobId?: string;
   summary: Record<string, unknown> | null;
@@ -747,6 +892,33 @@ export function ResultSummary({ jobId, summary }: Props) {
     : [];
 
   const summaryRecord = asRecord(summary);
+  const analysisSections = asRecord(summaryRecord?.analysis_sections);
+  const overview = asRecord(analysisSections?.overview);
+  const rBlock = asRecord(analysisSections?.r_block);
+  const categoricalAssociations = asRows(analysisSections?.categorical_associations);
+  const mixedGroupComparisons = asRows(analysisSections?.mixed_group_comparisons);
+
+  const nestedAnalysisBlocks = [...categoricalAssociations, ...mixedGroupComparisons]
+    .map((item) => asRecord(item.analysis))
+    .filter((x): x is Record<string, unknown> => !!x);
+
+  const nestedHypothesisRows = nestedAnalysisBlocks.flatMap((block) => {
+    const rows = block.hypothesis_table;
+    return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+  });
+
+  const mergedChart =
+    (chart && typeof chart === "object" ? chart : null) ??
+    nestedAnalysisBlocks.find((block) => !!asRecord(block.chart))?.chart ??
+    null;
+
+  const mergedDiagnostics =
+    (diagnostics && typeof diagnostics === "object" && !Array.isArray(diagnostics)
+      ? diagnostics
+      : null) ??
+    nestedAnalysisBlocks.find((block) => !!asRecord(block.diagnostics))?.diagnostics ??
+    null;
+
   const profiling = asRecord(summaryRecord?.profiling);
   const results = asRecord(summaryRecord?.results);
   const hypothesesApiRows = asRows(summaryRecord?.hypotheses).map((h) => {
@@ -758,13 +930,26 @@ export function ResultSummary({ jobId, summary }: Props) {
       method: h.method ?? result?.method,
     };
   });
-  const mergedHypothesisRows = tableRows.length ? tableRows : hypothesesApiRows;
+  const mergedHypothesisRows = tableRows.length
+    ? tableRows
+    : hypothesesApiRows.length
+      ? hypothesesApiRows
+      : nestedHypothesisRows;
 
   const sectionA = {
+    ...pickKeys(overview, [
+      "row_count",
+      "column_count",
+      "numeric_columns",
+      "categorical_columns",
+      "constant_columns",
+      "column_details",
+    ]),
     ...pickKeys(profiling, ["descriptive_stats", "missing_values", "outliers", "correlation_matrix"]),
     ...pickKeys(results, ["descriptive_stats", "missing_values", "outliers", "correlation_matrix"]),
   };
   const sectionB = {
+    ...normalizeRBlock(rBlock, locale),
     ...pickKeys(results, ["cronbach", "composite_reliability", "ave", "rho_a", "kmo_bartlett"]),
   };
   const sectionC = {
@@ -774,6 +959,50 @@ export function ResultSummary({ jobId, summary }: Props) {
     ...pickKeys(results, ["pls_sem", "measurement_model", "structural_model", "path_coefficients", "bootstrapping", "r2", "q2", "f2", "htmt", "fornell_larcker", "path_diagram"]),
   };
   const sectionE = {
+    ...(categoricalAssociations.length
+      ? {
+          categorical_associations: categoricalAssociations.map((item) => {
+            const first = firstHypothesisRow(item.analysis);
+            const warnings = Array.isArray(first?.warnings)
+              ? (first?.warnings as unknown[]).map((x) => String(x)).filter(Boolean)
+              : [];
+            return {
+              variable_a: item.variable_a,
+              variable_b: item.variable_b,
+              method: first?.method,
+              statistic: first?.statistic,
+              p_value: first?.p_value,
+              effect_size: first?.effect_size,
+              effect_size_kind: first?.effect_size_kind,
+              decision: first?.decision,
+              warning: warnings[0] ?? null,
+            };
+          }),
+        }
+      : {}),
+    ...(mixedGroupComparisons.length
+      ? {
+          mixed_group_comparisons: mixedGroupComparisons.map((item) => {
+            const first = firstHypothesisRow(item.analysis);
+            const warnings = Array.isArray(first?.warnings)
+              ? (first?.warnings as unknown[]).map((x) => String(x)).filter(Boolean)
+              : [];
+            return {
+              variable_numeric:
+                item.variable_numeric ?? item.numeric_variable ?? item.outcome ?? null,
+              variable_group:
+                item.variable_group ?? item.group_variable ?? item.group ?? null,
+              method: first?.method,
+              statistic: first?.statistic,
+              p_value: first?.p_value,
+              effect_size: first?.effect_size,
+              effect_size_kind: first?.effect_size_kind,
+              decision: first?.decision,
+              warning: warnings[0] ?? null,
+            };
+          }),
+        }
+      : {}),
     ...pickKeys(results, ["t_test", "mann_whitney", "anova", "kruskal_wallis", "regression", "logistic_regression", "assumptions", "residual_plot", "qq_plot", "vif"]),
   };
   const sectionF = {
@@ -908,8 +1137,8 @@ export function ResultSummary({ jobId, summary }: Props) {
     setModuleVisibility({ A: value, B: value, C: value, D: value, E: value, F: value, G: value });
   };
   
-  const hasChart = chart && typeof chart === "object";
-  const hasDiagnostics = diagnostics && typeof diagnostics === "object" && !Array.isArray(diagnostics);
+  const hasChart = mergedChart && typeof mergedChart === "object";
+  const hasDiagnostics = mergedDiagnostics && typeof mergedDiagnostics === "object" && !Array.isArray(mergedDiagnostics);
   const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
   const exportChartUrl =
     jobId && apiBase
@@ -918,9 +1147,12 @@ export function ResultSummary({ jobId, summary }: Props) {
   const specRecord = asRecord(summaryRecord?.spec);
   const profilingDetail = asRecord(summaryRecord?.profiling_detail);
   const analysisKind = String(specRecord?.kind ?? "");
-  const rowCount = Number(profiling?.row_count_profiled ?? tableRows.length ?? 0);
+  const rowCount = Number(
+    overview?.row_count ?? profiling?.row_count_profiled ?? tableRows.length ?? 0,
+  );
   const columnCount = Number(
-    profiling?.column_count ??
+    overview?.column_count ??
+      profiling?.column_count ??
       (Array.isArray(profilingDetail?.column_profiles) ? profilingDetail.column_profiles.length : 0) ??
       0,
   );
@@ -932,9 +1164,27 @@ export function ResultSummary({ jobId, summary }: Props) {
       : locale === "vi"
         ? "Bảng kiểm định + biểu đồ"
         : "Tests + charts";
+  const aiInsights = buildAiInsights(summary, locale);
 
   return (
     <div className="space-y-6">
+      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_10px_28px_rgba(22,22,21,0.05)] lg:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            AI Copilot
+          </h3>
+          <span className="rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold text-[var(--fg)]">
+            {locale === "vi" ? "Đọc từ output" : "Output-driven"}
+          </span>
+        </div>
+        <p className="mt-3 text-base font-semibold text-[var(--fg)]">{aiInsights.headline}</p>
+        <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[var(--muted)]">
+          {aiInsights.bullets.map((line, idx) => (
+            <li key={`ai-line-${idx}`}>• {line}</li>
+          ))}
+        </ul>
+      </section>
+
       <section className="rounded-[1.75rem] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(243,242,238,0.96))] p-6 shadow-[0_14px_40px_rgba(22,22,21,0.06)] lg:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl space-y-2">
@@ -1066,7 +1316,7 @@ export function ResultSummary({ jobId, summary }: Props) {
         <div className="grid gap-6 xl:grid-cols-2">
           {showCharts && hasChart ? (
             <SectionCard title={locale === "vi" ? "Biểu đồ chính" : "Primary chart"}>
-              <ChartView chart={chart} />
+              <ChartView chart={mergedChart} />
             </SectionCard>
           ) : null}
 
@@ -1095,7 +1345,7 @@ export function ResultSummary({ jobId, summary }: Props) {
 
       {showTables && hasDiagnostics ? (
         <SectionCard title={locale === "vi" ? "Chẩn đoán nhanh" : "Quick diagnostics"}>
-          <DiagnosticsBlock data={diagnostics as Record<string, unknown>} />
+          <DiagnosticsBlock data={mergedDiagnostics as Record<string, unknown>} />
         </SectionCard>
       ) : null}
 

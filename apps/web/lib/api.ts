@@ -1,4 +1,4 @@
-import type { JobDetail, QuickChartPayload, UploadResponse } from "@/lib/types";
+import type { HealthInfo, JobDetail, QuickChartPayload, UploadResponse, WebAnalysisChatResponse, WebAnalysisResponse } from "@/lib/types";
 
 const base = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -120,4 +120,36 @@ export async function getQuickChart(
     },
   );
   return parseJson<QuickChartPayload>(res);
+}
+
+export async function getHealth(): Promise<HealthInfo> {
+  const res = await fetch(`${base()}/health`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  return parseJson<HealthInfo>(res);
+}
+
+export async function analyzeWebInput(
+  input: string,
+  analysisMode: "academic" | "marketing_seo" | "business" = "business",
+): Promise<WebAnalysisResponse> {
+  const res = await fetch(`${base()}/v1/web/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ input, analysis_mode: analysisMode }),
+  });
+  return parseJson<WebAnalysisResponse>(res);
+}
+
+export async function chatWebAnalysis(
+  analysis: WebAnalysisResponse,
+  question: string,
+): Promise<WebAnalysisChatResponse> {
+  const res = await fetch(`${base()}/v1/web/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analysis, question }),
+  });
+  return parseJson<WebAnalysisChatResponse>(res);
 }

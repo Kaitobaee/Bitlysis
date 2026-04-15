@@ -1,14 +1,31 @@
-# Đóng góp Bitlysis
+# Contributing to Bitlysis
 
-## Yêu cầu môi trường
+Tài liệu này mô tả quy trình đóng góp mã nguồn cho Bitlysis.
 
-- **Node** ≥ 22, **pnpm** 9.x
-- **Python** ≥ 3.11 (CI dùng 3.12)
-- Tuân thủ [.cursor/.agents/AGENT.md](.cursor/.agents/AGENT.md) và [.cursor/tech-stack.md](.cursor/tech-stack.md)
+## Môi trường phát triển
 
-## Lệnh local (quality gates)
+- Node.js 22+
+- pnpm 9.x
+- Python 3.11+
+- R 4.4+ nếu đụng tới pipeline R
 
-Từ **root repo**:
+Khuyến nghị đọc thêm:
+
+- [docs/adr/](docs/adr/)
+- [docs/bao-cao-doi-chieu-de-tai-va-san-pham.md](docs/bao-cao-doi-chieu-de-tai-va-san-pham.md)
+
+## Quy trình làm việc
+
+1. Tạo nhánh riêng từ `main`.
+2. Thực hiện thay đổi nhỏ, rõ phạm vi.
+3. Chạy test/lint liên quan.
+4. Tạo PR khi mọi kiểm tra đã pass.
+
+Không commit trực tiếp lên `main` trừ khi được yêu cầu rõ ràng.
+
+## Lệnh cần chạy trước khi gửi PR
+
+Frontend:
 
 ```bash
 pnpm install
@@ -25,21 +42,31 @@ ruff check app tests scripts
 pytest tests -q
 ```
 
-Chạy API dev:
+Nếu chạm vào luồng AI/web analysis, nên chạy thêm:
 
 ```bash
 cd services/api
-uvicorn app.main:app --reload --port 8000
+pytest tests/test_web_analysis.py tests/test_jobs.py -q
 ```
 
-## CI
+## Quy ước code
 
-Push/PR lên `main` hoặc `master` chạy [.github/workflows/ci.yml](.github/workflows/ci.yml): **ruff + pytest** (`services/api`), **lint + build** (`apps/web`).
+- Giữ thay đổi nhỏ và tập trung.
+- Không sửa các file không liên quan đến task.
+- Ưu tiên giữ nguyên phong cách hiện có của repo.
+- Nếu thêm endpoint hoặc schema mới, cập nhật cả frontend type và tài liệu liên quan.
 
-## Dữ liệu thử
+## Kiểm tra chất lượng
 
-File mẫu **tổng hợp, không PII** nằm trong [services/api/tests/fixtures](services/api/tests/fixtures) — xem README trong thư mục đó.
+Trước khi mở PR, đảm bảo:
 
-## ADR
+- Không còn lỗi lint/type ở phần đã sửa.
+- Test liên quan pass.
+- UI mới không phá layout hiện tại.
+- API response và TypeScript types khớp nhau.
 
-Quyết định kiến trúc: [docs/adr/](docs/adr/).
+## Gợi ý khi đóng góp
+
+- Mô tả rõ mục tiêu thay đổi trong PR.
+- Nếu thay đổi hành vi AI, thêm ví dụ đầu ra trước/sau.
+- Nếu thay đổi cấu trúc output, cập nhật README hoặc tài liệu kèm theo.

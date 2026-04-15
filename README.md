@@ -1,52 +1,81 @@
 # Bitlysis
 
-Công cụ phân tích dữ liệu cloud-based (StatOne). Monorepo:
+Bitlysis là nền tảng phân tích dữ liệu và nội dung theo mô hình web + API + pipeline thống kê. Dự án hiện tập trung vào 4 hướng chính:
 
-| Thư mục | Vai trò |
-| --- | --- |
-| [`apps/web`](apps/web) | Next.js 15 (frontend, Vercel) |
-| [`services/api`](services/api) | FastAPI orchestrator (Docker / Render) |
-| [`packages/r-pipeline`](packages/r-pipeline) | R scripts + `renv` (phân tích nâng cao) |
+1. Phân tích website.
+2. Phân tích file Excel, Word và file dữ liệu.
+3. Phân tích nội dung văn bản, gợi ý bài báo liên quan và tóm tắt từng bài.
+4. Phân tích dữ liệu thống kê có cấu trúc, xuất báo cáo và minh bạch backend.
 
-**Đóng góp & CI:** [CONTRIBUTING.md](CONTRIBUTING.md) — GitHub Actions chạy ruff/pytest (API) và lint/build (web).
+## Cấu trúc repo
 
-Kiến trúc & quyết định: [docs/adr/](docs/adr/) (ADR 0001–0004).
+- `apps/web` - Next.js frontend.
+- `services/api` - FastAPI orchestrator, job API, web analysis API.
+- `packages/r-pipeline` - R scripts và `renv` cho các phân tích nâng cao.
+- `docs` - tài liệu kiến trúc, ADR và báo cáo đối chiếu.
 
-## Yêu cầu
+## Yêu cầu môi trường
 
-- **Node** ≥ 22, **pnpm** 9.x  
-- **Python** ≥ 3.11  
-- **R** ≥ 4.4 (khi chạy pipeline R)
+- Node.js 22+
+- pnpm 9.x
+- Python 3.11+
+- R 4.4+ nếu chạy pipeline R
 
-## Frontend
+## Chạy frontend
 
 ```bash
 pnpm install
 pnpm dev:web
 ```
 
-Mặc định: <http://localhost:3000>.
+Frontend mặc định chạy tại `http://localhost:3000`.
 
-## API
+## Chạy API
 
 ```bash
 cd services/api
 python -m venv .venv
-.\.venv\Scripts\activate   # Windows
+.\.venv\Scripts\activate
 pip install -e ".[dev]"
 uvicorn app.main:app --reload --port 8000
 ```
 
-Mặc định: <http://localhost:8000/docs>.
+API mặc định chạy tại `http://localhost:8000`.
 
-Sao chép `services/api/.env.example` → `services/api/.env` và chỉnh `API_CORS_ORIGINS` nếu cần.
+## Biến môi trường
 
-## R pipeline
+Copy `services/api/.env.example` sang `services/api/.env` rồi cấu hình:
 
-Xem [packages/r-pipeline/README.md](packages/r-pipeline/README.md).
+- `API_CORS_ORIGINS`
+- `UPLOAD_DIR`
+- `LLM_ENABLED`
+- `OPENROUTER_API_KEY` hoặc `OPENAI_API_KEY`
+- `OPENROUTER_MODEL` hoặc `OPENAI_MODEL`
 
-## Chuẩn dự án Cursor
+## Lệnh kiểm tra nhanh
 
-- [`.cursor/.agents/AGENT.md`](.cursor/.agents/AGENT.md)
-- [`.cursor/tech-stack.md`](.cursor/tech-stack.md)
-- [`.cursor/.docs/docs.md`](.cursor/.docs/docs.md)
+Frontend:
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
+API:
+
+```bash
+cd services/api
+ruff check app tests scripts
+pytest tests -q
+```
+
+## Tài liệu liên quan
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [docs/adr/](docs/adr/)
+- [docs/bao-cao-doi-chieu-de-tai-va-san-pham.md](docs/bao-cao-doi-chieu-de-tai-va-san-pham.md)
+
+## Ghi chú
+
+- Phần AI web analysis hiện hỗ trợ phân tích website, nội dung text và gợi ý bài báo liên quan.
+- Phần data analysis ưu tiên output có cấu trúc, provenance và khả năng kiểm chứng.

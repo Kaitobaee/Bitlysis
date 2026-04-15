@@ -36,7 +36,7 @@ class HypothesisSuggestionsEnvelope(BaseModel):
     """Payload API sau khi validate / fallback."""
 
     job_id: str
-    source: Literal["openrouter", "fallback", "disabled_no_key"]
+    source: Literal["openrouter", "openai", "fallback", "disabled_no_key"]
     model: str | None = None
     result: LLMHypothesisResponse
     warning: str | None = None

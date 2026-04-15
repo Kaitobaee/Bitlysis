@@ -18,7 +18,7 @@ from app.schemas.llm import LLMHypothesisResponse, SuggestedHypothesis
 
 logger = logging.getLogger(__name__)
 
-SourceKind = Literal["openrouter", "fallback", "disabled_no_key"]
+SourceKind = Literal["openrouter", "openai", "fallback", "disabled_no_key"]
 
 _JSON_FENCE = re.compile(
     r"^\s*```(?:json)?\s*\n?(.*?)\n?```\s*$",
@@ -189,6 +189,62 @@ def call_openrouter_chat(
             hc.close()
 
 
+def call_openai_chat(
+    settings: Settings,
+    *,
+    user_prompt: str,
+    client: httpx.Client | None = None,
+) -> tuple[str, str]:
+    """
+    Goi OpenAI chat completions.
+    Tra ve (assistant_content, model_id_used).
+    """
+    if not settings.openai_api_key:
+        msg = "Thieu OPENAI_API_KEY"
+        raise RuntimeError(msg)
+
+    url = f"{settings.openai_base_url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {settings.openai_api_key}",
+        "Content-Type": "application/json",
+    }
+    body: dict[str, Any] = {
+        "model": settings.openai_model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "response_format": {"type": "json_object"},
+    }
+
+    timeout = httpx.Timeout(settings.llm_timeout_seconds)
+    own_client = client is None
+    hc = client or httpx.Client(timeout=timeout)
+    try:
+        r = hc.post(url, headers=headers, json=body)
+        r.raise_for_status()
+        payload = r.json()
+        choices = payload.get("choices")
+        if not isinstance(choices, list) or len(choices) < 1:
+            msg = "OpenAI: response khong co choices"
+            raise ValueError(msg)
+        choice0 = choices[0]
+        msg = (choice0.get("message") or {})
+        content = msg.get("content") or ""
+        if not isinstance(content, str):
+            content = str(content)
+        if not content.strip():
+            msg = "OpenAI: completion rong"
+            raise ValueError(msg)
+        model_used = str(payload.get("model") or settings.openai_model)
+        return content, model_used
+    finally:
+        if own_client:
+            hc.close()
+
+
 def profiling_types_from_job_meta(raw: dict[str, Any]) -> dict[str, str] | None:
     """Lấy map cột → pandas_dtype từ profiling_detail nếu có."""
     detail = raw.get("profiling_detail")
@@ -214,14 +270,17 @@ def run_hypothesis_suggestions(
 ) -> tuple[LLMHypothesisResponse, SourceKind, str | None, str | None]:
     """
     Trả về (result, source, model_or_none, warning_or_none).
-    source: openrouter | fallback | disabled_no_key
+    source: openrouter | openai | fallback | disabled_no_key
     """
     max_h = max(1, min(15, settings.llm_max_hypotheses))
     if force_fallback:
         fb = rule_based_hypotheses(columns, max_hypotheses=max_h)
         return fb, "fallback", None, None
 
-    if not settings.openrouter_api_key or not settings.llm_enabled:
+    has_openrouter = bool(settings.openrouter_api_key)
+    has_openai = bool(settings.openai_api_key)
+
+    if not settings.llm_enabled or (not has_openrouter and not has_openai):
         fb = rule_based_hypotheses(columns, max_hypotheses=max_h)
         return fb, "disabled_no_key", None, None
 
@@ -246,11 +305,21 @@ def run_hypothesis_suggestions(
         )
 
     try:
-        content, model_used = call_openrouter_chat(
-            settings,
-            user_prompt=user_prompt,
-            client=httpx_client,
-        )
+        if has_openrouter:
+            content, model_used = call_openrouter_chat(
+                settings,
+                user_prompt=user_prompt,
+                client=httpx_client,
+            )
+            source_kind: SourceKind = "openrouter"
+        else:
+            content, model_used = call_openai_chat(
+                settings,
+                user_prompt=user_prompt,
+                client=httpx_client,
+            )
+            source_kind = "openai"
+
         data = extract_json_object(content)
         parsed = validate_llm_hypothesis_json(data)
         # cắt theo cấu hình
@@ -259,7 +328,7 @@ def run_hypothesis_suggestions(
             hypotheses=parsed.hypotheses[:max_h],
             notes=parsed.notes,
         )
-        return parsed, "openrouter", model_used, None
+        return parsed, source_kind, model_used, None
     except (
         httpx.TimeoutException,
         httpx.HTTPError,

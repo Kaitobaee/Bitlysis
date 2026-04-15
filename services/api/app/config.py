@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    api_cors_origins: str = "http://localhost:3000"
+    api_cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002"
 
     # Phase 11–12 — hardening (để trống = tắt TrustedHost)
     api_trusted_hosts: str = Field(
@@ -77,6 +77,17 @@ class Settings(BaseSettings):
     openrouter_model: str = Field(
         default="openai/gpt-4o-mini",
         description="Model id OpenRouter — eval golden không phụ thuộc biến này",
+    )
+
+    # Optional direct OpenAI provider support (fallback when OpenRouter key is absent)
+    openai_api_key: str | None = Field(default=None, description="Direct OpenAI API key")
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="Base URL for OpenAI-compatible chat completions",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="Model id for direct OpenAI provider",
     )
     openrouter_http_referer: str = Field(
         default="https://github.com/bitlysis/bitlysis",
