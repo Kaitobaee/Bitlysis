@@ -26,4 +26,16 @@ install.packages(
   Ncpus = nc
 )
 
+installed <- rownames(installed.packages())
+missing <- setdiff(pkgs, installed)
+if (length(missing) > 0) {
+  stop(
+    sprintf(
+      "R dependency install incomplete (%s mode). Missing: %s",
+      if (install_dev) "dev" else "runtime",
+      paste(missing, collapse = ", ")
+    )
+  )
+}
+
 message(sprintf("OK: R deps installed (%s mode)", if (install_dev) "dev" else "runtime"))

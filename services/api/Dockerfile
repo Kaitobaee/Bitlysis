@@ -15,6 +15,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
+        libnode-dev \
         r-base \
         r-base-dev \
         libcurl4-openssl-dev \
