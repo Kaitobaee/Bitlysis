@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
-# CI / local: cài dependency đầy đủ (seminr kéo theo ggplot2, dplyr, …).
+# CI / local: cài dependency bắt buộc cho runtime (Depends/Imports/LinkingTo).
+# Tránh dependencies=TRUE vì sẽ kéo cả Suggests, dễ phát sinh lỗi build không cần thiết trên Render.
 # Windows: ưu tiên binary + không compile từ source (tránh lỗi 'make' not found khi thiếu Rtools).
 # Cảnh báo "graph / Rgraphviz are not available": gói tùy chọn (Suggests); không chặn Cronbach / EFA / PLS.
 
@@ -13,6 +14,11 @@ if (.Platform$OS.type == "windows") {
 
 pkgs <- c("jsonlite", "psych", "seminr", "testthat")
 nc <- if (.Platform$OS.type == "windows") 1L else 2L
-install.packages(pkgs, repos = repos, dependencies = TRUE, Ncpus = nc)
+install.packages(
+  pkgs,
+  repos = repos,
+  dependencies = c("Depends", "Imports", "LinkingTo"),
+  Ncpus = nc
+)
 
 message("OK: R deps installed (see renv.lock for pin gợi ý; CI dùng install đầy đủ dependency)")
