@@ -9,7 +9,7 @@ services:
     region: frankfurt
     plan: starter
     branch: main
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./services/api/Dockerfile
     dockerContext: .
     healthCheckPath: /health
     envVars:
@@ -21,3 +21,15 @@ services:
         sync: false
       - key: UPLOAD_DIR
         value: /data/uploads
+
+  - type: worker
+    name: bitlysis-r-pipeline-staging
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    branch: main
+    dockerfilePath: ./packages/r-pipeline/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: BITLYSIS_R_PKG_ROOT
+        value: /opt/bitlysis/packages/r-pipeline
