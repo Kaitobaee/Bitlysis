@@ -45,9 +45,19 @@ docker compose --profile pls up -d   # thêm replica :8001 — định tuyến t
 | `UPLOAD_DIR` | Container: `/data/uploads` | Ổn định với volume Render (nếu gắn disk). |
 | `OPENROUTER_API_KEY` | Tùy Phase 7 | Không commit; chỉ secret dashboard. |
 | `R_SUBPROCESS_TIMEOUT_SECONDS` | Tùy | Mặc định 180; PLS nặng có thể tăng. |
+| `RUN_ENDPOINT_TOKEN` | Khuyến nghị | Token cho `POST /v1/run` qua header `X-Run-Token`. |
 | `EXPORT_*` | Tùy | Phase 8 ZIP. |
 
 Chi tiết đầy đủ: `services/api/.env.example`.
+
+## Chạy R core theo lịch miễn phí (GitHub Actions)
+
+- Endpoint server-side: `POST /v1/run`.
+- Workflow có sẵn: `.github/workflows/r-core-schedule.yml`.
+- Tạo 2 GitHub Actions secrets:
+  - `RUN_ENDPOINT_URL`: ví dụ `https://bitlysis-api-staging.onrender.com/v1/run`
+  - `RUN_ENDPOINT_TOKEN`: phải khớp env `RUN_ENDPOINT_TOKEN` trên Render
+- Có thể chạy tay bằng `workflow_dispatch` hoặc để cron tự gọi mỗi ngày.
 
 ## Biến môi trường — Web (Vercel)
 

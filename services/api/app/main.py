@@ -17,6 +17,7 @@ from app.middleware.upload_rate_limit import UploadRateLimitMiddleware
 from app.routers.v1.export_router import router as v1_export_router
 from app.routers.v1.hypotheses import router as v1_hypotheses_router
 from app.routers.v1.jobs import router as v1_jobs_router
+from app.routers.v1.run import router as v1_run_router
 from app.routers.v1.upload import router as v1_upload_router
 from app.routers.v1.web import router as v1_web_router
 from app.services.retention import sweep_expired_jobs
@@ -72,6 +73,7 @@ v1.include_router(v1_jobs_router)
 v1.include_router(v1_hypotheses_router)
 v1.include_router(v1_export_router)
 v1.include_router(v1_web_router)
+v1.include_router(v1_run_router)
 app.include_router(v1)
 
 

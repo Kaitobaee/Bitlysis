@@ -1,0 +1,45 @@
+name: R Core Scheduled Run
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every day at 01:00 UTC
+    - cron: "0 1 * * *"
+
+jobs:
+  call-run-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Bitlysis R core endpoint
+        env:
+          RUN_ENDPOINT_URL: ${{ secrets.RUN_ENDPOINT_URL }}
+          RUN_ENDPOINT_TOKEN: ${{ secrets.RUN_ENDPOINT_TOKEN }}
+        run: |
+          if [ -z "${RUN_ENDPOINT_URL}" ]; then
+            echo "Missing RUN_ENDPOINT_URL secret"
+            exit 1
+          fi
+
+          payload='{
+            "records": [
+              {"x1": 1, "x2": 2, "x3": 3, "y1": 2, "y2": 3, "y3": 4},
+              {"x1": 2, "x2": 3, "x3": 4, "y1": 3, "y2": 4, "y3": 5},
+              {"x1": 3, "x2": 4, "x3": 5, "y1": 4, "y2": 5, "y3": 6}
+            ],
+            "analyses": [
+              {"type": "cronbach_alpha", "scale_id": "trust", "items": ["x1", "x2", "x3"]}
+            ]
+          }'
+
+          status=$(curl -sS -o response.json -w "%{http_code}" \
+            -X POST "${RUN_ENDPOINT_URL}" \
+            -H "Content-Type: application/json" \
+            -H "X-Run-Token: ${RUN_ENDPOINT_TOKEN}" \
+            --data "${payload}")
+
+          echo "HTTP status: ${status}"
+          cat response.json
+
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            exit 1
+          fi
