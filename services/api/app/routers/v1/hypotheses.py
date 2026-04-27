@@ -8,8 +8,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
+from app.repositories import get_job_repository
 from app.schemas.llm import HypothesisSuggestionsEnvelope
-from app.services import job_store
 from app.services.llm_hypotheses import profiling_types_from_job_meta, run_hypothesis_suggestions
 
 router = APIRouter(tags=["hypotheses"])
@@ -26,12 +26,12 @@ class HypothesisSuggestionsBody(BaseModel):
     "/jobs/{job_id}/hypothesis-suggestions",
     response_model=HypothesisSuggestionsEnvelope,
 )
-def post_hypothesis_suggestions(
+async def post_hypothesis_suggestions(
     job_id: str,
     body: Annotated[HypothesisSuggestionsBody | None, Body()] = None,
     settings: Settings = Depends(get_settings),
 ) -> HypothesisSuggestionsEnvelope:
-    raw = job_store.read_raw_meta(settings, job_id)
+    raw = await get_job_repository(settings).get_job(job_id)
     if raw is None:
         raise HTTPException(status_code=404, detail="Job không tồn tại")
     columns = list(raw.get("columns") or [])

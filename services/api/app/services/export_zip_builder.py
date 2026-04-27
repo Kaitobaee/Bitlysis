@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -36,26 +35,17 @@ def _placeholder_png(path: Path, message: str) -> None:
     plt.close(fig)
 
 
-def _load_base_manifest(settings: Settings, raw: dict[str, Any], job_id: str) -> dict[str, Any]:
-    rel = raw.get("manifest_stored_as")
-    if rel:
-        p = (settings.upload_dir / str(rel)).resolve()
-        root = settings.upload_dir.resolve()
-        p.relative_to(root)
-        if p.is_file():
-            return json.loads(p.read_text(encoding="utf-8"))
-    ver = int(raw.get("profiling_engine_version", 1))
-    return build_run_manifest(job_id, ver)
-
-
 def build_export_zip_bytes(
     settings: Settings,
     job_id: str,
     raw: dict[str, Any],
     df: pd.DataFrame,
+    base_manifest: dict[str, Any] | None = None,
 ) -> bytes:
     """Tạo ZIP trong thư mục tạm; trả bytes (để kiểm tra heavy threshold)."""
-    base_manifest = _load_base_manifest(settings, raw, job_id)
+    if base_manifest is None:
+        ver = int(raw.get("profiling_engine_version", 1))
+        base_manifest = build_run_manifest(job_id, ver)
     merged = merge_manifest_with_export(base_manifest)
     cols = list(raw.get("columns") or [])
     result_summary = (

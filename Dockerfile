@@ -44,7 +44,9 @@ COPY services/api /app
 
 RUN pip install --no-cache-dir .
 
-ENV UPLOAD_DIR=/data/uploads \
+ENV STORAGE_BACKEND=local \
+    UPLOAD_DIR=/data/uploads \
+    QUEUE_BACKEND=local \
     HOST=0.0.0.0 \
     PORT=8000
 

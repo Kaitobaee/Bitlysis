@@ -20,7 +20,27 @@ class Settings(BaseSettings):
         description="Danh sách Host header (comma); production: api.example.com,*.onrender.com",
     )
 
+    storage_backend: Literal["local", "r2"] = Field(
+        default="local",
+        description="Storage backend for uploads, manifests, exports, and charts",
+    )
     upload_dir: Path = Field(default=Path("./data/uploads"))
+    r2_bucket: str | None = Field(
+        default=None,
+        description="Future Cloudflare R2 bucket name/binding identifier",
+    )
+    d1_database: str | None = Field(
+        default=None,
+        description="Future Cloudflare D1 database name/binding identifier",
+    )
+    cloudflare_account_id: str | None = Field(
+        default=None,
+        description="Future Cloudflare account id for deployment tooling",
+    )
+    queue_backend: Literal["local", "cloudflare"] = Field(
+        default="local",
+        description="Background queue backend",
+    )
     max_upload_bytes: int = Field(
         default=52_428_800,
         description="Max upload size in bytes (default ~50 MiB)",

@@ -1,0 +1,17 @@
+name = "bitlysis-worker-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-04-27"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGIN = "http://localhost:3000"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# TODO(cloudflare): configure the Cloudflare Container/Service binding for FastAPI.
+# The Worker code expects a Fetcher-compatible binding named API_CONTAINER.
+# [[services]]
+# binding = "API_CONTAINER"
+# service = "bitlysis-api-container"

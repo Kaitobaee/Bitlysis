@@ -50,13 +50,21 @@ Cấu trúc ZIP: `run_manifest.json` (merge `export` + phiên bản gói), `docs
 - **Rate limit**: `POST /v1/upload` giới hạn theo IP (sliding window), cấu hình `UPLOAD_RATE_LIMIT_*`.
 - **Retention**: nền định kỳ xóa job quá `RETENTION_HOURS` (tắt bằng `RETENTION_ENABLED=false`).
 
-File dữ liệu và `{job_id}.meta.json` nằm trong `UPLOAD_DIR` (mặc định `./data/uploads`).
+Mặc định local dùng `STORAGE_BACKEND=local` và `QUEUE_BACKEND=local`, lưu file trong
+`UPLOAD_DIR` (mặc định `./data/uploads`). API đi qua storage/repository/queue adapters
+để chuẩn bị thay `UPLOAD_DIR` bằng R2, D1 và Cloudflare Queues sau này.
 
 **Lỗi** (JSON): `{ "code", "message", "details", "request_id" }`.
 
 ## Biến môi trường
 
 Xem `.env.example` (copy thành `.env`). `API_CORS_ORIGINS` là danh sách URL frontend, phân tách bằng dấu phẩy. `API_TRUSTED_HOSTS` (tùy chọn): bật `TrustedHostMiddleware` khi production; nên gồm `127.0.0.1,localhost` nếu dùng `HEALTHCHECK` Docker nội bộ.
+
+Cloudflare prep:
+
+- `STORAGE_BACKEND=local` hiện hoạt động đầy đủ; `r2` là stub để tích hợp R2 sau.
+- `QUEUE_BACKEND=local` dùng FastAPI `BackgroundTasks`; `cloudflare` là stub cho Queues.
+- Job metadata vẫn file-based qua repository pattern, tương thích với D1/SQLite sau này.
 
 ## Docker & triển khai (Phase 11)
 

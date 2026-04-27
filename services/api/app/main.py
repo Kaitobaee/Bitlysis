@@ -43,7 +43,7 @@ async def _retention_loop(cfg: Settings):
     while True:
         await asyncio.sleep(cfg.retention_sweep_interval_seconds)
         try:
-            n = sweep_expired_jobs(cfg)
+            n = await sweep_expired_jobs(cfg)
             log_event(log, "retention_sweep", deleted=n)
         except Exception:
             log.exception("retention_sweep_failed")

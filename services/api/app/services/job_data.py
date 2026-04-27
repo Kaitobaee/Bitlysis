@@ -7,21 +7,25 @@ from typing import Any
 import pandas as pd
 
 from app.config import Settings
+from app.storage import get_storage
 
 
-def load_job_dataframe(settings: Settings, raw: dict[str, Any]) -> pd.DataFrame:
+async def load_job_dataframe(settings: Settings, raw: dict[str, Any]) -> pd.DataFrame:
     name = raw.get("stored_as")
     if not name:
         msg = "Job meta missing stored_as"
         raise ValueError(msg)
-    path = (settings.upload_dir / str(name)).resolve()
-    upload_root = settings.upload_dir.resolve()
-    path.relative_to(upload_root)
-    suffix = path.suffix.lower()
+    key = str(name)
+    suffix = "." + key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    content = await get_storage(settings).read_file(key)
     if suffix == ".csv":
-        return pd.read_csv(path)
+        from io import BytesIO
+
+        return pd.read_csv(BytesIO(content))
     if suffix in {".xlsx", ".xlsm"}:
-        with pd.ExcelFile(path, engine="openpyxl") as xl:
+        from io import BytesIO
+
+        with pd.ExcelFile(BytesIO(content), engine="openpyxl") as xl:
             return pd.read_excel(xl, sheet_name=0)
     msg = f"Unsupported file type for dataframe load: {suffix}"
     raise ValueError(msg)

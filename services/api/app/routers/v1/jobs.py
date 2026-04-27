@@ -1,12 +1,11 @@
+import pandas as pd
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
-import pandas as pd
-
 from app.config import Settings, get_settings
+from app.jobs import get_queue
+from app.repositories import get_job_repository
 from app.schemas.job import AnalyzeAccepted, JobDetail, JobStatus
 from app.schemas.stats import AnalyzeRequest
-from app.services import job_store
-from app.services.analyze_tasks import run_analyze
 from app.services.job_data import load_job_dataframe
 
 router = APIRouter(tags=["jobs"])
@@ -55,30 +54,30 @@ def _column_chart_payload(
 
 
 @router.get("/jobs/{job_id}", response_model=JobDetail)
-def get_job(
+async def get_job(
     job_id: str,
     settings: Settings = Depends(get_settings),
 ) -> JobDetail:
-    detail = job_store.get_job_detail(settings, job_id)
+    detail = await get_job_repository(settings).get_job_detail(job_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Job không tồn tại")
     return detail
 
 
 @router.get("/jobs/{job_id}/charts/quick")
-def get_quick_chart(
+async def get_quick_chart(
     job_id: str,
     column: str = Query(..., min_length=1),
     chart_type: str = Query("bar", pattern="^(bar|pie|line|area|donut)$"),
     max_items: int = Query(12, ge=3, le=30),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, object]:
-    raw = job_store.read_raw_meta(settings, job_id)
+    raw = await get_job_repository(settings).get_job(job_id)
     if raw is None:
         raise HTTPException(status_code=404, detail="Job không tồn tại")
 
     try:
-        df = load_job_dataframe(settings, raw)
+        df = await load_job_dataframe(settings, raw)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"Không đọc được dữ liệu job: {e}") from e
 
@@ -99,7 +98,8 @@ async def start_analyze(
     spec: AnalyzeRequest,
     settings: Settings = Depends(get_settings),
 ) -> AnalyzeAccepted:
-    raw = job_store.read_raw_meta(settings, job_id)
+    repo = get_job_repository(settings)
+    raw = await repo.get_job(job_id)
     if raw is None:
         raise HTTPException(status_code=404, detail="Job không tồn tại")
     st = str(raw.get("status", ""))
@@ -110,8 +110,7 @@ async def start_analyze(
             detail=f"Job không thể chạy analyze ở trạng thái: {st}",
         )
     spec_dump = spec.model_dump(mode="json")
-    job_store.patch_meta(
-        settings,
+    await repo.patch_job(
         job_id,
         {
             "status": JobStatus.analyzing.value,
@@ -119,14 +118,14 @@ async def start_analyze(
             "analysis_spec": spec_dump,
         },
     )
-    background_tasks.add_task(run_analyze, settings, job_id, spec_dump)
+    await get_queue(settings, background_tasks).enqueue(job_id, "analyze", {"spec": spec_dump})
     return AnalyzeAccepted(job_id=job_id, status=JobStatus.analyzing)
 
 
 @router.delete("/jobs/{job_id}", status_code=204)
-def remove_job(
+async def remove_job(
     job_id: str,
     settings: Settings = Depends(get_settings),
 ) -> None:
-    if not job_store.delete_job(settings, job_id):
+    if not await get_job_repository(settings).delete_job(job_id):
         raise HTTPException(status_code=404, detail="Job không tồn tại")

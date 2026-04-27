@@ -13,7 +13,9 @@ services:
     environment:
       API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
       UPLOAD_DIR: /data/uploads
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-local}
     volumes:
       - bitlysis-uploads:/data/uploads
 
@@ -29,7 +31,9 @@ services:
     environment:
       API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
       UPLOAD_DIR: /data/uploads
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-local}
       BITLYSIS_PLS_WORKER_ROLE: "1"
     volumes:
       - bitlysis-uploads:/data/uploads

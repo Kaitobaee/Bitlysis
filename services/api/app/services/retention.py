@@ -2,29 +2,24 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 from app.config import Settings
-from app.services import job_store
+from app.repositories.job_repository import FileJobRepository
 
 logger = logging.getLogger(__name__)
 
 
-def sweep_expired_jobs(settings: Settings) -> int:
+async def sweep_expired_jobs(settings: Settings) -> int:
     if not settings.retention_enabled:
-        return 0
-    upload_dir = settings.upload_dir
-    if not upload_dir.is_dir():
         return 0
 
     cutoff = datetime.now(UTC) - timedelta(hours=settings.retention_hours)
     deleted = 0
-    for meta_file in upload_dir.glob("*.meta.json"):
+    repo = FileJobRepository(settings)
+    for raw in await repo.iter_jobs():
         try:
-            raw = json.loads(meta_file.read_text(encoding="utf-8"))
             uploaded_str = raw.get("uploaded_at")
             if not uploaded_str:
                 continue
@@ -33,18 +28,9 @@ def sweep_expired_jobs(settings: Settings) -> int:
                 uploaded = uploaded.replace(tzinfo=UTC)
             if uploaded < cutoff:
                 job_id = str(raw["job_id"])
-                if job_store.delete_job(settings, job_id):
+                if await repo.delete_job(job_id):
                     deleted += 1
-        except (json.JSONDecodeError, KeyError, ValueError):
-            _delete_orphan_meta(meta_file, upload_dir)
+        except (KeyError, ValueError):
             continue
     return deleted
-
-
-def _delete_orphan_meta(meta_file: Path, _upload_dir: Path) -> None:
-    """Meta hỏng: xóa file .meta để tránh tích lũy."""
-    try:
-        meta_file.unlink(missing_ok=True)
-    except OSError:
-        logger.warning("Could not delete corrupt meta %s", meta_file)
 

@@ -11,5 +11,8 @@ class ExportStartAccepted(BaseModel):
     job_id: str
     status: JobStatus = JobStatus.exporting
     message: str = Field(
-        default="Job chuyển sang exporting — gọi POST /export để tải ZIP nặng.",
+        default=(
+            "Job chuyển sang exporting và đã enqueue export. "
+            "Poll GET /jobs/<id> hoặc tải lại khi export_stored_as xuất hiện."
+        ),
     )
