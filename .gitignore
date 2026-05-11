@@ -60,3 +60,6 @@ datasets/
 # Test / coverage
 coverage/
 .nyc_output/
+
+# Dockerfile original
+Dockerfile

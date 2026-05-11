@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+# Dockerfile.render - Tối ưu cho Render Free Tier
+# Không cài R để giảm image size ~60%
+
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1     PYTHONDONTWRITEBYTECODE=0     PIP_NO_CACHE_DIR=1     PIP_DISABLE_PIP_VERSION_CHECK=1     UVICORN_WORKERS=1     UVICORN_TIMEOUT_KEEP_ALIVE=5     UVICORN_LIMIT_CONCURRENCY=10     HOST=0.0.0.0     PORT=8000     STORAGE_BACKEND=local     UPLOAD_DIR=/tmp/uploads     QUEUE_BACKEND=local     APP_ENVIRONMENT=production
+
+# Cài dependencies tối thiểu (KHÔNG cài R)
+RUN apt-get update && apt-get install -y --no-install-recommends     curl ca-certificates libfreetype6-dev libpng-dev     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /app
+
+# Copy và install Python deps trước để cache layer
+COPY services/api/pyproject.toml ./
+RUN pip install --no-cache-dir     fastapi uvicorn[standard] python-multipart     pydantic pydantic-settings pandas numpy scipy     statsmodels matplotlib openpyxl httpx     beautifulsoup4 reportlab python-docx plotly
+
+# Copy source code
+COPY services/api /app
+
+# Pre-compile bytecode để khởi động nhanh
+RUN python -m compileall /app/app 2>/dev/null || true
+
+# Tạo upload dir trên /tmp (nhanh hơn, ephemeral)
+RUN mkdir -p /tmp/uploads
+
+EXPOSE 8000
+
+# Healthcheck nhẹ - start-period ngắn hơn
+HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=2     CMD curl -fsS http://127.0.0.1:8000/health || exit 1
+
+# Chạy với 1 worker, giới hạn concurrency
+CMD exec uvicorn app.main:app     --host 0.0.0.0     --port 8000     --workers 1     --limit-concurrency 10     --timeout-keep-alive 5     --h11-max-incomplete-event-size 16384

@@ -1,35 +1,59 @@
-# Phase 11 — Render Blueprint (staging/production).
-# Thay service name / branch và gán secrets trên dashboard (OPENROUTER_API_KEY, …).
-# Staging URL ví dụ: https://bitlysis-api-staging.onrender.com
-
 services:
   - type: web
-    name: bitlysis-api-staging
+    name: bitlysis-api
     runtime: docker
-    region: frankfurt
-    plan: starter
-    branch: main
-    dockerfilePath: ./services/api/Dockerfile
-    dockerContext: .
-    healthCheckPath: /health
+    plan: free
+    dockerfilePath: ./Dockerfile.render
     envVars:
       - key: APP_ENVIRONMENT
         value: production
       - key: API_CORS_ORIGINS
-        sync: false
+        value: "https://bitlysis-web.vercel.app,http://localhost:3000"
       - key: API_TRUSTED_HOSTS
-        sync: false
+        value: "bitlysis-api.onrender.com,127.0.0.1,localhost"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8000"
+      - key: STORAGE_BACKEND
+        value: local
       - key: UPLOAD_DIR
-        value: /data/uploads
-
-  - type: worker
-    name: bitlysis-r-pipeline-staging
-    runtime: docker
-    region: frankfurt
-    plan: starter
-    branch: main
-    dockerfilePath: ./packages/r-pipeline/Dockerfile
-    dockerContext: .
-    envVars:
-      - key: BITLYSIS_R_PKG_ROOT
-        value: /opt/bitlysis/packages/r-pipeline
+        value: /tmp/uploads
+      - key: QUEUE_BACKEND
+        value: local
+      - key: MAX_UPLOAD_BYTES
+        value: "10485760"
+      - key: RETENTION_ENABLED
+        value: true
+      - key: RETENTION_HOURS
+        value: 1
+      - key: RETENTION_SWEEP_INTERVAL_SECONDS
+        value: 300
+      - key: UPLOAD_RATE_LIMIT_ENABLED
+        value: true
+      - key: UPLOAD_RATE_LIMIT_MAX_REQUESTS
+        value: 10
+      - key: UPLOAD_RATE_LIMIT_WINDOW_SECONDS
+        value: 60
+      - key: PROFILING_MAX_ROWS
+        value: 5000
+      - key: R_SUBPROCESS_TIMEOUT_SECONDS
+        value: 60
+      - key: LLM_ENABLED
+        value: false
+      - key: EXPORT_INCLUDE_PLOTLY
+        value: false
+      - key: EXPORT_ZIP_HEAVY_THRESHOLD_BYTES
+        value: 1048576
+      - key: EXPORT_MAX_ZIP_BYTES
+        value: 52428800
+      - key: EXPORT_DATA_MAX_ROWS
+        value: 50000
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: PYTHONDONTWRITEBYTECODE
+        value: 0
+      - key: UVICORN_WORKERS
+        value: 1
+    healthCheckPath: /health
+    autoDeploy: false
