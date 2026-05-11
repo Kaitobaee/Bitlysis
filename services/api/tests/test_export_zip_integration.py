@@ -79,12 +79,16 @@ def test_export_zip_contains_docs_layout_and_excel_sheets(export_client):
     man = json.loads(zf.read("run_manifest.json").decode("utf-8"))
     assert man.get("export", {}).get("phase") == 8
     wb = load_workbook(BytesIO(zf.read("docs/data/workbook.xlsx")))
-    assert set(wb.sheetnames) == {"data_clean", "results_raw"}
-    assert len(wb.sheetnames) == 2
+    # Phase 2: thêm sheet `data_raw` + `cleaning_log` bên cạnh các sheet cũ.
+    assert set(wb.sheetnames) == {"data_clean", "data_raw", "cleaning_log", "results_raw"}
     ws = wb["data_clean"]
     assert ws.max_row >= 2
     ws2 = wb["results_raw"]
     assert ws2.max_row >= 2
+    ws3 = wb["data_raw"]
+    assert ws3.max_row >= 2
+    ws4 = wb["cleaning_log"]
+    assert ws4.max_row >= 1
 
 
 def test_heavy_export_requires_start_then_succeeds(tmp_path: Path) -> None:

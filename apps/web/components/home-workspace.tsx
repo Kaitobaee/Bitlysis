@@ -19,7 +19,7 @@ import {
   startAnalyze,
   startExportPhase,
 } from "@/lib/api";
-import { fullAutoAnalysisSpec } from "@/lib/analyze-default";
+import { comprehensiveAnalysisSpec } from "@/lib/analyze-default";
 import { useI18n } from "@/lib/i18n";
 import {
   isBusyStatus,
@@ -416,7 +416,10 @@ export function HomeWorkspace() {
     pollAbortRef.current = ac;
     setBusyAnalyze(true);
     try {
-      await startAnalyze(job.job_id, fullAutoAnalysisSpec() as unknown as Record<string, unknown>);
+      await startAnalyze(
+        job.job_id,
+        comprehensiveAnalysisSpec() as unknown as Record<string, unknown>,
+      );
       toast.success(t("toast.analyzeOk"));
       const final = await pollJobUntil(
         job.job_id,

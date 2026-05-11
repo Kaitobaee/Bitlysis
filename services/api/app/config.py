@@ -73,23 +73,43 @@ class Settings(BaseSettings):
         description="Số dòng tối đa đọc cho profiling (cap bộ nhớ)",
     )
 
+    # Legacy R fields — giữ để client/test cũ không gãy; engine giờ là Python (ADR 0005).
     r_subprocess_timeout_seconds: int = Field(
         default=180,
         ge=15,
         le=3600,
-        description="Timeout Rscript Phase 5 (Cronbach/EFA/PLS)",
+        description="Deprecated — không còn dùng (engine Python).",
     )
     r_package_root: Path | None = Field(
         default=None,
-        description="Thư mục packages/r-pipeline; mặc định suy ra từ repo",
+        description="Deprecated — chỉ giữ để định vị fixture tests cũ.",
     )
     bitlysis_rscript_path: Path | None = Field(
         default=None,
-        description="Đường dẫn đầy đủ tới Rscript.exe nếu không có trên PATH",
+        description="Deprecated — không còn gọi Rscript.",
     )
     run_endpoint_token: str | None = Field(
         default=None,
         description="Token bảo vệ POST /v1/run qua header X-Run-Token",
+    )
+
+    # Phase 3 — orchestrator comprehensive_analysis
+    analysis_random_seed_default: int = Field(
+        default=42,
+        ge=0,
+        description="Seed mặc định cho bootstrap/permutation khi spec không truyền",
+    )
+    cleaning_missing_drop_column_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Drop cột nếu missing_pct vượt ngưỡng (orchestrator default)",
+    )
+    pls_bootstrap_samples_default: int = Field(
+        default=500,
+        ge=0,
+        le=5000,
+        description="Số mẫu bootstrap PLS-SEM mặc định",
     )
 
     # Phase 7 — OpenRouter (ADR 0004)

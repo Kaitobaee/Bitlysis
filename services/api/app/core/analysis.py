@@ -9,14 +9,96 @@ from pydantic import TypeAdapter
 
 from app.config import Settings
 from app.repositories import get_job_repository
-from app.schemas.stats import AnalyzeRequest, FullAutoAnalysisSpec, RPipelineSpec, TimeSeriesSpec
+from app.schemas.stats import (
+    AnalyzeRequest,
+    ComprehensiveAnalysisSpec,
+    FullAutoAnalysisSpec,
+    PsychometricsSpec,
+    TimeSeriesSpec,
+)
 from app.services.auto_analysis import run_full_auto_analysis
 from app.services.job_data import load_job_dataframe
-from app.services.r_pipeline import run_r_pipeline_json
+from app.services.psychometrics import ENGINE_ID as PSYCHO_ENGINE_ID
+from app.services.psychometrics import run_psychometrics
 from app.services.stats_engine import build_basic_analysis, run_stats_analysis
 from app.services.timeseries_engine import run_timeseries_analysis
 
 logger = logging.getLogger(__name__)
+
+
+def _map_psychometrics_results(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Map output dispatcher psychometrics → key shape mà UI ResultSummary mong đợi.
+
+    Trả về dict gồm `cronbach`, `efa`, `pls_sem` (mỗi cái là list các result block
+    cùng type), kèm các alias `factor_loadings`, `htmt`, `path_coefficients`,
+    `r2`, `q2`, `f2`, `bootstrapping`, `fornell_larcker`, `measurement_model`,
+    `structural_model` để mở rộng UI sau này không cần đổi backend.
+    """
+    out: dict[str, Any] = {}
+    results = parsed.get("results") if isinstance(parsed, dict) else None
+    if not isinstance(results, list):
+        return out
+
+    cronbach: list[dict[str, Any]] = []
+    efa: list[dict[str, Any]] = []
+    pls: list[dict[str, Any]] = []
+    for block in results:
+        if not isinstance(block, dict):
+            continue
+        typ = block.get("type")
+        if typ == "cronbach_alpha":
+            cronbach.append(block)
+        elif typ == "efa":
+            efa.append(block)
+        elif typ == "pls_sem":
+            pls.append(block)
+
+    if cronbach:
+        out["cronbach"] = cronbach
+    if efa:
+        out["efa"] = efa
+        first_efa = next((b for b in efa if b.get("ran")), efa[0])
+        if first_efa.get("loadings"):
+            out["factor_loadings"] = first_efa["loadings"]
+        if first_efa.get("communalities"):
+            out["communalities"] = first_efa["communalities"]
+        if first_efa.get("variance_proportion"):
+            out["variance_explained"] = first_efa["variance_proportion"]
+        if first_efa.get("eigenvalues"):
+            out["eigenvalues"] = first_efa["eigenvalues"]
+        if first_efa.get("scree_plot"):
+            out["scree_plot"] = first_efa["scree_plot"]
+        if first_efa.get("kmo_bartlett"):
+            out["kmo_bartlett"] = first_efa["kmo_bartlett"]
+        if first_efa.get("factor_correlation_matrix"):
+            out["factor_correlation_matrix"] = first_efa["factor_correlation_matrix"]
+    if pls:
+        out["pls_sem"] = pls
+        first_pls = next((b for b in pls if b.get("ran")), pls[0])
+        if first_pls.get("measurement_model"):
+            out["measurement_model"] = first_pls["measurement_model"]
+        if first_pls.get("structural_model"):
+            out["structural_model"] = first_pls["structural_model"]
+            paths = first_pls["structural_model"].get("path_coefficients")
+            if paths:
+                out["path_coefficients"] = paths
+            r2 = first_pls["structural_model"].get("r_squared")
+            if r2:
+                out["r2"] = r2
+            q2 = first_pls["structural_model"].get("q_squared")
+            if q2:
+                out["q2"] = q2
+            f2 = first_pls["structural_model"].get("f_squared")
+            if f2:
+                out["f2"] = f2
+        if first_pls.get("htmt"):
+            out["htmt"] = first_pls["htmt"]
+        if first_pls.get("fornell_larcker"):
+            out["fornell_larcker"] = first_pls["fornell_larcker"]
+        if first_pls.get("bootstrapping"):
+            out["bootstrapping"] = first_pls["bootstrapping"]
+
+    return out
 
 
 async def run_analysis_job(settings: Settings, job_id: str, spec_payload: dict[str, Any]) -> None:
@@ -65,23 +147,26 @@ async def run_analysis_job(settings: Settings, job_id: str, spec_payload: dict[s
             )
             return
 
-        if isinstance(spec, RPipelineSpec):
-            parsed, r_stderr, rc = run_r_pipeline_json(settings, df, spec.analyses)
+        if isinstance(spec, PsychometricsSpec):
+            seed = getattr(spec, "random_seed", None)
+            parsed = run_psychometrics(df, spec.analyses, random_seed=seed)
             basic = build_basic_analysis(df)
+            ok = bool(parsed.get("ok"))
+            mapped = _map_psychometrics_results(parsed)
             summary = {
-                "engine": "bitlysis_r_pipeline",
-                "version": 5,
+                "engine": PSYCHO_ENGINE_ID,
+                "version": 6,
                 "spec": spec_payload,
-                "r_output": parsed,
-                "r_stderr": (r_stderr or "")[:16_000],
-                "r_returncode": rc,
+                "psychometrics_output": parsed,
+                "r_output": parsed,  # alias backward-compat
+                "r_stderr": "",
+                "r_returncode": 0 if ok else 1,
                 "results": {
                     **basic,
-                    **(parsed if isinstance(parsed, dict) else {}),
+                    **mapped,
                 },
                 "profiling": raw.get("profiling"),
             }
-            ok = bool(parsed.get("ok")) and rc == 0
             await repo.patch_job(
                 job_id,
                 {
@@ -90,8 +175,8 @@ async def run_analysis_job(settings: Settings, job_id: str, spec_payload: dict[s
                     "error": None
                     if ok
                     else {
-                        "code": "r_pipeline_failed",
-                        "message": str(parsed.get("error", "R pipeline lỗi"))[:2000],
+                        "code": "psychometrics_failed",
+                        "message": str(parsed.get("error", "Psychometrics lỗi"))[:2000],
                     },
                 },
             )
@@ -99,6 +184,20 @@ async def run_analysis_job(settings: Settings, job_id: str, spec_payload: dict[s
 
         if isinstance(spec, FullAutoAnalysisSpec):
             summary = run_full_auto_analysis(settings, df, spec)
+            await repo.patch_job(
+                job_id,
+                {
+                    "status": "succeeded",
+                    "result_summary": summary,
+                    "error": None,
+                },
+            )
+            return
+
+        if isinstance(spec, ComprehensiveAnalysisSpec):
+            from app.services.orchestrator import run_comprehensive_analysis
+
+            summary = await run_comprehensive_analysis(settings, raw, df, spec)
             await repo.patch_job(
                 job_id,
                 {

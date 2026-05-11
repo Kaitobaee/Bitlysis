@@ -1,4 +1,7 @@
-name: R Core Scheduled Run
+name: Psychometrics Core Scheduled Run
+
+# ADR 0005: engine R đã được port sang Python. Workflow này giữ tên file cũ
+# để không phá CI subscribers; gọi `/v1/run` (psychometrics Python) thay vì R.
 
 on:
   workflow_dispatch:
@@ -10,7 +13,7 @@ jobs:
   call-run-endpoint:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Bitlysis R core endpoint
+      - name: Call Bitlysis psychometrics core endpoint
         env:
           RUN_ENDPOINT_URL: ${{ secrets.RUN_ENDPOINT_URL }}
           RUN_ENDPOINT_TOKEN: ${{ secrets.RUN_ENDPOINT_TOKEN }}

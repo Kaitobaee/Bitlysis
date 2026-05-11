@@ -774,6 +774,17 @@ def _merge_sections(primary: list[dict[str, str]], secondary: list[dict[str, str
     return out
 
 
+def _augment_when_thin(primary: list[str], fallback: list[str], *, max_items: int = 6) -> list[str]:
+    """Use the page-specific items first; only top up from the mode boilerplate
+    if the LLM/heuristic output is too thin. This keeps the per-URL analysis
+    front-and-center instead of being drowned by canned mode-lens text.
+    """
+    cleaned_primary = [item for item in (_clean_text(p) for p in primary) if item]
+    if len(cleaned_primary) >= 2:
+        return _dedupe_keep_order(cleaned_primary, max_items=max_items)
+    return _dedupe_keep_order([*cleaned_primary, *fallback], max_items=max_items)
+
+
 def _apply_mode_lens(
     *,
     analysis_mode: str,
@@ -789,17 +800,13 @@ def _apply_mode_lens(
     base_summary = _strip_redundant_summary_prefix(summary)
     summary = f"{lead}: {base_summary}" if base_summary else lead
 
-    findings_out = _dedupe_keep_order([*profile["findings"], *findings], max_items=6)
-    highlights_out = _dedupe_keep_order([*profile["highlights"], *highlights], max_items=6)
-    recommendations_out = _dedupe_keep_order([*profile["recommendations"], *recommendations], max_items=6)
-    sections_out = _merge_sections(profile["sections"], sections, max_items=6)
+    findings_out = _augment_when_thin(findings, list(profile["findings"]), max_items=6)
+    highlights_out = _augment_when_thin(highlights, list(profile["highlights"]), max_items=6)
+    recommendations_out = _augment_when_thin(recommendations, list(profile["recommendations"]), max_items=6)
+    sections_out = _merge_sections(sections, profile["sections"], max_items=6)
 
-    mode_evidence = {
-        "label": "Mode lens",
-        "detail": f"Đầu ra được điều chỉnh theo chế độ {analysis_mode}.",
-    }
-    evidence_out = [mode_evidence]
-    seen_ev: set[str] = {f"{mode_evidence['label']}::{mode_evidence['detail']}".lower()}
+    evidence_out: list[dict[str, str]] = []
+    seen_ev: set[str] = set()
     for item in evidence:
         label = _clean_text(str(item.get("label", "")))[:120]
         detail = _clean_text(str(item.get("detail", "")))[:320]
@@ -813,10 +820,17 @@ def _apply_mode_lens(
         if len(evidence_out) >= 6:
             break
 
+    if not evidence_out:
+        mode_evidence = {
+            "label": "Mode lens",
+            "detail": f"Đầu ra được điều chỉnh theo chế độ {analysis_mode}.",
+        }
+        evidence_out.append(mode_evidence)
+
     return summary, findings_out, highlights_out, recommendations_out, sections_out, evidence_out
 
 
-def _find_browser_executable() -> str | None:
+def _find_browser_executables() -> list[str]:
     candidates = [
         shutil.which("chrome"),
         shutil.which("msedge"),
@@ -825,42 +839,113 @@ def _find_browser_executable() -> str | None:
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     ]
+    found: list[str] = []
+    seen: set[str] = set()
     for candidate in candidates:
-        if candidate:
-            return candidate
-    return None
+        if not candidate:
+            continue
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(candidate)
+    return found
+
+
+_SCREENSHOT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+
+def _run_headless_screenshot(
+    browser: str,
+    source_url: str,
+    *,
+    output_path: str,
+    profile_dir: str,
+    headless_mode: str,
+) -> tuple[bool, str]:
+    """Run a single headless capture attempt; return (success, stderr_excerpt)."""
+    command = [
+        browser,
+        headless_mode,
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-extensions",
+        "--disable-popup-blocking",
+        "--disable-features=Translate,IsolateOrigins,site-per-process",
+        "--ignore-certificate-errors",
+        "--window-size=1440,1800",
+        f"--user-data-dir={profile_dir}",
+        f"--user-agent={_SCREENSHOT_USER_AGENT}",
+        "--lang=vi-VN",
+        "--accept-lang=vi-VN,vi;q=0.9,en;q=0.7",
+        "--virtual-time-budget=12000",
+        f"--screenshot={output_path}",
+        source_url,
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return False, f"{type(exc).__name__}: {exc}"
+
+    stderr_text = (completed.stderr or b"").decode("utf-8", errors="replace")[:400]
+    if completed.returncode != 0:
+        return False, stderr_text
+    return True, stderr_text
 
 
 def _capture_real_website_screenshot(source_url: str) -> bytes | None:
-    browser = _find_browser_executable()
-    if not browser:
+    browsers = _find_browser_executables()
+    if not browsers:
         return None
+
+    # Chrome headless mode keyword changes between versions. "--headless=new"
+    # (Chrome >=109) renders modern pages reliably; if a build rejects it we
+    # transparently fall back to the legacy "--headless" flag.
+    headless_modes = ("--headless=new", "--headless")
 
     with tempfile.TemporaryDirectory() as temp_dir:
         output_path = f"{temp_dir}\\website.png"
-        command = [
-            browser,
-            "--headless",
-            "--disable-gpu",
-            "--hide-scrollbars",
-            "--window-size=1440,1800",
-            "--virtual-time-budget=5000",
-            f"--screenshot={output_path}",
-            source_url,
-        ]
-        try:
-            completed = subprocess.run(command, check=True, capture_output=True, timeout=30)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("website_screenshot_capture_failed: %s", type(exc).__name__)
-            return None
+        profile_dir = f"{temp_dir}\\profile"
 
-        if completed.returncode != 0:
-            return None
-        try:
-            with open(output_path, "rb") as handle:
-                return handle.read()
-        except OSError:
-            return None
+        last_error = ""
+        for browser in browsers:
+            for mode in headless_modes:
+                ok, stderr_text = _run_headless_screenshot(
+                    browser,
+                    source_url,
+                    output_path=output_path,
+                    profile_dir=profile_dir,
+                    headless_mode=mode,
+                )
+                if not ok:
+                    last_error = stderr_text or last_error
+                    continue
+                try:
+                    with open(output_path, "rb") as handle:
+                        data = handle.read()
+                except OSError as exc:
+                    last_error = f"OSError: {exc}"
+                    continue
+                if not data or len(data) < 1024:
+                    # Browser may exit 0 but produce an empty/placeholder PNG;
+                    # treat that as failure so we fall back to the SVG preview.
+                    last_error = f"empty_or_tiny_png_size={len(data)}"
+                    continue
+                return data
+
+        if last_error:
+            logger.warning("website_screenshot_capture_failed: %s", last_error[:240])
+        return None
 
 
 def _build_website_screenshot_url(source_url: str) -> str | None:
@@ -1525,6 +1610,143 @@ def _analyze_text(
     )
 
 
+DEFAULT_FETCH_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+DEFAULT_FETCH_HEADERS = {
+    "User-Agent": DEFAULT_FETCH_USER_AGENT,
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+
+def _fetch_url_html(url: str, *, timeout: float = 30.0) -> httpx.Response:
+    """Fetch a page with browser-like headers, one retry, and TLS fallback.
+
+    Many Vietnamese .edu.vn sites sit behind WAFs that reject clients without
+    realistic User-Agent / Accept-Language headers, or briefly time out under
+    load. We mimic a modern browser and retry once on transient failures.
+    """
+    last_error: Exception | None = None
+    for attempt in (1, 2):
+        try:
+            with httpx.Client(
+                timeout=httpx.Timeout(timeout, connect=min(timeout, 10.0)),
+                follow_redirects=True,
+                headers=DEFAULT_FETCH_HEADERS,
+                http2=False,
+            ) as client:
+                response = client.get(url)
+                response.raise_for_status()
+                return response
+        except httpx.ConnectError as exc:
+            last_error = exc
+            if "CERTIFICATE_VERIFY_FAILED" in str(exc):
+                try:
+                    with httpx.Client(
+                        timeout=httpx.Timeout(timeout, connect=min(timeout, 10.0)),
+                        follow_redirects=True,
+                        headers=DEFAULT_FETCH_HEADERS,
+                        verify=False,
+                    ) as insecure_client:
+                        response = insecure_client.get(url)
+                        response.raise_for_status()
+                        return response
+                except Exception as retry_exc:  # noqa: BLE001
+                    last_error = retry_exc
+            if attempt == 1:
+                continue
+        except (httpx.ReadTimeout, httpx.WriteTimeout, httpx.ConnectTimeout, httpx.PoolTimeout) as exc:
+            last_error = exc
+            if attempt == 1:
+                continue
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            break
+
+    raise ValueError(f"Khong truy cap duoc URL: {last_error}") from last_error
+
+
+_ARTICLE_ROOT_SELECTORS = (
+    "main",
+    "article",
+    "[role='main']",
+    ".content",
+    ".main-content",
+    ".post-content",
+    ".entry-content",
+    "#content",
+    "#main",
+    "#main-content",
+)
+_ARTICLE_BLOCK_SELECTOR = "p, h1, h2, h3, h4, li, blockquote, dd, td, figcaption"
+_ARTICLE_BLOCKED_PARENTS = ("nav", "footer", "aside", "header", "form", "script", "style", "noscript")
+_ARTICLE_MIN_LENGTHS = {
+    "p": 25,
+    "h1": 8,
+    "h2": 8,
+    "h3": 8,
+    "h4": 8,
+    "li": 20,
+    "blockquote": 25,
+    "dd": 20,
+    "td": 20,
+    "figcaption": 20,
+}
+
+
+def _extract_article_text(soup: BeautifulSoup, *, max_chunks: int = 80) -> str:
+    """Collect meaningful text from the page across `<p>`, headings, `<li>`, etc.
+
+    Earlier versions relied solely on `<p>` tags longer than 35 characters,
+    which produced very little text on portal-style university homepages
+    (e.g., utc.edu.vn) where the body is structured around heading + list
+    blocks instead of long paragraphs. That starved downstream summarization
+    and led to generic, site-agnostic answers.
+    """
+    roots = soup.select(", ".join(_ARTICLE_ROOT_SELECTORS))
+    if not roots:
+        roots = [soup.body or soup]
+
+    chunks: list[str] = []
+    seen: set[str] = set()
+    for root in roots:
+        for tag in root.select(_ARTICLE_BLOCK_SELECTOR):
+            if tag.find_parent(_ARTICLE_BLOCKED_PARENTS):
+                continue
+            text = _sanitize_extracted_text(tag.get_text(" "))
+            if not text:
+                continue
+            min_len = _ARTICLE_MIN_LENGTHS.get(tag.name, 25)
+            if len(text) < min_len:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            chunks.append(text)
+            if len(chunks) >= max_chunks:
+                break
+        if len(chunks) >= max_chunks:
+            break
+
+    if chunks:
+        return "\n".join(chunks)
+
+    # Last-resort: full body text minus noise containers so we never feed an
+    # empty string to the analyzer.
+    body = soup.body or soup
+    return _sanitize_extracted_text(body.get_text(" "))
+
+
 def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> WebAnalyzeResponse:
     value = user_input.strip()
     normalized_mode = _normalize_analysis_mode(analysis_mode)
@@ -1532,33 +1754,20 @@ def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> Web
         raise ValueError("Input khong duoc rong")
 
     if _is_url(value):
-        try:
-            with httpx.Client(timeout=20.0, follow_redirects=True) as client:
-                response = client.get(value)
-                response.raise_for_status()
-        except httpx.ConnectError as exc:
-            if "CERTIFICATE_VERIFY_FAILED" not in str(exc):
-                raise ValueError(f"Khong truy cap duoc URL: {exc}") from exc
-            try:
-                with httpx.Client(timeout=20.0, follow_redirects=True, verify=False) as insecure_client:
-                    response = insecure_client.get(value)
-                    response.raise_for_status()
-            except Exception as retry_exc:  # noqa: BLE001
-                raise ValueError(f"Khong truy cap duoc URL: {retry_exc}") from retry_exc
-        except Exception as exc:  # noqa: BLE001
-            raise ValueError(f"Khong truy cap duoc URL: {exc}") from exc
+        response = _fetch_url_html(value)
 
         soup = BeautifulSoup(response.text, "html.parser")
-        page_title = _clean_text(soup.title.get_text(" ") if soup.title else "") or value
-        paragraphs = [_sanitize_extracted_text(p.get_text(" ")) for p in soup.select("p")]
-        paragraphs = [p for p in paragraphs if len(p) > 35][:40]
+        for noise in soup(["script", "style", "noscript", "template"]):
+            noise.decompose()
 
-        article_text = _sanitize_extracted_text(soup.get_text(" ")) if not paragraphs else "\n".join(paragraphs)
+        page_title = _clean_text(soup.title.get_text(" ") if soup.title else "") or value
+        article_text = _extract_article_text(soup)
 
         analysis = _analyze_text(article_text, "url", page_title, soup, analysis_mode=normalized_mode)
         analysis.metrics.append({"metric": "http_status", "value": int(response.status_code)})
         analysis.metrics.append({"metric": "links", "value": len(soup.select("a[href]"))})
         analysis.metrics.append({"metric": "headings", "value": len(soup.select("h1, h2, h3"))})
+        analysis.metrics.append({"metric": "content_chars", "value": len(article_text)})
         analysis.website_screenshot = _build_website_screenshot_url(str(response.url))
         analysis.related_websites = _extract_related_websites(soup, str(response.url))
         return analysis

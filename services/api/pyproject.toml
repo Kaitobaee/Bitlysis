@@ -1,9 +1,9 @@
 [project]
 name = "bitlysis-api"
-version = "0.1.0"
-description = "Bitlysis FastAPI orchestrator (Python + R bridge)"
+version = "0.2.0"
+description = "Bitlysis FastAPI orchestrator (Python-only psychometrics; ADR 0005)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",

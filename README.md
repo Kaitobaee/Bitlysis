@@ -1,25 +1,32 @@
 # Bitlysis
 
-Bitlysis là nền tảng phân tích dữ liệu và nội dung theo mô hình web + API + pipeline thống kê. Dự án hiện tập trung vào 4 hướng chính:
+Bitlysis là **statistical copilot** trên đám mây cho sinh viên, giảng viên và người làm khảo sát. Người dùng tải file, hệ thống tự động profile → làm sạch → chọn phương pháp → kiểm định → xuất báo cáo có cấu trúc và minh bạch.
 
-1. Phân tích website.
-2. Phân tích file Excel, Word và file dữ liệu.
-3. Phân tích nội dung văn bản, gợi ý bài báo liên quan và tóm tắt từng bài.
-4. Phân tích dữ liệu thống kê có cấu trúc, xuất báo cáo và minh bạch backend.
+## Lõi sản phẩm (đề tài)
+
+1. **Phân tích thống kê tự động** trên file CSV/Excel: t-test, ANOVA, hồi quy OLS, chi-square, chuỗi thời gian (ETS/ARIMA/Prophet).
+2. **Psychometrics Python**: Cronbach α, EFA, PLS-SEM (bootstrap, HTMT, Q², f²) — không còn phụ thuộc R, deploy Python-only.
+3. **AI hỗ trợ** (rule-based mặc định, LLM tuỳ chọn) gợi ý giả thuyết; engine thống kê vẫn quyết định kết quả.
+4. **Minh bạch học thuật**: hash file gốc, hash lock dependencies, random seed, version package, decision trace, manifest JSON.
+5. **Xuất ZIP** gồm Word học thuật, Excel (data_raw + data_clean + cleaning_log + results_raw), PDF bảng, biểu đồ PNG.
+
+## Module phụ trợ
+
+- **Phân tích website / nội dung**: tab riêng (`/web/analyze`), giúp demo nhanh; không thay thế phân tích thống kê.
 
 ## Cấu trúc repo
 
-- `apps/web` - Next.js frontend.
-- `services/api` - FastAPI orchestrator, job API, web analysis API.
-- `packages/r-pipeline` - R scripts và `renv` cho các phân tích nâng cao.
-- `docs` - tài liệu kiến trúc, ADR và báo cáo đối chiếu.
+- `apps/web` — Next.js frontend (`ResultSummary` academic-first).
+- `services/api` — FastAPI orchestrator + engine Python (`stats_engine`, `psychometrics`, `timeseries_engine`).
+- `packages/r-pipeline` — **legacy**, chỉ giữ fixture/test tham chiếu; runtime không còn gọi R.
+- `docs` — kiến trúc, ADR, báo cáo đối chiếu, methodology.
 
 ## Yêu cầu môi trường
 
 - Node.js 22+
 - pnpm 9.x
-- Python 3.11+
-- R 4.4+ nếu chạy pipeline R
+- **Python 3.11+** (bắt buộc; pin trong `pyproject.toml`)
+- ~~R 4.4+~~ — **không còn cần** kể từ ADR 0005.
 
 ## Chạy frontend
 
@@ -34,7 +41,7 @@ Frontend mặc định chạy tại `http://localhost:3000`.
 
 ```bash
 cd services/api
-python -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\activate
 pip install -e ".[dev]"
 uvicorn app.main:app --reload --port 8000
@@ -49,8 +56,13 @@ Copy `services/api/.env.example` sang `services/api/.env` rồi cấu hình:
 - `API_CORS_ORIGINS`
 - `UPLOAD_DIR`
 - `LLM_ENABLED`
-- `OPENROUTER_API_KEY` hoặc `OPENAI_API_KEY`
-- `OPENROUTER_MODEL` hoặc `OPENAI_MODEL`
+- `OPENROUTER_API_KEY` hoặc `OPENAI_API_KEY` (tuỳ chọn — chỉ dùng cho gợi ý giả thuyết, không thay engine)
+
+## Quy trình một-lần-chạy (`comprehensive_analysis`)
+
+`POST /v1/upload` → `POST /v1/jobs/{id}/analyze` với spec `{ "kind": "comprehensive_analysis", ... }` →
+orchestrator tự chạy profiling → cleaning → hypothesis suggest → engine dispatch → unified schema.
+Xem chi tiết: [docs/Methodology.md](docs/Methodology.md).
 
 ## Lệnh kiểm tra nhanh
 
@@ -72,10 +84,6 @@ pytest tests -q
 ## Tài liệu liên quan
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
-- [docs/adr/](docs/adr/)
+- [docs/adr/](docs/adr/) (ADR 0005: Python-only stats engine)
+- [docs/Methodology.md](docs/Methodology.md)
 - [docs/bao-cao-doi-chieu-de-tai-va-san-pham.md](docs/bao-cao-doi-chieu-de-tai-va-san-pham.md)
-
-## Ghi chú
-
-- Phần AI web analysis hiện hỗ trợ phân tích website, nội dung text và gợi ý bài báo liên quan.
-- Phần data analysis ưu tiên output có cấu trúc, provenance và khả năng kiểm chứng.

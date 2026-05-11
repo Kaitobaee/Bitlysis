@@ -59,6 +59,7 @@ def test_hypothesis_suggestions_no_api_key_uses_disabled(tmp_path: Path) -> None
         max_upload_bytes=2 * 1024 * 1024,
         api_cors_origins="http://test",
         openrouter_api_key=None,
+        openai_api_key=None,
         llm_enabled=True,
     )
     app.dependency_overrides[get_settings] = lambda: custom

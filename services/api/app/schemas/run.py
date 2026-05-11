@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class RunRequest(BaseModel):
-    """Payload tối giản để gọi trực tiếp R core engine."""
+    """Payload tối giản để gọi trực tiếp psychometrics core engine."""
 
     records: list[dict[str, Any]] = Field(
         min_length=1,
@@ -14,13 +14,17 @@ class RunRequest(BaseModel):
     )
     analyses: list[dict[str, Any]] = Field(
         min_length=1,
-        description='Danh sách phân tích R, ví dụ {"type":"cronbach_alpha",...}',
+        description='Danh sách phân tích, ví dụ {"type":"cronbach_alpha",...}',
+    )
+    random_seed: int | None = Field(
+        default=None,
+        description="Seed bootstrap PLS-SEM; null = không cố định",
     )
 
 
 class RunResponse(BaseModel):
     ok: bool
-    engine: str = "bitlysis_r_pipeline"
-    r_returncode: int
+    engine: str = "bitlysis_python_psychometrics"
+    r_returncode: int = Field(default=0, description="Backward compat: 0 ok, !=0 lỗi")
     result: dict[str, Any]
     stderr: str | None = None

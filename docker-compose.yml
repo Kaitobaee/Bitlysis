@@ -1,6 +1,8 @@
-# Phase 11 — local stack. Profile `pls`: bản sao API với giới hạn RAM cao hơn (tránh OOM PLS-SEM / R nặng).
+# Local stack — Python-only (ADR 0005).
 # Dùng: docker compose up
-# PLS worker: docker compose --profile pls up -d
+#
+# Profile `pls` đã bỏ — PLS-SEM giờ chạy in-process Python, không cần worker
+# RAM riêng.
 
 services:
   api:
@@ -18,29 +20,6 @@ services:
       QUEUE_BACKEND: ${QUEUE_BACKEND:-local}
     volumes:
       - bitlysis-uploads:/data/uploads
-
-  api-pls-worker:
-    profiles:
-      - pls
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: pls-worker
-    ports:
-      - "8001:8000"
-    environment:
-      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
-      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
-      UPLOAD_DIR: /data/uploads
-      QUEUE_BACKEND: ${QUEUE_BACKEND:-local}
-      BITLYSIS_PLS_WORKER_ROLE: "1"
-    volumes:
-      - bitlysis-uploads:/data/uploads
-    deploy:
-      resources:
-        limits:
-          memory: 4G
 
 volumes:
   bitlysis-uploads:

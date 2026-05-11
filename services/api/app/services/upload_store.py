@@ -15,7 +15,7 @@ from app.schemas.job import JobStatus
 from app.schemas.profiling import ProfilingSummary
 from app.services.file_magic import validate_saved_file_magic
 from app.services.profiling import profile_file
-from app.services.provenance import build_run_manifest
+from app.services.provenance import build_run_manifest, file_sha256
 from app.storage import get_storage
 
 ALLOWED_SUFFIXES = frozenset({".csv", ".xlsx", ".xlsm"})
@@ -113,7 +113,19 @@ async def save_and_validate_upload(
 
     ts = datetime.now(UTC).isoformat()
     manifest_rel = f"{job_id}.manifest.json"
-    manifest_body = build_run_manifest(job_id, PROFILING_ENGINE_VERSION)
+    file_hash = file_sha256(dest)
+    manifest_body = build_run_manifest(
+        job_id,
+        PROFILING_ENGINE_VERSION,
+        file_hash=file_hash,
+    )
+    manifest_body["source_file"] = {
+        "original_filename": original,
+        "stored_as": dest_name,
+        "size_bytes": size,
+        "content_type": file.content_type,
+        "sha256": file_hash,
+    }
     manifest_body["profiling_sample"] = {
         "row_count_profiled": prof.row_count_in_profile,
         "profiled_row_cap": prof.profiled_row_cap,
@@ -121,6 +133,10 @@ async def save_and_validate_upload(
         "encoding_used": prof.encoding_used,
         "sheet_used": prof.sheet_used,
         "transformations": prof.transformations,
+    }
+    manifest_body["phase_timestamps"] = {
+        "uploaded_at": ts,
+        "profiled_at": ts,
     }
     await storage.save_file(
         manifest_rel,
@@ -146,6 +162,7 @@ async def save_and_validate_upload(
         "stored_as": dest_name,
         "size_bytes": size,
         "content_type": file.content_type,
+        "file_sha256": file_hash,
         "uploaded_at": ts,
         "status": JobStatus.uploaded.value,
         "status_updated_at": ts,

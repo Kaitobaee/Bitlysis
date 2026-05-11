@@ -20,7 +20,8 @@ def _wait_for_status(client, job_id: str, expected: set[str]) -> dict:
     raise AssertionError(f"Timed out waiting for {expected}; last status={final}")
 
 
-def test_full_auto_analysis_python_fallback(client):
+def test_full_auto_analysis_python_skip_psychometrics(client):
+    """Khi `prefer_r=False`, skip khối psychometrics nhưng vẫn chạy categorical / mixed."""
     rows = []
     for i in range(24):
         grp = "A" if i % 2 == 0 else "B"
@@ -53,33 +54,8 @@ def test_full_auto_analysis_python_fallback(client):
     assert sections["mixed_group_comparisons"]
 
 
-def test_full_auto_analysis_prefers_r_when_available(client, monkeypatch):
-    import app.services.auto_analysis as auto_analysis
-
-    def fake_run_r_pipeline_json(settings, df, analyses):
-        assert len(analyses) >= 1
-        return (
-            {
-                "ok": True,
-                "engine": "bitlysis_r_pipeline",
-                "results": [
-                    {
-                        "type": "cronbach_alpha",
-                        "ok": True,
-                        "ran": True,
-                        "skipped": False,
-                        "raw_alpha": 0.91,
-                        "std_alpha": 0.92,
-                        "n": len(df),
-                    }
-                ],
-            },
-            "",
-            0,
-        )
-
-    monkeypatch.setattr(auto_analysis, "run_r_pipeline_json", fake_run_r_pipeline_json)
-
+def test_full_auto_analysis_runs_python_psychometrics(client):
+    """Mặc định `prefer_r=True` giờ trỏ engine Python; chạy Cronbach/EFA thật."""
     rows = []
     for i in range(18):
         rows.append(f"{1.0 + i * 0.1},{2.0 + i * 0.2},{3.0 + i * 0.3}")
@@ -96,7 +72,8 @@ def test_full_auto_analysis_prefers_r_when_available(client, monkeypatch):
     data = _wait_for_status(client, job_id, {"succeeded", "failed"})
     assert data["status"] == "succeeded"
     summary = data["result_summary"]
-    assert summary["engine"] == "auto_full_analysis_r"
-    r_block = summary["analysis_sections"]["r_block"]
-    assert r_block["available"] is True
-    assert r_block["results"]
+    assert summary["engine"] == "auto_full_analysis_psychometrics"
+    block = summary["analysis_sections"]["psychometrics_block"]
+    assert block["available"] is True
+    assert block["results"]
+    assert any(r.get("type") == "cronbach_alpha" for r in block["results"])

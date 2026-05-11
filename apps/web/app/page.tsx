@@ -32,13 +32,13 @@ export default function Home() {
 
           <div className="relative z-10 flex items-center justify-center">
             <div className="w-full max-w-xl text-center">
-              <p className="text-label text-[#8f80c7]">Bitlysis workspace</p>
+              <p className="text-label text-[#8f80c7]">Statistical copilot</p>
               <h1 className="mt-4 font-serif text-[42px] font-semibold leading-[1.14] tracking-[-0.01em] text-[#47435f] md:text-[56px]">
-                Học phân tích dữ liệu miễn phí, nhanh gọn và hiệu quả!
+                Phân tích dữ liệu khảo sát chuẩn học thuật, một-lần-chạy
               </h1>
 
               <p className="mx-auto mt-5 max-w-lg text-[17px] leading-relaxed text-[#78738e] md:text-[22px]">
-                Tải file, chạy phân tích và xem kết quả trực quan trong một quy trình đơn giản.
+                Tải file → Bitlysis tự profile → làm sạch → chọn phương pháp (t-test, ANOVA, OLS, Cronbach, EFA, PLS-SEM) → xuất Word/Excel có provenance.
               </p>
 
               <div className="mt-9 space-y-4">
@@ -46,14 +46,11 @@ export default function Home() {
                   href="/workspace"
                   className="block rounded-2xl bg-[#6f56e9] px-6 py-4 text-center text-lg font-bold uppercase tracking-[0.04em] text-white shadow-[0_6px_0_#5b46c4] transition hover:translate-y-px hover:bg-[#674fe0] hover:shadow-[0_5px_0_#5b46c4]"
                 >
-                  Bắt đầu
+                  Phân tích file của bạn
                 </Link>
-                <Link
-                  href="/workspace"
-                  className="block rounded-2xl border-2 border-[#ddd9f0] bg-white px-6 py-4 text-center text-lg font-bold uppercase tracking-[0.04em] text-[#6f56e9] transition hover:border-[#cec8e8]"
-                >
-                  Tôi đã có tài khoản
-                </Link>
+                <p className="text-xs leading-relaxed text-[#9b95b8]">
+                  Module phụ trợ phân tích website/nội dung mở trong workspace.
+                </p>
               </div>
             </div>
           </div>

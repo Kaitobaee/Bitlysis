@@ -1,6 +1,7 @@
 # Deploy — Render (API) + Vercel (web)
 
-Phase 11 — infra; cập nhật URL staging khi bạn đã tạo service.
+ADR 0005: API image giờ **Python-only**, không còn R/`renv`. Cold start nhanh hơn,
+ít rủi ro CRAN, deploy đơn giản hơn.
 
 ## Staging URL (DoD)
 
@@ -15,9 +16,10 @@ Trong **Render**, đặt `API_CORS_ORIGINS` = URL web Vercel + `http://localhost
 
 ## Cold start (Render free/starter)
 
-- **Free / spin-down:** lần request đầu sau idle có thể mất **~50–90 giây** (pull image + khởi động Python + R layer).
-- **Luôn bật (paid)** hoặc **cron ping** `/health` giảm trải nghiệm “ngủ”.
-- **HEALTHCHECK** trong `Dockerfile` giúp orchestrator biết container sống; Render dùng `healthCheckPath: /health` trong `render.yaml`.
+- **Free / spin-down:** lần request đầu sau idle ~**20–40 giây** (chỉ Python; trước khi
+  refactor mất 50–90s do layer R).
+- **Luôn bật (paid)** hoặc **cron ping** `/health` giảm trải nghiệm "ngủ".
+- **HEALTHCHECK** trong `Dockerfile` giúp orchestrator biết container sống.
 
 ## Docker (repo root)
 
@@ -26,14 +28,14 @@ docker build -t bitlysis-api .
 docker run -p 8000:8000 -e API_CORS_ORIGINS=http://localhost:3000 bitlysis-api
 ```
 
-Compose + worker PLS (RAM cao hơn, cùng volume upload):
+Compose:
 
 ```bash
 docker compose up -d
-docker compose --profile pls up -d   # thêm replica :8001 — định tuyến thủ công / LB nếu OOM PLS
 ```
 
-**Lưu ý OOM PLS:** `pls-worker` là **cùng image**, target `pls-worker`; trên Render hãy tạo **Web Service thứ hai** với **nhiều RAM hơn** và cùng image/Dockerfile target `pls-worker`, trỏ client nội bộ hoặc tách route theo ADR sau.
+> Profile `pls-worker` đã bị bỏ trong ADR 0005 (PLS chạy in-process Python; không
+> còn job R nặng cần worker RAM riêng).
 
 ## Biến môi trường — API (Render)
 
@@ -41,23 +43,27 @@ docker compose --profile pls up -d   # thêm replica :8001 — định tuyến t
 | --- | --- | --- |
 | `APP_ENVIRONMENT` | Khuyến nghị `production` | Bật header/LLM an toàn hơn. |
 | `API_CORS_ORIGINS` | **Có** | Danh sách origin (comma), khớp Vercel. |
-| `API_TRUSTED_HOSTS` | Khuyến nghị khi bật | Ví dụ `bitlysis-api-staging.onrender.com,127.0.0.1,localhost` — **luôn** gồm `127.0.0.1,localhost` nếu image dùng `HEALTHCHECK` nội bộ trỏ `127.0.0.1`; Render health check qua URL công khai thì `Host` là hostname service. |
-| `UPLOAD_DIR` | Container: `/data/uploads` | Ổn định với volume Render (nếu gắn disk). |
-| `OPENROUTER_API_KEY` | Tùy Phase 7 | Không commit; chỉ secret dashboard. |
-| `R_SUBPROCESS_TIMEOUT_SECONDS` | Tùy | Mặc định 180; PLS nặng có thể tăng. |
+| `API_TRUSTED_HOSTS` | Khuyến nghị | Ví dụ `bitlysis-api-staging.onrender.com,127.0.0.1,localhost`. |
+| `UPLOAD_DIR` | Container: `/data/uploads` | Ổn định với volume Render. |
+| `OPENROUTER_API_KEY` | Tùy | LLM hypothesis suggestions; không bắt buộc. |
 | `RUN_ENDPOINT_TOKEN` | Khuyến nghị | Token cho `POST /v1/run` qua header `X-Run-Token`. |
-| `EXPORT_*` | Tùy | Phase 8 ZIP. |
+| `ANALYSIS_RANDOM_SEED_DEFAULT` | Tùy | Seed bootstrap mặc định (42). |
+| `PLS_BOOTSTRAP_SAMPLES_DEFAULT` | Tùy | Số mẫu bootstrap PLS-SEM (500). |
+| `EXPORT_*` | Tùy | Export ZIP (Phase 8). |
+
+Các biến `R_SUBPROCESS_TIMEOUT_SECONDS`, `R_PACKAGE_ROOT`, `BITLYSIS_RSCRIPT_PATH`
+**còn trong code để backward compat** nhưng **không có tác dụng** kể từ ADR 0005.
 
 Chi tiết đầy đủ: `services/api/.env.example`.
 
-## Chạy R core theo lịch miễn phí (GitHub Actions)
+## Scheduled ping (GitHub Actions)
 
 - Endpoint server-side: `POST /v1/run`.
-- Workflow có sẵn: `.github/workflows/r-core-schedule.yml`.
+- Workflow: `.github/workflows/r-core-schedule.yml` (giữ tên file vì lịch sử;
+  payload giờ trỏ tới engine Python).
 - Tạo 2 GitHub Actions secrets:
-  - `RUN_ENDPOINT_URL`: ví dụ `https://bitlysis-api-staging.onrender.com/v1/run`
-  - `RUN_ENDPOINT_TOKEN`: phải khớp env `RUN_ENDPOINT_TOKEN` trên Render
-- Có thể chạy tay bằng `workflow_dispatch` hoặc để cron tự gọi mỗi ngày.
+  - `RUN_ENDPOINT_URL`
+  - `RUN_ENDPOINT_TOKEN`
 
 ## Biến môi trường — Web (Vercel)
 
@@ -67,7 +73,8 @@ Chi tiết đầy đủ: `services/api/.env.example`.
 
 ## Tài liệu liên quan
 
-- `Dockerfile` — layer Python → R+CRAN → API.
-- `docker-compose.yml` — local + profile `pls`.
+- `Dockerfile` — Python-only.
+- `docker-compose.yml` — local dev.
 - `apps/web/vercel.json` — header tối thiểu tầng edge.
+- `docs/adr/0005-python-only-stats-engine.md` — quyết định bỏ R.
 - `docs/security-auditor-checklist.md` — Phase 12.

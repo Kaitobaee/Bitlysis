@@ -859,6 +859,188 @@ type Props = {
   summary: Record<string, unknown> | null;
 };
 
+function AcademicSummaryCard({
+  summary,
+  locale,
+}: {
+  summary: Record<string, unknown> | null;
+  locale: Locale;
+}) {
+  if (!summary) return null;
+  const academic = asRecord(summary["academic_summary"]);
+  const cleaning = asRecord(summary["cleaning"]);
+  const cleaningSummary = asRecord(cleaning?.summary);
+  const provenance = asRecord(summary["provenance_ref"]);
+  const hypothesisRows = Array.isArray(summary["hypothesis_table"])
+    ? (summary["hypothesis_table"] as Record<string, unknown>[])
+    : [];
+
+  if (!academic && !cleaning && !provenance) return null;
+
+  const dataType = (academic?.data_type as string | undefined) ?? "—";
+  const methods = Array.isArray(academic?.methods)
+    ? (academic?.methods as string[])
+    : [];
+  const rationale = (academic?.rationale as string | undefined) ?? "";
+  const conclusion = (academic?.conclusion as string | undefined) ?? "";
+  const assumptions = Array.isArray(academic?.assumptions)
+    ? (academic?.assumptions as string[])
+    : [];
+  const warns = Array.isArray(academic?.warnings)
+    ? (academic?.warnings as string[])
+    : [];
+
+  const tReject = hypothesisRows.filter((r) => r.decision === "reject_h0").length;
+  const tKeep = hypothesisRows.filter(
+    (r) => r.decision === "fail_to_reject_h0",
+  ).length;
+
+  return (
+    <section className="space-y-5 rounded-[1.75rem] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(243,242,238,0.96))] p-6 shadow-[0_14px_40px_rgba(22,22,21,0.06)] lg:p-8">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
+          {locale === "vi" ? "Tóm tắt học thuật" : "Academic summary"}
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-[var(--fg)] lg:text-3xl">
+          {locale === "vi"
+            ? "Bitlysis đã phân tích dữ liệu của bạn"
+            : "Bitlysis analyzed your dataset"}
+        </h2>
+      </div>
+
+      <dl className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi" ? "Loại dữ liệu" : "Data type"}
+          </dt>
+          <dd className="mt-1 text-sm text-[var(--fg)]">{dataType}</dd>
+        </div>
+        <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi" ? "Phương pháp đã chạy" : "Methods used"}
+          </dt>
+          <dd className="mt-1 flex flex-wrap gap-2">
+            {methods.length === 0 ? (
+              <span className="text-sm text-[var(--muted)]">—</span>
+            ) : (
+              methods.map((m) => (
+                <span
+                  key={m}
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold text-[var(--fg)]"
+                >
+                  {m}
+                </span>
+              ))
+            )}
+          </dd>
+        </div>
+      </dl>
+
+      {rationale ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi" ? "Lý do chọn" : "Rationale"}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--fg)]">{rationale}</p>
+        </div>
+      ) : null}
+
+      {assumptions.length ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi" ? "Giả định đã áp dụng" : "Assumptions"}
+          </p>
+          <ul className="mt-2 space-y-1 text-sm leading-relaxed text-[var(--fg)]">
+            {assumptions.map((a, idx) => (
+              <li key={idx}>• {a}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label={locale === "vi" ? "Bác bỏ H0" : "Rejected H0"}
+          value={String(tReject)}
+          hint={locale === "vi" ? "Đủ bằng chứng" : "Sufficient evidence"}
+        />
+        <StatCard
+          label={locale === "vi" ? "Không bác bỏ H0" : "Failed to reject"}
+          value={String(tKeep)}
+          hint={locale === "vi" ? "Chưa đủ bằng chứng" : "Insufficient evidence"}
+        />
+        <StatCard
+          label={locale === "vi" ? "Tổng kiểm định" : "Total tests"}
+          value={String(hypothesisRows.length)}
+          hint={locale === "vi" ? "Trong bảng giả thuyết" : "In hypothesis table"}
+        />
+      </div>
+
+      {conclusion ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi" ? "Kết luận" : "Conclusion"}
+          </p>
+          <p className="mt-2 text-sm font-medium text-[var(--fg)]">{conclusion}</p>
+        </div>
+      ) : null}
+
+      {warns.length ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-800">
+            {locale === "vi" ? "Cảnh báo" : "Warnings"}
+          </p>
+          <ul className="mt-2 space-y-1 text-sm leading-relaxed text-amber-900">
+            {warns.map((w, idx) => (
+              <li key={idx}>• {w}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {(cleaningSummary || provenance) ? (
+        <details className="rounded-2xl border border-[var(--border)] bg-white p-4">
+          <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {locale === "vi"
+              ? "Minh bạch học thuật (cleaning + provenance)"
+              : "Academic transparency (cleaning + provenance)"}
+          </summary>
+          <div className="mt-3 grid gap-3 text-sm text-[var(--fg)] sm:grid-cols-2">
+            {cleaningSummary ? (
+              <div>
+                <p className="font-semibold">
+                  {locale === "vi" ? "Cleaning" : "Cleaning"}
+                </p>
+                <p>
+                  rows: {String(cleaningSummary.rows_before ?? "—")} →{" "}
+                  {String(cleaningSummary.rows_after ?? "—")}
+                </p>
+                <p>missing: {String(cleaningSummary.missing_policy ?? "—")}</p>
+                <p>outlier: {String(cleaningSummary.outlier_policy ?? "—")}</p>
+              </div>
+            ) : null}
+            {provenance ? (
+              <div>
+                <p className="font-semibold">
+                  {locale === "vi" ? "Provenance" : "Provenance"}
+                </p>
+                <p className="break-all">
+                  file_sha256: {String(provenance.file_sha256 ?? "—")}
+                </p>
+                <p className="break-all">
+                  pip_lock_sha256: {String(provenance.pip_lock_sha256 ?? "—")}
+                </p>
+                <p>random_seed: {String(provenance.random_seed ?? "—")}</p>
+                <p>engine: {String(provenance.psychometrics_engine ?? "—")}</p>
+              </div>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
 export function ResultSummary({ jobId, summary }: Props) {
   const { t, locale } = useI18n();
   const [showTables, setShowTables] = useState(true);
@@ -1168,6 +1350,8 @@ export function ResultSummary({ jobId, summary }: Props) {
 
   return (
     <div className="space-y-6">
+      <AcademicSummaryCard summary={summary} locale={locale} />
+
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_10px_28px_rgba(22,22,21,0.05)] lg:p-6">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">

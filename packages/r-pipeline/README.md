@@ -1,6 +1,16 @@
-# R pipeline (Bitlysis) — Phase 5
+# R pipeline (Bitlysis) — LEGACY (archived)
 
-Phân tích **Cronbach α**, **EFA** (psych::fa), **PLS-SEM** (seminr) qua **CLI JSON**, được FastAPI gọi bằng `Rscript` (timeout + stderr).
+> **ADR 0005 (2026-05-11):** package này không còn được runtime gọi. Engine
+> psychometrics (Cronbach, EFA, PLS-SEM) đã được port sang Python thuần
+> (`services/api/app/services/psychometrics/`). Thư mục này giữ:
+>
+> - Fixture `tests/testthat/fixtures/tiny_pls.csv` — dùng làm parity test cho
+>   Python engine (`services/api/tests/test_psychometrics.py`).
+> - Mã R/`renv.lock` lịch sử để tham khảo / khôi phục nếu cần benchmark.
+>
+> Không cần `Rscript`, `renv`, hoặc cài CRAN packages để chạy Bitlysis.
+
+Phân tích **Cronbach α**, **EFA** (psych::fa), **PLS-SEM** (seminr) qua **CLI JSON**.
 
 ## Cấu trúc
 

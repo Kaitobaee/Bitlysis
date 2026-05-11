@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.config import Settings, get_settings
 from app.schemas.run import RunRequest, RunResponse
-from app.services.r_pipeline import run_r_pipeline_json
+from app.services.psychometrics import ENGINE_ID, run_psychometrics
 
 router = APIRouter(tags=["run"])
 
@@ -27,12 +27,15 @@ def run_core_engine(
     if df.empty:
         raise HTTPException(status_code=400, detail="records must not be empty")
 
-    parsed, stderr, rc = run_r_pipeline_json(settings, df, payload.analyses)
-    ok = bool(parsed.get("ok")) and rc == 0
+    parsed = run_psychometrics(df, payload.analyses, random_seed=payload.random_seed)
+    parsed.setdefault("engine", ENGINE_ID)
+    ok = bool(parsed.get("ok"))
+    rc = 0 if ok else 1
 
     return RunResponse(
         ok=ok,
+        engine=str(parsed.get("engine") or ENGINE_ID),
         r_returncode=rc,
-        result=parsed if isinstance(parsed, dict) else {"ok": False, "error": "Invalid R output"},
-        stderr=(stderr or "")[:8000] or None,
+        result=parsed,
+        stderr=None,
     )

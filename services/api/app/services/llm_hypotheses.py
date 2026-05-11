@@ -260,6 +260,35 @@ def profiling_types_from_job_meta(raw: dict[str, Any]) -> dict[str, str] | None:
     return out or None
 
 
+def suggest_hypotheses_from_profile(
+    settings: Settings,
+    *,
+    columns: list[str],
+    profiling_types: dict[str, str] | None = None,
+    prefer_llm: bool = False,
+    httpx_client: httpx.Client | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Public helper cho orchestrator: trả (hypotheses_list, meta).
+
+    `prefer_llm=False` → luôn rule-based (deterministic, không tốn LLM).
+    `prefer_llm=True` + có API key → gọi LLM rồi fallback nếu lỗi.
+    Narrative engine vẫn chỉ paraphrase output thống kê, không thay engine.
+    """
+    if prefer_llm and (settings.openrouter_api_key or settings.openai_api_key):
+        response, src, model, warn = run_hypothesis_suggestions(
+            settings,
+            columns=columns,
+            profiling_types=profiling_types,
+            force_fallback=False,
+            httpx_client=httpx_client,
+        )
+        meta = {"source": src, "model": model, "warning": warn}
+    else:
+        response = rule_based_hypotheses(columns, max_hypotheses=settings.llm_max_hypotheses)
+        meta = {"source": "rule_based", "model": None, "warning": None}
+    return [h.model_dump() for h in response.hypotheses], meta
+
+
 def run_hypothesis_suggestions(
     settings: Settings,
     *,

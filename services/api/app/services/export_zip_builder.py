@@ -78,11 +78,26 @@ def build_export_zip_bytes(
             out_path=stage / "docs/report.docx",
             template_path=settings.export_docx_template_path,
         )
+        cleaning_block = None
+        if isinstance(result_summary, dict):
+            cleaning_block = result_summary.get("cleaning")
+        cleaning_log = None
+        df_clean = None
+        if isinstance(cleaning_block, dict):
+            cleaning_log = cleaning_block.get("log")
+            sample = cleaning_block.get("data_clean_preview")
+            if isinstance(sample, list) and sample:
+                try:
+                    df_clean = pd.DataFrame(sample)
+                except Exception:  # noqa: BLE001
+                    df_clean = None
         render_workbook_clean_and_raw(
             df,
             result_summary,
             stage / "docs/data/workbook.xlsx",
             max_rows=settings.export_data_max_rows,
+            df_clean=df_clean,
+            cleaning_log=cleaning_log if isinstance(cleaning_log, list) else None,
         )
 
         bio = BytesIO()

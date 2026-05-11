@@ -1,14 +1,29 @@
-/** Spec mặc định mới: phân tích toàn bộ dữ liệu, ưu tiên R nếu có. */
-export function fullAutoAnalysisSpec(): {
-  kind: "full_auto_analysis";
-  prefer_r: boolean;
+/**
+ * Spec mặc định: comprehensive_analysis (orchestrator một-lần-chạy).
+ * Backend xử lý: profile → cleaning → hypothesis suggestion → engine dispatch
+ * (stats / psychometrics Python / timeseries) → schema thống nhất.
+ */
+export function comprehensiveAnalysisSpec(): {
+  kind: "comprehensive_analysis";
+  enable_psychometrics: boolean;
+  enable_pls: boolean;
+  enable_timeseries: boolean;
+  enable_llm_hypotheses: boolean;
   max_categorical_pairs: number;
   max_group_comparisons: number;
+  random_seed: number | null;
 } {
   return {
-    kind: "full_auto_analysis",
-    prefer_r: true,
+    kind: "comprehensive_analysis",
+    enable_psychometrics: true,
+    enable_pls: true,
+    enable_timeseries: true,
+    enable_llm_hypotheses: false,
     max_categorical_pairs: 8,
     max_group_comparisons: 12,
+    random_seed: 42,
   };
 }
+
+/** Alias deprecated giữ tương thích cho import cũ. */
+export const fullAutoAnalysisSpec = comprehensiveAnalysisSpec;

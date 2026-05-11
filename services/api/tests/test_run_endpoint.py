@@ -20,13 +20,17 @@ def test_run_endpoint_requires_token_when_configured(client):
     app.dependency_overrides.clear()
 
 
-def test_run_endpoint_executes_r_pipeline(client, monkeypatch):
-    def fake_run_r_pipeline_json(settings, df, analyses):  # noqa: ANN001
+def test_run_endpoint_executes_psychometrics(client, monkeypatch):
+    def fake_run_psychometrics(df, analyses, *, random_seed=None):  # noqa: ANN001
         assert list(df.columns) == ["x1", "x2"]
         assert analyses[0]["type"] == "cronbach_alpha"
-        return ({"ok": True, "results": [{"type": "cronbach_alpha", "ok": True}]}, "", 0)
+        return {
+            "ok": True,
+            "engine": "bitlysis_python_psychometrics",
+            "results": [{"type": "cronbach_alpha", "ok": True}],
+        }
 
-    monkeypatch.setattr("app.routers.v1.run.run_r_pipeline_json", fake_run_r_pipeline_json)
+    monkeypatch.setattr("app.routers.v1.run.run_psychometrics", fake_run_psychometrics)
 
     payload = {
         "records": [{"x1": 1, "x2": 2}, {"x1": 2, "x2": 3}],
@@ -37,4 +41,5 @@ def test_run_endpoint_executes_r_pipeline(client, monkeypatch):
     data = r.json()
     assert data["ok"] is True
     assert data["r_returncode"] == 0
+    assert data["engine"] == "bitlysis_python_psychometrics"
     assert data["result"]["ok"] is True

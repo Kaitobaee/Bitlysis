@@ -1,5 +1,8 @@
 # Báo cáo đối chiếu đề tài và sản phẩm Bitlysis
 
+> **Cập nhật phase Refactor Python-only + Academic Orchestrator** (xem ADR 0005).
+> Lõi statistical engine giờ thuần Python; sản phẩm tách rõ trục **phân tích thống kê** (lõi đề tài) và **web/content analysis** (module phụ trợ).
+
 ## 1. Mục tiêu báo cáo
 
 Báo cáo này đánh giá mức độ khớp giữa ý tưởng/đề tài Bitlysis và trạng thái sản phẩm hiện tại trong repository. Trọng tâm là xem webapp đã thể hiện đúng bản chất của đề tài hay chưa, đặc biệt ở phần đầu ra phân tích, tính minh bạch học thuật và vai trò hỗ trợ của AI.
@@ -40,18 +43,13 @@ Nhìn chung, nền tảng kỹ thuật đã đi đúng hướng với đề tài
 - Có pipeline R đúng với phần nói về Cronbach’s Alpha, EFA, PLS-SEM.
 - Có yếu tố minh bạch backend, phù hợp với narrative provenance.
 
-### 4.2. Phần chưa khớp đủ mạnh
+### 4.2. Phần chưa khớp đủ mạnh (đã giải quyết trong refactor)
 
-- Giao diện hiện tại chưa thể hiện rõ “bản chất phân tích” của hệ thống.
-- Kết quả đầu ra còn thiên về hiển thị bảng, JSON, key-value; chưa đủ lớp diễn giải cho người không chuyên.
-- Chưa thấy một khối tóm tắt học thuật nổi bật ở đầu kết quả, ví dụ:
-  - loại dữ liệu
-  - phương pháp được chọn
-  - lý do chọn
-  - giả định đã kiểm tra
-  - kết luận cuối cùng
-- AI đang xuất hiện ở một số luồng chat/web-analysis riêng, nhưng chưa được gắn chặt vào luồng phân tích dữ liệu chính.
-- Báo cáo đề tài nói nhiều về “One-Click Comprehensive Analysis”, nhưng UI hiện tại chưa làm nổi bật logic ra quyết định của pipeline.
+- ~~Giao diện hiện tại chưa thể hiện rõ “bản chất phân tích”.~~ → `AcademicSummaryCard` trong `apps/web/components/result-summary.tsx` hiển thị loại dữ liệu, phương pháp, lý do, giả định, kết luận, cảnh báo ngay đầu trang.
+- ~~Kết quả đầu ra thiên về bảng/JSON.~~ → Schema thống nhất (`academic_summary`/`hypothesis_table`/`cleaning`/`provenance_ref`); JSON raw đẩy xuống panel mở rộng.
+- ~~AI đang ở luồng chat/web riêng.~~ → Orchestrator gọi rule-based hypothesis (LLM optional); narrative chỉ paraphrase output engine.
+- ~~“One-Click Comprehensive Analysis” chưa thể hiện.~~ → `comprehensive_analysis` spec orchestrate đủ profile → clean → hypothesis → engine dispatch → unify → export.
+- ~~Pipeline R deploy không ổn định.~~ → ADR 0005: Python-only psychometrics (`services/api/app/services/psychometrics/`); deploy Docker chỉ 1 stage Python.
 
 ## 5. Đánh giá output hiện tại
 

@@ -133,8 +133,7 @@ def render_plotly_series_png(df: pd.DataFrame, out_path: Path) -> bool:
 def render_summary_tables_pdf(result_summary: dict[str, Any] | None, out_path: Path) -> None:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -211,6 +210,49 @@ def render_summary_tables_pdf(result_summary: dict[str, Any] | None, out_path: P
     doc.build(story)
 
 
+def _add_kv_paragraph(doc: Any, key: str, value: Any) -> None:
+    from docx.shared import Pt
+
+    p = doc.add_paragraph()
+    run_k = p.add_run(f"{key}: ")
+    run_k.bold = True
+    run_k.font.size = Pt(11)
+    run_v = p.add_run(str(value))
+    run_v.font.size = Pt(11)
+
+
+def _add_hypothesis_table(doc: Any, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        doc.add_paragraph("(Chưa có giả thuyết nào được kiểm định.)")
+        return
+    headers = ["ID", "Phương pháp", "Statistic", "p-value", "Effect", "Quyết định"]
+    table = doc.add_table(rows=1, cols=len(headers))
+    table.style = "Light Grid Accent 1"
+    hdr = table.rows[0].cells
+    for i, h in enumerate(headers):
+        hdr[i].text = h
+    for r in rows[:50]:
+        cells = table.add_row().cells
+        cells[0].text = str(r.get("hypothesis_id", ""))
+        cells[1].text = str(r.get("method", ""))
+        stat = r.get("statistic")
+        cells[2].text = f"{stat:.4f}" if isinstance(stat, (int, float)) else "—"
+        p_val = r.get("p_value")
+        cells[3].text = f"{p_val:.4f}" if isinstance(p_val, (int, float)) else "—"
+        es = r.get("effect_size")
+        es_kind = r.get("effect_size_kind") or ""
+        if isinstance(es, (int, float)):
+            cells[4].text = f"{es:.3f} ({es_kind})" if es_kind else f"{es:.3f}"
+        else:
+            cells[4].text = "—"
+        decision = str(r.get("decision", ""))
+        cells[5].text = {
+            "reject_h0": "Bác bỏ H0",
+            "fail_to_reject_h0": "Không đủ bằng chứng",
+            "not_applicable": "Không áp dụng",
+        }.get(decision, decision)
+
+
 def render_docx_report(
     *,
     job_id: str,
@@ -220,6 +262,11 @@ def render_docx_report(
     out_path: Path,
     template_path: Path | None,
 ) -> None:
+    """Báo cáo Word học thuật từ `result_summary` (orchestrator unified schema).
+
+    Nếu `template_path` trỏ tới file .docx hợp lệ, dùng làm khuôn (giữ
+    style/cover page); ngược lại tạo Document trống và build từ đầu.
+    """
     from docx import Document
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,16 +274,84 @@ def render_docx_report(
         doc = Document(str(template_path))
     else:
         doc = Document()
-        doc.add_heading("Bitlysis — Báo cáo xuất", level=0)
-    doc.add_paragraph(f"Job ID: {job_id}")
-    doc.add_paragraph(f"Tệp gốc: {original_filename}")
-    doc.add_paragraph(f"Số cột: {len(columns)}")
-    doc.add_heading("Danh sách cột", level=2)
+
+    rs = result_summary or {}
+    eng = str(rs.get("engine") or "unknown_engine")
+    version = rs.get("version", "?")
+
+    doc.add_heading("Bitlysis — Báo cáo phân tích thống kê", level=0)
+    _add_kv_paragraph(doc, "Job ID", job_id)
+    _add_kv_paragraph(doc, "Tệp gốc", original_filename)
+    _add_kv_paragraph(doc, "Số cột", len(columns))
+    _add_kv_paragraph(doc, "Engine", f"{eng} (version {version})")
+
+    # 1. Tóm tắt học thuật
+    academic = rs.get("academic_summary") if isinstance(rs, dict) else None
+    if isinstance(academic, dict):
+        doc.add_heading("1. Tóm tắt học thuật", level=1)
+        _add_kv_paragraph(doc, "Loại dữ liệu", academic.get("data_type", "—"))
+        methods = academic.get("methods") or []
+        if methods:
+            _add_kv_paragraph(doc, "Phương pháp", ", ".join(methods))
+        if academic.get("rationale"):
+            doc.add_paragraph(academic["rationale"])
+        assumptions = academic.get("assumptions") or []
+        if assumptions:
+            doc.add_paragraph("Giả định đã áp dụng:")
+            for a in assumptions:
+                doc.add_paragraph(str(a), style="List Bullet")
+        if academic.get("conclusion"):
+            doc.add_heading("Kết luận", level=2)
+            doc.add_paragraph(str(academic["conclusion"]))
+        warns = academic.get("warnings") or []
+        if warns:
+            doc.add_heading("Cảnh báo", level=2)
+            for w in warns:
+                doc.add_paragraph(str(w), style="List Bullet")
+
+    # 2. Bảng giả thuyết
+    rows = rs.get("hypothesis_table") if isinstance(rs, dict) else None
+    if isinstance(rows, list):
+        doc.add_heading("2. Bảng giả thuyết", level=1)
+        _add_hypothesis_table(doc, rows)
+
+    # 3. Cleaning log
+    cleaning = rs.get("cleaning") if isinstance(rs, dict) else None
+    if isinstance(cleaning, dict):
+        doc.add_heading("3. Làm sạch dữ liệu", level=1)
+        summary = cleaning.get("summary") or {}
+        _add_kv_paragraph(doc, "Số dòng trước", summary.get("rows_before", "—"))
+        _add_kv_paragraph(doc, "Số dòng sau", summary.get("rows_after", "—"))
+        _add_kv_paragraph(doc, "Chính sách missing", summary.get("missing_policy", "—"))
+        _add_kv_paragraph(doc, "Chính sách outlier", summary.get("outlier_policy", "—"))
+        for entry in (cleaning.get("log") or [])[:30]:
+            action = entry.get("action", "")
+            detail = entry.get("detail", "")
+            doc.add_paragraph(f"• {action}: {detail}", style="List Bullet")
+
+    # 4. Minh bạch học thuật (provenance)
+    prov = rs.get("provenance_ref") if isinstance(rs, dict) else None
+    if isinstance(prov, dict):
+        doc.add_heading("4. Minh bạch học thuật", level=1)
+        _add_kv_paragraph(doc, "Engine psychometrics", prov.get("psychometrics_engine", "—"))
+        _add_kv_paragraph(doc, "SHA-256 file gốc", prov.get("file_sha256") or "—")
+        _add_kv_paragraph(doc, "pip lock hash", prov.get("pip_lock_sha256") or "—")
+        seed_val = prov.get("random_seed")
+        _add_kv_paragraph(doc, "Random seed", seed_val if seed_val is not None else "—")
+        for ts_key in ("started_at", "cleaned_at", "finished_at"):
+            v = prov.get(ts_key)
+            if v:
+                _add_kv_paragraph(doc, f"Timestamp ({ts_key})", v)
+        ev = prov.get("engine_versions") or {}
+        if ev:
+            doc.add_paragraph("Phiên bản thư viện:")
+            for name, ver in ev.items():
+                doc.add_paragraph(f"• {name} = {ver}", style="List Bullet")
+
+    # 5. Danh sách cột (rút gọn)
+    doc.add_heading("5. Danh sách cột", level=1)
     doc.add_paragraph(", ".join(columns[:80]) or "(không có)")
-    if result_summary:
-        doc.add_heading("Tóm tắt engine", level=2)
-        eng = result_summary.get("engine", "?")
-        doc.add_paragraph(f"Engine: {eng}")
+
     doc.save(str(out_path))
 
 
@@ -246,9 +361,18 @@ def render_workbook_clean_and_raw(
     out_path: Path,
     *,
     max_rows: int,
+    df_clean: pd.DataFrame | None = None,
+    cleaning_log: list[dict[str, Any]] | None = None,
 ) -> None:
+    """Xuất Excel: `data_raw`, `data_clean`, `cleaning_log`, `results_raw`.
+
+    Khi `df_clean` không truyền (legacy caller), sheet `data_clean` sẽ là bản
+    sao `df.head(max_rows)` để giữ tương thích test cũ.
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    sample = df.head(max_rows)
+    raw_sample = df.head(max_rows)
+    clean_sample = (df_clean if df_clean is not None else df).head(max_rows)
+
     raw_rows: list[list[str]] = []
     if result_summary:
         for k, v in result_summary.items():
@@ -256,6 +380,23 @@ def render_workbook_clean_and_raw(
     else:
         raw_rows.append(["result_summary", "null"])
     raw_df = pd.DataFrame(raw_rows, columns=["key", "value_json"])
+
+    log_rows: list[dict[str, Any]] = []
+    for entry in cleaning_log or []:
+        log_rows.append({
+            "action": str(entry.get("action", "")),
+            "detail": str(entry.get("detail", "")),
+            "evidence_json": json.dumps(entry.get("evidence") or {}, ensure_ascii=False),
+        })
+    empty_log_row = {
+        "action": "(empty)",
+        "detail": "Không có bước cleaning",
+        "evidence_json": "{}",
+    }
+    log_df = pd.DataFrame(log_rows) if log_rows else pd.DataFrame([empty_log_row])
+
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
-        sample.to_excel(writer, sheet_name="data_clean", index=False)
+        clean_sample.to_excel(writer, sheet_name="data_clean", index=False)
+        raw_sample.to_excel(writer, sheet_name="data_raw", index=False)
+        log_df.to_excel(writer, sheet_name="cleaning_log", index=False)
         raw_df.to_excel(writer, sheet_name="results_raw", index=False)
