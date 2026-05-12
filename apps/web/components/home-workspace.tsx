@@ -589,10 +589,10 @@ export function HomeWorkspace() {
     return acc;
   }, {});
   const factChartLabels = Object.keys(factTypeCounts);
-  const factChartValues = factChartLabels.map((label) => factTypeCounts[label] ?? 0);
+  const _factChartValues = factChartLabels.map((label) => factTypeCounts[label] ?? 0);
   
   // Helper: Check if chart data is valid and meaningful
-  const isValidChartData = (labels: unknown[] | undefined, values: unknown[] | undefined): boolean => {
+  const _isValidChartData = (labels: unknown[] | undefined, values: unknown[] | undefined): boolean => {
     if (!Array.isArray(labels) || !Array.isArray(values) || labels.length === 0 || values.length === 0) {
       return false;
     }
@@ -1160,6 +1160,7 @@ export function HomeWorkspace() {
                       {screenshotSource === "real" ? "real capture" : "fallback preview"}
                     </span>
                   </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- base64 screenshot, next/image không hỗ trợ */}
                   <img
                     src={webAnalysis.website_screenshot}
                     alt={`Ảnh chụp website ${webAnalysis.source_label}`}
@@ -1553,7 +1554,7 @@ export function HomeWorkspace() {
             </section>
           </div>
         )}
-          </div>
+        </div>
       </main>
     </div>
   );

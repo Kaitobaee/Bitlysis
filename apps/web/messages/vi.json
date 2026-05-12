@@ -237,7 +237,8 @@
     "chartUnlockHint": "Chạy phân tích trước để mở khoá biểu đồ tương tác.",
     "chartUnlockCta": "Chạy phân tích toàn bộ"
   },
-  "result_extras": {
-    "rSuccess": "R pipeline chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR."
+  "result": {
+    "rSuccess": "R pipeline chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR.",
+    "rSuccessVi": "R pipeline chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR."
   }
 }
