@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
-import type { WebAnalysisResponse } from "@/lib/types";
+import { analyzeAcademicContent } from "@/lib/academic-api";
+import type { AcademicAnalyzeResponse, WebAnalysisResponse } from "@/lib/types";
 
 type Props = {
   disabled?: boolean;
@@ -11,6 +12,7 @@ type Props = {
   onAnalyzePrompt: (value: string) => Promise<void>;
   onAskAssistant: (value: string) => Promise<string>;
   onUploadDataFile: (file: File) => Promise<void>;
+  onAcademicResult?: (result: AcademicAnalyzeResponse) => void;
 };
 
 type ChatMessage = {
@@ -38,7 +40,7 @@ function formatAssistantMessage(value: string): string {
   return cleaned;
 }
 
-export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant, onUploadDataFile }: Props) {
+export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant, onUploadDataFile, onAcademicResult }: Props) {
   const { t } = useI18n();
   const [websiteValue, setWebsiteValue] = useState("");
   const [chatValue, setChatValue] = useState("");
@@ -46,8 +48,14 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  // Academic panel state
+  const [academicText, setAcademicText] = useState("");
+  const [academicLang, setAcademicLang] = useState<"vi" | "en">("vi");
+  const [academicBusy, setAcademicBusy] = useState(false);
+  const [academicStep, setAcademicStep] = useState(0); // 0=idle 1=keywords 2=papers 3=factcheck
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const academicAbortRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom on new message (UX-5)
   useEffect(() => {
@@ -203,7 +211,7 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
         </div>
 
         {!analysis && (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-3">
             {/* Panel 1: Website Analysis */}
             <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">1. {t("upload.panelWebTitle")}</p>
@@ -279,6 +287,86 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
               >
                 {uploading ? t("upload.uploading") : t("upload.panelFileCta")}
               </button>
+            </div>
+
+            {/* Panel 3: Academic Content Analysis */}
+            <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">
+                {t("academic.panelTitle")}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("academic.panelDesc")}</p>
+
+              {/* Language selector */}
+              <div className="mt-3 flex gap-1.5">
+                {(["vi", "en"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setAcademicLang(lang)}
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+                      academicLang === lang
+                        ? "bg-(--fg) text-(--surface)"
+                        : "border border-(--border) bg-(--surface) text-(--muted)"
+                    }`}
+                  >
+                    {lang === "vi" ? t("academic.langVi") : t("academic.langEn")}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={academicText}
+                disabled={disabled || academicBusy}
+                onChange={(e) => setAcademicText(e.target.value)}
+                placeholder={t("academic.placeholder")}
+                rows={4}
+                className="mt-3 w-full resize-none rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--fg) outline-none placeholder:text-(--muted) disabled:opacity-60"
+              />
+
+              {/* Progress steps */}
+              {academicBusy && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--border) border-t-(--accent)" />
+                  <span className="text-xs text-(--muted)">
+                    {academicStep === 1 && t("academic.step1")}
+                    {academicStep === 2 && t("academic.step2")}
+                    {academicStep === 3 && t("academic.step3")}
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={disabled || academicBusy || academicText.trim().length < 50}
+                onClick={async () => {
+                  academicAbortRef.current?.abort();
+                  const ac = new AbortController();
+                  academicAbortRef.current = ac;
+                  setAcademicBusy(true);
+                  setAcademicStep(1);
+                  try {
+                    setAcademicStep(2);
+                    const result = await analyzeAcademicContent(
+                      { text: academicText.trim(), language: academicLang },
+                      ac.signal,
+                    );
+                    setAcademicStep(3);
+                    onAcademicResult?.(result);
+                  } catch {
+                    // error handled upstream
+                  } finally {
+                    setAcademicBusy(false);
+                    setAcademicStep(0);
+                  }
+                }}
+                className="mt-3 rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
+              >
+                {academicBusy ? t("academic.analyzing") : t("academic.analyzeBtn")}
+              </button>
+
+              {academicText.trim().length > 0 && academicText.trim().length < 50 && (
+                <p className="mt-1.5 text-[11px] text-amber-600">{t("academic.errorTooShort")}</p>
+              )}
             </div>
           </div>
         )}

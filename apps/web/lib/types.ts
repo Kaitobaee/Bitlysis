@@ -123,10 +123,57 @@ export type WebAnalysisResponse = {
   fraud_score: number;
   website_screenshot: string | null;
 };
-
 export type WebAnalysisChatResponse = {
   question: string;
   answer: string;
   source_label: string;
   focus: string;
+};
+
+// ── Academic Content Analyzer ─────────────────────────────────────────────────
+
+export type AcademicQuartile = "Q1" | "Q2" | "Q3" | "Q4" | "Unknown";
+
+export type FactCheckVerdictType =
+  | "Supported"
+  | "Contradicted"
+  | "Partially_supported"
+  | "Unverified";
+
+export type AcademicPaper = {
+  title: string;
+  authors: string[];
+  year: number | null;
+  doi: string | null;
+  abstract: string;
+  cited_by_count: number;
+  quartile: AcademicQuartile;
+  source_name: string;
+  open_access: boolean;
+  url: string;
+};
+
+export type FactCheckVerdict = {
+  claim: string;
+  verdict: FactCheckVerdictType;
+  confidence: number;
+  reasoning: string;
+  supporting_papers: string[];
+  contradicting_papers: string[];
+};
+
+export type AcademicAnalyzeRequest = {
+  text: string;
+  language: "vi" | "en";
+  max_papers?: number;
+};
+
+export type AcademicAnalyzeResponse = {
+  summary: string;
+  keywords: string[];
+  papers: AcademicPaper[];
+  fact_checks: FactCheckVerdict[];
+  quartile_distribution: Record<string, number>;
+  overall_support_score: number;
+  search_query: string;
 };

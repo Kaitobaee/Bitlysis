@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { LanguageSwitch } from "@/components/language-switch";
 import { ResultSummary } from "@/components/result-summary";
 import { UploadZone } from "@/components/upload-zone";
+import { AcademicResult } from "@/components/academic-result";
 import {
   analyzeWebInput,
   ApiClientError,
@@ -28,7 +29,7 @@ import {
   PollTimeoutError,
 } from "@/lib/poll-job";
 import { toastApiError } from "@/lib/toast-error";
-import type { HealthInfo, JobDetail, JobStatus, QuickChartPayload, WebAnalysisMode, WebAnalysisResponse } from "@/lib/types";
+import type { AcademicAnalyzeResponse, HealthInfo, JobDetail, JobStatus, QuickChartPayload, WebAnalysisMode, WebAnalysisResponse } from "@/lib/types";
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -143,6 +144,7 @@ export function HomeWorkspace() {
   const [webAnalysisMode, setWebAnalysisMode] = useState<WebAnalysisMode>("business");
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [academicResult, setAcademicResult] = useState<AcademicAnalyzeResponse | null>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -851,7 +853,32 @@ export function HomeWorkspace() {
             onAnalyzePrompt={onAnalyzeWebsite}
             onAskAssistant={onAskAssistant}
             onUploadDataFile={onUploadDataFile}
+            onAcademicResult={(result) => setAcademicResult(result)}
           />
+
+          {/* Academic result panel — hiển thị sau khi phân tích nội dung */}
+          {academicResult && (
+            <div id="tool-academic" className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-4 scroll-mt-6">
+              <div className="flex items-start justify-between gap-3 border-b border-(--border) pb-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">
+                    {t("academic.factCheckTitle")}
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-(--fg)">
+                    {academicResult.papers.length} {t("academic.papersFound")} · {academicResult.keywords.length} keywords
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAcademicResult(null)}
+                  className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold text-(--muted) hover:bg-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <AcademicResult result={academicResult} />
+            </div>
+          )}
 
           <div id="tool-mode" className="space-y-3 rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5 scroll-mt-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Chọn phong cách phân tích</p>

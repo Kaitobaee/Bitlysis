@@ -240,5 +240,38 @@
   "result": {
     "rSuccess": "R pipeline completed successfully. Warnings (if any) are in STDERR.",
     "rSuccessVi": "R pipeline completed successfully. Warnings (if any) are in STDERR."
+  },
+  "academic": {
+    "panelTitle": "3. CONTENT ANALYSIS",
+    "panelDesc": "Paste text for AI to find Q1–Q4 academic papers and fact-check claims.",
+    "placeholder": "Paste text to fact-check (minimum 50 characters)...",
+    "analyzeBtn": "Analyze & Fact-check",
+    "analyzing": "Analyzing...",
+    "step1": "Extracting keywords",
+    "step2": "Searching papers",
+    "step3": "Fact-checking",
+    "papersFound": "papers found",
+    "keywordsLabel": "Academic keywords",
+    "factCheckTitle": "Fact-check results",
+    "supportScore": "Support rate",
+    "quartileTitle": "Quartile distribution",
+    "openAccess": "Open",
+    "viewPaper": "View paper",
+    "noPapers": "No relevant papers found.",
+    "noFacts": "No verifiable claims extracted.",
+    "verdicts": {
+      "Supported": "Supported",
+      "Contradicted": "Contradicted",
+      "Partially_supported": "Partially supported",
+      "Unverified": "Unverified"
+    },
+    "confidence": "Confidence",
+    "reasoning": "Reasoning",
+    "supportingPapers": "Supporting papers",
+    "contradictingPapers": "Contradicting papers",
+    "langVi": "Vietnamese",
+    "langEn": "English",
+    "errorTooShort": "Text must be at least 50 characters.",
+    "searchQuery": "Search query used"
   }
 }

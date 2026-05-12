@@ -240,5 +240,38 @@
   "result": {
     "rSuccess": "R pipeline chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR.",
     "rSuccessVi": "R pipeline chạy thành công, đã có kết quả; cảnh báo (nếu có) nằm ở STDERR."
+  },
+  "academic": {
+    "panelTitle": "3. PHÂN TÍCH NỘI DUNG",
+    "panelDesc": "Dán văn bản để AI tìm bài báo khoa học Q1–Q4 và kiểm tra fact.",
+    "placeholder": "Dán văn bản cần kiểm tra (tối thiểu 50 ký tự)...",
+    "analyzeBtn": "Phân tích & Kiểm tra fact",
+    "analyzing": "Đang phân tích...",
+    "step1": "Trích xuất từ khóa",
+    "step2": "Tìm kiếm bài báo",
+    "step3": "Kiểm tra fact",
+    "papersFound": "bài báo tìm thấy",
+    "keywordsLabel": "Từ khóa học thuật",
+    "factCheckTitle": "Kết quả kiểm tra fact",
+    "supportScore": "Tỷ lệ có căn cứ",
+    "quartileTitle": "Phân bố quartile",
+    "openAccess": "Mở",
+    "viewPaper": "Xem bài báo",
+    "noPapers": "Không tìm thấy bài báo liên quan.",
+    "noFacts": "Không có luận điểm nào được trích xuất để kiểm tra.",
+    "verdicts": {
+      "Supported": "Có căn cứ",
+      "Contradicted": "Bị bác bỏ",
+      "Partially_supported": "Có một phần căn cứ",
+      "Unverified": "Chưa xác minh"
+    },
+    "confidence": "Độ tin cậy",
+    "reasoning": "Lý do",
+    "supportingPapers": "Bài ủng hộ",
+    "contradictingPapers": "Bài mâu thuẫn",
+    "langVi": "Tiếng Việt",
+    "langEn": "English",
+    "errorTooShort": "Văn bản phải có ít nhất 50 ký tự.",
+    "searchQuery": "Query đã dùng"
   }
 }
