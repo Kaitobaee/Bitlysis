@@ -1,13 +1,10 @@
 from __future__ import annotations
 
+import base64
+import html
 import json
 import logging
-import html
 import re
-import base64
-import shutil
-import subprocess
-import tempfile
 from collections import Counter
 from urllib.parse import quote, urljoin, urlparse
 
@@ -830,121 +827,61 @@ def _apply_mode_lens(
     return summary, findings_out, highlights_out, recommendations_out, sections_out, evidence_out
 
 
-def _find_browser_executables() -> list[str]:
-    candidates = [
-        shutil.which("chrome"),
-        shutil.which("msedge"),
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-    ]
-    found: list[str] = []
-    seen: set[str] = set()
-    for candidate in candidates:
-        if not candidate:
-            continue
-        key = candidate.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        found.append(candidate)
-    return found
-
-
-_SCREENSHOT_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
-
-
-def _run_headless_screenshot(
-    browser: str,
-    source_url: str,
-    *,
-    output_path: str,
-    profile_dir: str,
-    headless_mode: str,
-) -> tuple[bool, str]:
-    """Run a single headless capture attempt; return (success, stderr_excerpt)."""
-    command = [
-        browser,
-        headless_mode,
-        "--disable-gpu",
-        "--hide-scrollbars",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--disable-extensions",
-        "--disable-popup-blocking",
-        "--disable-features=Translate,IsolateOrigins,site-per-process",
-        "--ignore-certificate-errors",
-        "--window-size=1440,1800",
-        f"--user-data-dir={profile_dir}",
-        f"--user-agent={_SCREENSHOT_USER_AGENT}",
-        "--lang=vi-VN",
-        "--accept-lang=vi-VN,vi;q=0.9,en;q=0.7",
-        "--virtual-time-budget=12000",
-        f"--screenshot={output_path}",
-        source_url,
-    ]
-    try:
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            timeout=60,
-            check=False,
-        )
-    except Exception as exc:  # noqa: BLE001
-        return False, f"{type(exc).__name__}: {exc}"
-
-    stderr_text = (completed.stderr or b"").decode("utf-8", errors="replace")[:400]
-    if completed.returncode != 0:
-        return False, stderr_text
-    return True, stderr_text
-
-
 def _capture_real_website_screenshot(source_url: str) -> bytes | None:
-    browsers = _find_browser_executables()
-    if not browsers:
+    """Chụp ảnh trang web bằng Playwright Chromium (headless).
+
+    Playwright được bundle sẵn với Chromium nên hoạt động trên mọi môi trường
+    (local Windows, Docker Linux trên Render.com) mà không cần cài Chrome riêng.
+    """
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: PLC0415
+    except ImportError:
+        logger.warning("playwright_not_installed: pip install playwright && playwright install chromium")
         return None
 
-    # Chrome headless mode keyword changes between versions. "--headless=new"
-    # (Chrome >=109) renders modern pages reliably; if a build rejects it we
-    # transparently fall back to the legacy "--headless" flag.
-    headless_modes = ("--headless=new", "--headless")
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        output_path = f"{temp_dir}\\website.png"
-        profile_dir = f"{temp_dir}\\profile"
-
-        last_error = ""
-        for browser in browsers:
-            for mode in headless_modes:
-                ok, stderr_text = _run_headless_screenshot(
-                    browser,
-                    source_url,
-                    output_path=output_path,
-                    profile_dir=profile_dir,
-                    headless_mode=mode,
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--hide-scrollbars",
+                    "--disable-extensions",
+                    "--disable-popup-blocking",
+                    "--ignore-certificate-errors",
+                    "--lang=vi-VN",
+                ],
+            )
+            try:
+                page = browser.new_page(
+                    viewport={"width": 1440, "height": 900},
+                    user_agent=(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36"
+                    ),
                 )
-                if not ok:
-                    last_error = stderr_text or last_error
-                    continue
-                try:
-                    with open(output_path, "rb") as handle:
-                        data = handle.read()
-                except OSError as exc:
-                    last_error = f"OSError: {exc}"
-                    continue
-                if not data or len(data) < 1024:
-                    # Browser may exit 0 but produce an empty/placeholder PNG;
-                    # treat that as failure so we fall back to the SVG preview.
-                    last_error = f"empty_or_tiny_png_size={len(data)}"
-                    continue
-                return data
+                page.goto(source_url, wait_until="networkidle", timeout=30_000)
+                # Đợi thêm 1.5s cho lazy-load images
+                page.wait_for_timeout(1500)
+                screenshot_bytes: bytes = page.screenshot(
+                    full_page=False,
+                    type="png",
+                )
+            finally:
+                browser.close()
 
-        if last_error:
-            logger.warning("website_screenshot_capture_failed: %s", last_error[:240])
+        if not screenshot_bytes or len(screenshot_bytes) < 1024:
+            logger.warning("playwright_screenshot_too_small: size=%d", len(screenshot_bytes or b""))
+            return None
+
+        return screenshot_bytes
+
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("playwright_screenshot_failed: %s: %s", type(exc).__name__, str(exc)[:240])
         return None
 
 
@@ -1045,7 +982,7 @@ def _build_web_llm_prompt(
         "analysis_style": analysis_mode,
         "analysis_style_label": style,
         "metrics": metrics,
-        "top_keywords": [{"label": l, "count": v} for l, v in zip(labels[:8], values[:8])],
+        "top_keywords": [{"label": lbl, "count": v} for lbl, v in zip(labels[:8], values[:8])],
         "cta_detected": cta.model_dump() if cta else None,
         "data_facts": [fact.model_dump() for fact in data_facts[:8]],
         "text_excerpt": text[:7000],
