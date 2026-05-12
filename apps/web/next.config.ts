@@ -7,6 +7,11 @@ const connectSrc = isDev
   ? "connect-src 'self' https: http://localhost:* http://127.0.0.1:*"
   : "connect-src 'self' https:";
 
+// img-src: production chỉ cho https:, dev thêm localhost vì API trả ảnh matplotlib qua HTTP
+const imgSrc = isDev
+  ? "img-src 'self' data: blob: https: http://localhost:* http://127.0.0.1:*"
+  : "img-src 'self' data: blob: https:";
+
 const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
@@ -36,7 +41,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval cần cho WASM
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https:",
+      imgSrc,
       connectSrc,
       "worker-src 'self' blob:",
       "wasm-src 'self'",
