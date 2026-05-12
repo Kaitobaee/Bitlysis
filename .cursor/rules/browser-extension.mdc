@@ -1,0 +1,17 @@
+---
+description: Browser extension MV3 — permissions & messaging
+globs:
+  - "**/manifest.json"
+  - "**/service-worker*.js"
+  - "**/service-worker*.ts"
+  - "**/background*.ts"
+  - "**/content-script*.ts"
+alwaysApply: false
+---
+
+# Browser extension
+
+- Manifest V3; minimal `host_permissions`; justify `<all_urls>` if ever required.
+- Message passing: validate types; never `eval` remote code; no secrets in content scripts exposed to page.
+- Review CSP and remote code policies; pin dependency versions for build tooling.
+- Use `browser-extension-engineer` persona; security review before store publish.

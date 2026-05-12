@@ -1,0 +1,17 @@
+---
+description: Solidity / Foundry / Hardhat / DeFi safety habits
+globs:
+  - "**/*.sol"
+  - "**/foundry.toml"
+  - "**/hardhat.config.*"
+  - "**/remappings.txt"
+alwaysApply: false
+---
+
+# Web3 & DeFi (contracts)
+
+- No unchecked external calls; CEI; document trust model (oracles, admins, upgradability).
+- Fuzz / invariants for financial logic; bound inputs in tests.
+- No private keys or production RPC URLs in source; use env + CI secrets.
+- Prefer OpenZeppelin patterns; align compiler/EVM version with `tech-stack.md`.
+- Delegate product UI and APIs to fullstack agent; protocol economics with `defi-protocol-engineer`.

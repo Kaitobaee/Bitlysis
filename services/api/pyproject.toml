@@ -1,0 +1,54 @@
+[project]
+name = "bitlysis-api"
+version = "0.2.0"
+description = "Bitlysis FastAPI orchestrator (Python-only psychometrics; ADR 0005)"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "python-multipart>=0.0.12",
+  "pydantic>=2.10.0",
+  "pydantic-settings>=2.6.0",
+  "pandas>=2.2.0",
+  "openpyxl>=3.1.0",
+  "numpy>=2.0.0",
+  "scipy>=1.14.0",
+  "statsmodels>=0.14.0",
+  "httpx>=0.27.0",
+  "matplotlib>=3.8.0",
+  "plotly>=5.18.0",
+  "reportlab>=4.0.0",
+  "python-docx>=1.1.0",
+  "beautifulsoup4>=4.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.8.0",
+]
+timeseries = [
+  "prophet>=1.1.6",
+]
+export_viz = [
+  "kaleido>=0.2.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

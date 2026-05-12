@@ -1,0 +1,17 @@
+---
+description: Web games — loop, perf, networking client, Web3 economy hooks
+globs:
+  - "**/game/**"
+  - "**/games/**"
+  - "**/*phaser*/**"
+  - "**/*pixi*/**"
+alwaysApply: false
+---
+
+# Web games
+
+- Stable game loop; avoid unbounded work per frame; profile on low-end devices.
+- Multiplayer: clear authority model; document cheat tolerance for browser clients.
+- Asset loading: batch, release resources on scene change; watch memory on long sessions.
+- Web3: keep signing UX explicit; coordinate on-chain rules with `defi-protocol-engineer`.
+- Use `game-web-engineer` persona; backend lobbies with `fullstack-developer`.

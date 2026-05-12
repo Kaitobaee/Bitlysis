@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lottie Stability Test</title>
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --card: #ffffff;
+        --fg: #111827;
+        --muted: #6b7280;
+        --ok: #0d9488;
+        --warn: #d97706;
+        --danger: #dc2626;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Segoe UI, Arial, sans-serif;
+        background: linear-gradient(180deg, #eef2ff, var(--bg));
+        color: var(--fg);
+      }
+
+      .page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .card {
+        width: min(980px, 100%);
+        background: var(--card);
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+        padding: 20px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        gap: 20px;
+      }
+
+      .stage {
+        width: 420px;
+        height: 420px;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        background: radial-gradient(circle at 30% 20%, #ffffff, #f8fafc 58%, #f1f5f9);
+        overflow: hidden;
+      }
+
+      #lottie {
+        width: 420px;
+        height: 420px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      button {
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.primary {
+        background: #111827;
+        color: #fff;
+        border-color: #111827;
+      }
+
+      .meta {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .report {
+        margin: 0;
+        padding-left: 18px;
+        line-height: 1.55;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .stage,
+        #lottie {
+          width: min(420px, 100%);
+          height: min(420px, 100vw - 64px);
+          margin: 0 auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="card">
+        <div class="layout">
+          <div class="stage">
+            <div id="lottie"></div>
+          </div>
+
+          <div>
+            <h1>Lottie Integration and Stability Report</h1>
+            <p class="meta">Fixed container: 420 x 420 px. JSON: /animations/data.json</p>
+
+            <div class="controls">
+              <button id="play" class="primary" type="button">Play</button>
+              <button id="pause" type="button">Pause</button>
+              <button id="svg" type="button">Use SVG</button>
+              <button id="canvas" type="button">Use Canvas</button>
+            </div>
+
+            <ul id="report" class="report"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+    <script>
+      const CONTAINER_SIZE = 420;
+      const JSON_PATH = "/animations/data.json";
+      const SAMPLE_MS = 5000;
+
+      let animation;
+      let renderer = "canvas";
+      let diagnostics = null;
+
+      function reportItem(text, level = "ok") {
+        const li = document.createElement("li");
+        li.className = level;
+        li.textContent = text;
+        return li;
+      }
+
+      function clearReport() {
+        document.getElementById("report").innerHTML = "";
+      }
+
+      function setReport(items) {
+        const report = document.getElementById("report");
+        report.innerHTML = "";
+        items.forEach((item) => report.appendChild(item));
+      }
+
+      function destroyAnimation() {
+        if (animation) {
+          animation.destroy();
+          animation = null;
+        }
+      }
+
+      function stableContainerGuard() {
+        const el = document.getElementById("lottie");
+        const width = Math.round(el.clientWidth);
+        const height = Math.round(el.clientHeight);
+        return {
+          width,
+          height,
+          ok: width === CONTAINER_SIZE && height === CONTAINER_SIZE,
+        };
+      }
+
+      async function collectDiagnostics(anim) {
+        const frameDeltas = [];
+        const frameIndices = [];
+        let lastTs = null;
+        let lastFrame = anim.currentFrame;
+        let loops = 0;
+        let loopJumpDetected = false;
+
+        const loopListener = () => {
+          loops += 1;
+          const f = anim.currentFrame;
+          if (f > 1.5) {
+            loopJumpDetected = true;
+          }
+        };
+        anim.addEventListener("loopComplete", loopListener);
+
+        const clsShifts = [];
+        let po;
+        if ("PerformanceObserver" in window) {
+          try {
+            po = new PerformanceObserver((entryList) => {
+              for (const entry of entryList.getEntries()) {
+                if (!entry.hadRecentInput) clsShifts.push(entry.value || 0);
+              }
+            });
+            po.observe({ type: "layout-shift", buffered: true });
+          } catch {
+            po = null;
+          }
+        }
+
+        const started = performance.now();
+        await new Promise((resolve) => {
+          function step(ts) {
+            if (lastTs !== null) {
+              frameDeltas.push(ts - lastTs);
+              frameIndices.push(Math.abs(anim.currentFrame - lastFrame));
+            }
+            lastTs = ts;
+            lastFrame = anim.currentFrame;
+
+            if (ts - started >= SAMPLE_MS) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        });
+
+        anim.removeEventListener("loopComplete", loopListener);
+        if (po) po.disconnect();
+
+        const avgDelta = frameDeltas.reduce((a, b) => a + b, 0) / Math.max(frameDeltas.length, 1);
+        const janky = frameDeltas.filter((d) => d > 24).length;
+        const maxFrameStep = Math.max(...frameIndices, 0);
+        const clsTotal = clsShifts.reduce((a, b) => a + b, 0);
+
+        return {
+          avgDelta,
+          janky,
+          loops,
+          loopJumpDetected,
+          maxFrameStep,
+          clsTotal,
+        };
+      }
+
+      async function mountLottie(nextRenderer = renderer) {
+        renderer = nextRenderer;
+        clearReport();
+
+        const items = [];
+        items.push(reportItem("Loading animation...", "ok"));
+        setReport(items);
+
+        destroyAnimation();
+
+        const response = await fetch(JSON_PATH, { cache: "no-store" });
+        const data = await response.json();
+
+        const container = document.getElementById("lottie");
+        animation = lottie.loadAnimation({
+          container,
+          renderer,
+          loop: true,
+          autoplay: true,
+          animationData: data,
+          rendererSettings: {
+            preserveAspectRatio: "xMidYMid meet",
+            clearCanvas: true,
+            progressiveLoad: renderer === "svg",
+          },
+        });
+
+        animation.setSubframe(false);
+        animation.setQuality("medium");
+
+        await new Promise((resolve) => {
+          animation.addEventListener("DOMLoaded", resolve, { once: true });
+        });
+
+        diagnostics = await collectDiagnostics(animation);
+
+        const box = stableContainerGuard();
+        const targetFrameMs = 1000 / 30;
+        const avgFps = diagnostics.avgDelta > 0 ? 1000 / diagnostics.avgDelta : 0;
+
+        const finalReport = [
+          reportItem(`Renderer: ${renderer.toUpperCase()} (switchable to SVG/Canvas)`, "ok"),
+          reportItem(`Frame rate target: 30fps, measured ~${avgFps.toFixed(1)}fps`, avgFps >= 27 ? "ok" : "warn"),
+          reportItem(
+            diagnostics.janky <= 8
+              ? `Stutter check: stable (${diagnostics.janky} janky frames in ${SAMPLE_MS / 1000}s)`
+              : `Stutter check: noticeable (${diagnostics.janky} janky frames in ${SAMPLE_MS / 1000}s)`,
+            diagnostics.janky <= 8 ? "ok" : "warn",
+          ),
+          reportItem(
+            diagnostics.loopJumpDetected
+              ? "Loop check: possible jump detected at loop boundary"
+              : "Loop check: no visible loop boundary jump detected",
+            diagnostics.loopJumpDetected ? "warn" : "ok",
+          ),
+          reportItem(
+            box.ok ? `Container check: fixed ${box.width} x ${box.height}px` : `Container resized to ${box.width} x ${box.height}px`,
+            box.ok ? "ok" : "danger",
+          ),
+          reportItem(
+            diagnostics.clsTotal > 0.001
+              ? `Layout reflow/shift check: CLS=${diagnostics.clsTotal.toFixed(4)} (non-zero)`
+              : "Layout reflow/shift check: no meaningful layout shift",
+            diagnostics.clsTotal > 0.001 ? "warn" : "ok",
+          ),
+          reportItem(
+            diagnostics.maxFrameStep > 3
+              ? `Frame jump check: max frame step ${diagnostics.maxFrameStep.toFixed(2)} (possible jitter)`
+              : `Frame jump check: max frame step ${diagnostics.maxFrameStep.toFixed(2)} (stable)`,
+            diagnostics.maxFrameStep > 3 ? "warn" : "ok",
+          ),
+        ];
+
+        setReport(finalReport);
+      }
+
+      document.getElementById("play").addEventListener("click", () => animation && animation.play());
+      document.getElementById("pause").addEventListener("click", () => animation && animation.pause());
+      document.getElementById("svg").addEventListener("click", () => mountLottie("svg"));
+      document.getElementById("canvas").addEventListener("click", () => mountLottie("canvas"));
+
+      mountLottie("canvas").catch((error) => {
+        setReport([reportItem(`Failed to load animation: ${error.message}`, "danger")]);
+      });
+    </script>
+  </body>
+</html>

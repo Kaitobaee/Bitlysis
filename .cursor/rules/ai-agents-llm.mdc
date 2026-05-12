@@ -1,0 +1,19 @@
+---
+description: LLM apps, agents, RAG, evals — safety & tooling
+globs:
+  - "**/agents/**"
+  - "**/llm/**"
+  - "**/rag/**"
+  - "**/eval/**"
+  - "**/mcp/**"
+  - "**/prompts/**"
+alwaysApply: false
+---
+
+# AI agents & LLM applications
+
+- Tool schemas: validate inputs/outputs; timeouts; user-visible errors when tools fail.
+- Treat untrusted documents and web fetches as injection sources; sandbox or strip when needed.
+- Log trace/session IDs; keep eval golden sets under version control (no secrets in fixtures).
+- Model/provider keys: env only; no logging of full prompts with PII in production without policy.
+- Use `ai-agent-engineer` persona; infra with `devinfra-engineer`.

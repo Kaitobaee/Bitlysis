@@ -1,0 +1,25 @@
+# Local stack — Python-only (ADR 0005).
+# Dùng: docker compose up
+#
+# Profile `pls` đã bỏ — PLS-SEM giờ chạy in-process Python, không cần worker
+# RAM riêng.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    ports:
+      - "8000:8000"
+    environment:
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      UPLOAD_DIR: /data/uploads
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-local}
+    volumes:
+      - bitlysis-uploads:/data/uploads
+
+volumes:
+  bitlysis-uploads:

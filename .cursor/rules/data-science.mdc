@@ -1,0 +1,16 @@
+---
+description: R / Quarto / notebooks — reproducible analysis
+globs:
+  - "**/*.R"
+  - "**/*.Rmd"
+  - "**/*.qmd"
+  - "**/*.ipynb"
+alwaysApply: false
+---
+
+# Data science & analysis
+
+- Prefer `renv` (or documented env); `set.seed` when randomness matters.
+- Document data lineage (`data/raw` vs `data/processed`); SPSS/Stata via **haven** when applicable.
+- Do not invent GUI steps for SmartPLS / EViews — document exports and dictionaries.
+- Use `data-analyst-r` persona for pipeline design; keep reports runnable headless where possible.
