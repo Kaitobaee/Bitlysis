@@ -1,0 +1,301 @@
+﻿ma_phieu,loai_doi_tuong,truong_dai_hoc,khoa_nganh,gioi_tinh,do_tuoi,hoc_vi_hoc_ham,nam_hoc_hoac_nam_giang_day,hieu_biet_phan_mem_phan_tich_1_5,phan_mem_dang_su_dung,tan_suat_su_dung_1_5,muc_do_hai_long_phan_mem_hien_tai_1_5,kho_khan_chinh_khi_su_dung,nhu_cau_phan_tich_noi_dung_van_ban_1_5,nhu_cau_kiem_tra_fact_tu_nguon_khoa_hoc_1_5,nhu_cau_phan_tich_bao_cao_hoc_thuat_1_5,nhu_cau_truc_quan_hoa_du_lieu_1_5,nhu_cau_xuat_bao_cao_tu_dong_1_5,san_sang_su_dung_cong_cu_mien_phi,muc_phi_chap_nhan_usd_thang,danh_gia_tam_quan_trong_ai_trong_giao_duc_1_5,kha_nang_tich_hop_vao_giang_day_1_5,kien_nghi_them,thoi_gian_hoan_thanh_phut
+SV0176,Sinh vien,DH Kinh te TP.HCM,Giao duc hoc,Nu,23,Dai hoc,3,3,Khong su dung,2,2,Giao dien phuc tap,5,5,5,4,4,Co the,10,4,5,Tich hop AI de goi y phan tich,22
+SV0168,Sinh vien,DH Can Tho,Ky thuat,Nu,18,Dai hoc,4,5,Excel,5,3,Khong duoc dao tao su dung,3,5,5,2,3,Co,0,3,3,Co giao dien tieng Viet,20
+SV0198,Sinh vien,DH Bach khoa HN,Y khoa,Nu,22,Dai hoc,2,4,Khong su dung,2,4,Khong co tai lieu tieng Viet,3,5,5,3,4,Co,0,4,4,Mien phi cho sinh vien,21
+SV0071,Sinh vien,DH Da Nang,Tai chinh - Ngan hang,Nu,20,Dai hoc,5,1,Excel,5,3,Khong co tai lieu tieng Viet,3,5,3,3,5,Co,5,5,4,Co ban bao cao tu dong,13
+SV0085,Sinh vien,DH Thuong mai,Cong nghe thong tin,Nam,18,Dai hoc,5,1,Excel,1,3,Khong duoc dao tao su dung,3,5,5,4,3,Khong,5,5,1,Co giao dien tieng Viet,16
+GV0042,Giang vien,DH Ngoai thuong,Luat,Nam,52,TS,24,4,SmartPLS,1,3,Khong co tai lieu tieng Viet,5,5,3,3,3,Khong,10,5,4,Co ban bao cao tu dong,26
+SV0216,Sinh vien,DH Kinh te TP.HCM,Tai chinh - Ngan hang,Nam,22,Dai hoc,4,1,Excel,4,3,Khong duoc dao tao su dung,3,4,3,4,4,Co,0,2,2,Ho tro nhieu dinh dang file,18
+GV0064,Giang vien,DH Su pham HN,Xa hoi hoc,Nam,38,TS,5,5,Khac,4,3,Chi phi ban quyen cao,4,4,3,4,4,Co the,10,4,4,Ho tro nhieu dinh dang file,13
+GV0057,Giang vien,DH Su pham HN,Xa hoi hoc,Nam,42,TS,13,4,Excel,5,3,Chi phi ban quyen cao,2,3,4,5,3,Co,10,4,3,Co ban bao cao tu dong,15
+GV0017,Giang vien,DH Bach khoa HN,Ke toan - Kiem toan,Nam,43,PGS.TS,14,2,Stata,4,4,Thieu tinh nang can thiet,5,4,4,3,5,Co,30,4,2,Mien phi cho sinh vien,12
+SV0165,Sinh vien,DH Su pham HN,Giao duc hoc,Nu,24,Dai hoc,3,3,Excel,1,1,Giao dien phuc tap,4,5,4,3,5,Co,10,3,4,Mien phi cho sinh vien,10
+SV0153,Sinh vien,DH Bach khoa HN,Giao duc hoc,Nu,21,Dai hoc,3,3,R,2,5,Chi phi ban quyen cao,5,5,4,4,2,Co,10,3,1,Co huong dan su dung chi tiet,10
+SV0053,Sinh vien,DH Kinh te TP.HCM,Y khoa,Nam,23,Dai hoc,3,3,SPSS,5,3,Khong co tai lieu tieng Viet,2,3,4,4,3,Khong,5,4,4,Co ban bao cao tu dong,10
+SV0017,Sinh vien,DH Su pham HN,Marketing,Nam,23,Dai hoc,2,3,R,3,2,Khong co kho khan gi,5,4,5,4,3,Co,0,5,4,Co giao dien tieng Viet,22
+SV0003,Sinh vien,DH Ngoai thuong,Ky thuat,Nam,19,Dai hoc,5,3,SPSS,2,2,Chi phi ban quyen cao,5,5,4,4,5,Co,0,4,4,Co ban bao cao tu dong,18
+SV0163,Sinh vien,DH Kinh te Quoc dan,Giao duc hoc,Nam,21,Dai hoc,2,1,Khong su dung,2,3,Chi phi ban quyen cao,2,3,4,5,4,Co the,0,4,4,Mien phi cho sinh vien,19
+SV0073,Sinh vien,DH Ngoai thuong,Tai chinh - Ngan hang,Nu,21,Dai hoc,5,3,SPSS,2,3,Giao dien phuc tap,5,5,2,3,4,Co the,5,2,5,Co giao dien tieng Viet,12
+SV0197,Sinh vien,DH Bach khoa HN,Luat,Nu,23,Dai hoc,1,1,SPSS,4,5,Khong co kho khan gi,3,5,4,3,5,Co,10,2,5,Co ban bao cao tu dong,16
+GV0025,Giang vien,DH Hoa Sen,Giao duc hoc,Nam,58,TS,30,4,R,4,5,Thieu tinh nang can thiet,5,2,4,4,5,Co the,0,3,4,Co giao dien tieng Viet,19
+GV0036,Giang vien,DH Hoa Sen,Cong nghe thong tin,Nam,51,ThS,18,3,Python,3,3,Giao dien phuc tap,1,4,4,4,5,Khong,5,2,3,Mien phi cho sinh vien,12
+SV0040,Sinh vien,DH Kinh te TP.HCM,Xa hoi hoc,Nam,21,Dai hoc,2,3,Excel,2,5,Khong co tai lieu tieng Viet,4,4,2,4,3,Co the,10,4,4,Tich hop AI de goi y phan tich,18
+SV0077,Sinh vien,DH Su pham HN,Tai chinh - Ngan hang,Nam,22,Dai hoc,1,3,Khong su dung,3,1,Khong co tai lieu tieng Viet,1,3,4,5,3,Co,0,4,2,Ho tro nhieu dinh dang file,19
+GV0058,Giang vien,DH Can Tho,Luat,Nu,56,TS,26,3,R,4,3,Khong co tai lieu tieng Viet,4,4,5,4,5,Co,15,4,3,Co ban bao cao tu dong,14
+SV0008,Sinh vien,DH Can Tho,Luat,Nam,19,Dai hoc,1,4,Khac,1,3,Chi phi ban quyen cao,5,4,2,4,5,Co,5,4,5,Ho tro nhieu dinh dang file,20
+SV0175,Sinh vien,DH Hue,Khoa hoc may tinh,Nu,19,Dai hoc,3,3,R,4,3,Chi phi ban quyen cao,1,5,5,5,4,Co,0,4,3,Tich hop AI de goi y phan tich,12
+SV0006,Sinh vien,DH Can Tho,Luat,Nu,22,Dai hoc,4,1,Excel,5,3,Khong duoc dao tao su dung,5,1,4,4,4,Co,5,3,3,Mien phi cho sinh vien,8
+SV0169,Sinh vien,DH Kinh te Quoc dan,Tai chinh - Ngan hang,Nu,21,Dai hoc,1,1,Excel,3,5,Chi phi ban quyen cao,5,4,2,3,4,Co,5,4,3,Ho tro nhieu dinh dang file,15
+SV0182,Sinh vien,DH Can Tho,Y khoa,Nam,23,Dai hoc,4,5,Excel,4,3,Giao dien phuc tap,3,5,5,1,3,Khong,0,1,3,Co giao dien tieng Viet,13
+SV0174,Sinh vien,DH Kinh te TP.HCM,Khoa hoc may tinh,Nu,23,Dai hoc,3,3,SPSS,4,4,Chi phi ban quyen cao,4,2,3,5,3,Co,15,5,4,Tich hop AI de goi y phan tich,14
+SV0093,Sinh vien,DH Can Tho,Quan tri kinh doanh,Nu,20,Dai hoc,5,3,SPSS,2,2,Khong co tai lieu tieng Viet,4,5,4,4,1,Co,15,5,4,Ho tro nhieu dinh dang file,11
+SV0047,Sinh vien,DH Bach khoa HN,Ngu van,Nu,18,Dai hoc,3,1,Khong su dung,2,3,Giao dien phuc tap,3,3,4,3,3,Co,0,4,3,Ho tro nhieu dinh dang file,10
+SV0207,Sinh vien,DH Ngoai thuong,Cong nghe thong tin,Nam,18,Dai hoc,2,2,Khong su dung,4,4,Khong duoc dao tao su dung,4,4,3,2,2,Co the,5,4,2,Co ban bao cao tu dong,11
+SV0030,Sinh vien,DH Kinh te Quoc dan,Khoa hoc may tinh,Nu,18,Dai hoc,5,4,Excel,4,3,Khong co kho khan gi,3,4,5,3,4,Co,5,5,4,Ho tro nhieu dinh dang file,20
+SV0145,Sinh vien,DH Thuong mai,Khoa hoc may tinh,Nam,18,Dai hoc,2,4,SPSS,3,1,Khong co kho khan gi,4,4,2,4,4,Co,15,4,4,Co ban bao cao tu dong,12
+SV0049,Sinh vien,DH Su pham HN,Marketing,Nam,22,Dai hoc,4,2,SPSS,3,1,Khong co kho khan gi,3,1,5,5,5,Co the,10,5,5,Co huong dan su dung chi tiet,17
+SV0032,Sinh vien,DH Da Nang,Luat,Nu,20,Dai hoc,5,2,SPSS,5,2,Khong co tai lieu tieng Viet,3,4,4,4,1,Co the,0,3,4,Tich hop AI de goi y phan tich,12
+SV0141,Sinh vien,DH Hoa Sen,Ky thuat,Nu,23,Dai hoc,2,3,Khong su dung,3,3,Giao dien phuc tap,2,2,5,4,3,Khong,0,3,3,Co giao dien tieng Viet,11
+GV0046,Giang vien,DH Hue,Cong nghe thong tin,Nam,40,ThS,8,4,Excel,2,2,Chi phi ban quyen cao,4,2,5,4,5,Co,20,2,3,Co huong dan su dung chi tiet,17
+SV0114,Sinh vien,DH Da Nang,Ngu van,Nu,23,Dai hoc,5,5,Excel,4,1,Khong co kho khan gi,1,1,2,4,2,Co,0,4,1,Co ban bao cao tu dong,18
+GV0027,Giang vien,DH Kinh te Quoc dan,Luat,Nam,60,PGS.TS,30,4,Khac,4,3,Khong co kho khan gi,4,5,4,4,3,Co the,20,3,5,Mien phi cho sinh vien,24
+SV0181,Sinh vien,DH Can Tho,Xa hoi hoc,Nu,20,Dai hoc,1,4,Excel,1,1,Khong co kho khan gi,3,4,3,3,3,Co,0,5,3,Tich hop AI de goi y phan tich,15
+SV0211,Sinh vien,DH Ton Duc Thang,Marketing,Nam,18,Dai hoc,5,3,Khong su dung,4,3,Giao dien phuc tap,5,2,3,4,4,Co the,0,5,5,Co giao dien tieng Viet,11
+SV0089,Sinh vien,DH Quoc gia HN,Ngu van,Nam,19,Dai hoc,4,1,SPSS,5,4,Khong co tai lieu tieng Viet,3,5,3,3,4,Co,10,4,4,Mien phi cho sinh vien,22
+GV0031,Giang vien,DH Can Tho,Tai chinh - Ngan hang,Nam,33,TS,5,5,Khac,4,3,Chi phi ban quyen cao,3,3,4,3,2,Co the,0,4,2,Ho tro nhieu dinh dang file,25
+GV0053,Giang vien,DH Su pham HN,Ngu van,Nam,37,PGS.TS,7,4,Python,4,2,Chi phi ban quyen cao,5,5,4,3,5,Co,10,4,1,Co giao dien tieng Viet,14
+SV0013,Sinh vien,DH Da Nang,Marketing,Nam,22,Dai hoc,1,3,SPSS,2,1,Khong co tai lieu tieng Viet,4,5,3,5,2,Co,5,4,3,Co giao dien tieng Viet,22
+SV0078,Sinh vien,DH Quoc gia HN,Xa hoi hoc,Nu,22,Dai hoc,3,2,Excel,4,4,Khong co kho khan gi,4,3,2,4,5,Co,0,5,5,Tich hop AI de goi y phan tich,22
+GV0063,Giang vien,DH Da Nang,Ngu van,Nam,48,TS,17,3,Stata,2,4,Khong duoc dao tao su dung,4,5,5,3,5,Co the,0,2,4,Tich hop AI de goi y phan tich,15
+GV0048,Giang vien,DH Ton Duc Thang,Tai chinh - Ngan hang,Nam,52,GS.TS,19,4,SPSS,4,4,Khong co kho khan gi,3,4,4,4,5,Co,0,4,4,Co ban bao cao tu dong,27
+GV0067,Giang vien,DH Thuong mai,Ngu van,Nu,39,GS.TS,11,4,Excel,4,4,Khong co tai lieu tieng Viet,5,3,4,4,3,Co the,5,4,4,Co giao dien tieng Viet,13
+SV0156,Sinh vien,DH Su pham HN,Ky thuat,Nam,24,Dai hoc,5,1,Excel,3,3,Khong co tai lieu tieng Viet,3,4,3,3,1,Co,0,5,3,Mien phi cho sinh vien,16
+SV0180,Sinh vien,DH Hoa Sen,Marketing,Nu,20,Dai hoc,2,3,SPSS,2,4,Giao dien phuc tap,4,2,5,5,2,Co,5,4,3,Co giao dien tieng Viet,8
+SV0074,Sinh vien,DH Can Tho,Y khoa,Nu,22,Dai hoc,4,1,Excel,5,2,Khong co tai lieu tieng Viet,5,5,4,4,3,Co,0,3,3,Co giao dien tieng Viet,21
+SV0159,Sinh vien,DH Su pham HN,Cong nghe thong tin,Nu,20,Dai hoc,2,3,Khong su dung,4,3,Chi phi ban quyen cao,2,4,2,3,4,Co,0,5,4,Ho tro nhieu dinh dang file,9
+SV0082,Sinh vien,DH Quoc gia HN,Luat,Nu,21,Dai hoc,3,4,Excel,3,3,Khong co kho khan gi,3,5,1,3,4,Co the,0,5,4,Co huong dan su dung chi tiet,17
+GV0032,Giang vien,DH Da Nang,Y khoa,Nam,48,ThS,16,3,SmartPLS,3,5,Khong duoc dao tao su dung,3,2,5,4,5,Co,10,4,3,Tich hop AI de goi y phan tich,23
+GV0001,Giang vien,DH Thuong mai,Y khoa,Nu,37,GS.TS,6,1,SPSS,2,5,Khong co tai lieu tieng Viet,2,3,4,4,5,Khong,5,4,3,Ho tro nhieu dinh dang file,13
+SV0066,Sinh vien,DH Hue,Ky thuat,Nu,20,Dai hoc,3,3,Khong su dung,4,2,Giao dien phuc tap,3,3,3,5,2,Khong,5,4,4,Ho tro nhieu dinh dang file,15
+SV0067,Sinh vien,DH Hoa Sen,Giao duc hoc,Nu,19,Dai hoc,3,3,Excel,3,4,Khong duoc dao tao su dung,2,4,3,4,2,Co the,0,5,5,Ho tro nhieu dinh dang file,17
+GV0012,Giang vien,DH Can Tho,Marketing,Nu,56,ThS,28,3,Stata,4,4,Khong duoc dao tao su dung,4,3,4,5,4,Co the,20,4,3,Co giao dien tieng Viet,16
+GV0006,Giang vien,DH Hoa Sen,Quan tri kinh doanh,Nu,39,TS,6,5,Python,2,4,Thieu tinh nang can thiet,3,3,3,4,3,Co,20,5,4,Ho tro nhieu dinh dang file,12
+SV0087,Sinh vien,DH Hue,Giao duc hoc,Nu,18,Dai hoc,5,4,SPSS,1,3,Khong duoc dao tao su dung,3,3,4,4,1,Co the,5,4,3,Co huong dan su dung chi tiet,20
+SV0173,Sinh vien,DH Bach khoa HN,Y khoa,Nam,22,Dai hoc,4,3,Khac,3,3,Thieu tinh nang can thiet,3,5,5,4,3,Co,0,4,5,Co huong dan su dung chi tiet,18
+GV0014,Giang vien,DH Hoa Sen,Y khoa,Nu,48,ThS,15,4,SPSS,1,3,Thieu tinh nang can thiet,5,4,5,5,4,Co,20,4,4,Mien phi cho sinh vien,25
+SV0020,Sinh vien,DH Kinh te TP.HCM,Quan tri kinh doanh,Nam,20,Dai hoc,5,4,SPSS,5,2,Thieu tinh nang can thiet,1,4,3,5,4,Khong,0,5,2,Co giao dien tieng Viet,19
+GV0005,Giang vien,DH Su pham HN,Marketing,Nu,46,PGS.TS,13,3,Excel,4,3,Thieu tinh nang can thiet,4,1,5,3,2,Co the,15,2,5,Mien phi cho sinh vien,22
+SV0151,Sinh vien,DH Thuong mai,Ke toan - Kiem toan,Nam,22,Dai hoc,1,3,Excel,5,2,Thieu tinh nang can thiet,5,5,4,5,3,Co,0,5,2,Ho tro nhieu dinh dang file,9
+SV0115,Sinh vien,DH Hoa Sen,Cong nghe thong tin,Nu,18,Dai hoc,1,3,Excel,1,4,Khong duoc dao tao su dung,5,1,5,4,5,Co the,0,2,2,Co huong dan su dung chi tiet,17
+SV0194,Sinh vien,DH Can Tho,Marketing,Nu,21,Dai hoc,5,4,Excel,3,5,Giao dien phuc tap,4,3,5,2,4,Co,0,5,3,Ho tro nhieu dinh dang file,22
+GV0023,Giang vien,DH Su pham HN,Giao duc hoc,Nu,43,PGS.TS,15,4,Excel,5,4,Thieu tinh nang can thiet,5,3,5,4,4,Co,10,4,4,Ho tro nhieu dinh dang file,21
+SV0220,Sinh vien,DH Hoa Sen,Ky thuat,Nam,22,Dai hoc,3,3,SPSS,2,3,Khong co kho khan gi,3,2,5,3,3,Co the,15,2,3,Tich hop AI de goi y phan tich,20
+SV0010,Sinh vien,DH Hue,Ke toan - Kiem toan,Nam,23,Dai hoc,3,3,Excel,3,4,Khong duoc dao tao su dung,4,5,5,3,2,Co,5,4,4,Co ban bao cao tu dong,18
+GV0062,Giang vien,DH Da Nang,Tai chinh - Ngan hang,Nu,57,PGS.TS,27,2,Khac,4,2,Chi phi ban quyen cao,4,3,5,4,5,Co,0,5,5,Co ban bao cao tu dong,25
+SV0217,Sinh vien,DH Hoa Sen,Giao duc hoc,Nam,21,Dai hoc,2,4,Excel,4,3,Chi phi ban quyen cao,2,4,5,4,1,Khong,5,4,3,Co giao dien tieng Viet,19
+GV0051,Giang vien,DH Thuong mai,Ky thuat,Nam,59,ThS,27,4,Stata,3,2,Khong co kho khan gi,4,5,5,2,3,Co the,5,4,4,Co huong dan su dung chi tiet,24
+SV0131,Sinh vien,DH Su pham HN,Ngu van,Nam,20,Dai hoc,2,1,Excel,1,3,Khong duoc dao tao su dung,2,3,3,4,4,Co,20,4,3,Co huong dan su dung chi tiet,10
+GV0047,Giang vien,DH Da Nang,Quan tri kinh doanh,Nam,48,TS,15,5,SPSS,3,3,Khong co tai lieu tieng Viet,5,5,5,2,4,Co,15,4,3,Co huong dan su dung chi tiet,18
+SV0218,Sinh vien,DH Can Tho,Quan tri kinh doanh,Nam,24,Dai hoc,4,4,Excel,4,5,Khong co kho khan gi,4,3,3,5,5,Co,5,4,3,Co giao dien tieng Viet,19
+SV0025,Sinh vien,DH Thuong mai,Tai chinh - Ngan hang,Nam,21,Dai hoc,5,4,Python,3,2,Giao dien phuc tap,5,3,5,4,3,Co,10,3,3,Ho tro nhieu dinh dang file,9
+SV0201,Sinh vien,DH Hue,Ky thuat,Nam,22,Dai hoc,5,3,Excel,4,4,Thieu tinh nang can thiet,3,3,5,4,5,Co the,20,1,4,Mien phi cho sinh vien,11
+GV0075,Giang vien,DH Kinh te Quoc dan,Khoa hoc may tinh,Nam,57,TS,29,3,SPSS,4,4,Giao dien phuc tap,2,1,5,3,4,Co the,10,4,5,Mien phi cho sinh vien,12
+SV0080,Sinh vien,DH Kinh te TP.HCM,Cong nghe thong tin,Nam,23,Dai hoc,1,3,Excel,5,2,Thieu tinh nang can thiet,3,2,4,3,4,Co,5,4,1,Tich hop AI de goi y phan tich,17
+GV0074,Giang vien,DH Quoc gia HN,Luat,Nu,36,TS,4,5,Stata,3,1,Khong co kho khan gi,2,4,5,2,4,Co the,10,3,1,Mien phi cho sinh vien,18
+GV0045,Giang vien,DH Da Nang,Ky thuat,Nam,55,ThS,24,2,AMOS,5,1,Thieu tinh nang can thiet,1,4,4,5,4,Co,0,4,4,Mien phi cho sinh vien,14
+SV0140,Sinh vien,DH Thuong mai,Ngu van,Nu,21,Dai hoc,2,1,Excel,3,2,Thieu tinh nang can thiet,3,3,4,5,5,Co,5,2,4,Ho tro nhieu dinh dang file,18
+SV0069,Sinh vien,DH Hue,Ky thuat,Nam,21,Dai hoc,4,3,Excel,2,5,Khong co tai lieu tieng Viet,4,3,4,5,4,Co,0,4,3,Co ban bao cao tu dong,21
+SV0061,Sinh vien,DH Kinh te TP.HCM,Giao duc hoc,Nu,23,Dai hoc,5,4,SPSS,1,4,Thieu tinh nang can thiet,5,3,3,3,4,Co,10,5,2,Ho tro nhieu dinh dang file,11
+GV0021,Giang vien,DH Can Tho,Giao duc hoc,Nu,54,ThS,22,5,Excel,1,3,Giao dien phuc tap,5,5,3,3,5,Co the,15,5,4,Co huong dan su dung chi tiet,12
+SV0068,Sinh vien,DH Thuong mai,Quan tri kinh doanh,Nam,22,Dai hoc,5,5,Python,1,5,Khong duoc dao tao su dung,4,3,4,3,2,Co,10,4,4,Ho tro nhieu dinh dang file,18
+SV0191,Sinh vien,DH Da Nang,Ky thuat,Nu,21,Dai hoc,4,1,Excel,4,4,Khong duoc dao tao su dung,4,5,4,4,4,Co,10,5,5,Tich hop AI de goi y phan tich,16
+SV0063,Sinh vien,DH Kinh te TP.HCM,Tai chinh - Ngan hang,Nam,18,Dai hoc,4,2,R,3,4,Chi phi ban quyen cao,3,5,2,3,5,Co the,10,3,2,Mien phi cho sinh vien,19
+SV0058,Sinh vien,DH Ngoai thuong,Khoa hoc may tinh,Nu,22,Dai hoc,5,2,Excel,2,4,Chi phi ban quyen cao,5,4,5,4,3,Co,0,4,3,Mien phi cho sinh vien,19
+SV0128,Sinh vien,DH Bach khoa HN,Giao duc hoc,Nam,23,Dai hoc,4,3,Excel,2,4,Chi phi ban quyen cao,1,3,2,5,5,Co the,5,4,3,Mien phi cho sinh vien,15
+GV0009,Giang vien,DH Thuong mai,Y khoa,Nu,43,ThS,12,2,SPSS,3,2,Chi phi ban quyen cao,5,5,4,5,3,Co the,10,4,1,Mien phi cho sinh vien,27
+SV0124,Sinh vien,DH Ton Duc Thang,Tai chinh - Ngan hang,Nu,24,Dai hoc,3,4,Excel,5,2,Khong duoc dao tao su dung,3,4,1,4,5,Co,10,5,1,Mien phi cho sinh vien,18
+SV0160,Sinh vien,DH Thuong mai,Tai chinh - Ngan hang,Nam,19,Dai hoc,2,3,Excel,3,3,Thieu tinh nang can thiet,3,5,4,5,5,Co,5,3,3,Co ban bao cao tu dong,12
+GV0002,Giang vien,DH Hue,Giao duc hoc,Nu,43,ThS,15,4,Excel,3,1,Khong duoc dao tao su dung,4,4,4,4,4,Co the,30,3,3,Mien phi cho sinh vien,23
+SV0055,Sinh vien,DH Hoa Sen,Cong nghe thong tin,Nam,18,Dai hoc,5,1,Excel,5,4,Giao dien phuc tap,2,4,3,3,5,Co,0,5,1,Co huong dan su dung chi tiet,10
+GV0011,Giang vien,DH Kinh te TP.HCM,Y khoa,Nu,61,GS.TS,28,2,SmartPLS,4,2,Thieu tinh nang can thiet,4,4,4,5,5,Co,5,4,2,Co huong dan su dung chi tiet,22
+SV0065,Sinh vien,DH Ngoai thuong,Xa hoi hoc,Nam,24,Dai hoc,2,4,Excel,3,3,Khong co tai lieu tieng Viet,5,3,4,4,4,Co,0,4,2,Ho tro nhieu dinh dang file,18
+GV0019,Giang vien,DH Hue,Cong nghe thong tin,Nam,44,ThS,13,5,SPSS,4,2,Khong co kho khan gi,5,4,4,4,4,Co the,0,5,4,Tich hop AI de goi y phan tich,27
+SV0046,Sinh vien,DH Ngoai thuong,Ngu van,Nam,24,Dai hoc,3,3,Excel,5,3,Khong co tai lieu tieng Viet,5,1,2,4,5,Khong,10,4,2,Co ban bao cao tu dong,19
+GV0076,Giang vien,DH Bach khoa HN,Luat,Nam,44,ThS,11,2,Excel,4,3,Khong co kho khan gi,5,4,5,3,2,Co the,5,1,5,Ho tro nhieu dinh dang file,13
+SV0135,Sinh vien,DH Can Tho,Tai chinh - Ngan hang,Nam,20,Dai hoc,5,3,SPSS,5,2,Khong duoc dao tao su dung,3,5,5,4,2,Khong,10,5,5,Co ban bao cao tu dong,10
+SV0098,Sinh vien,DH Bach khoa HN,Xa hoi hoc,Nam,23,Dai hoc,1,4,SPSS,3,5,Khong co tai lieu tieng Viet,4,5,4,4,5,Co,0,2,4,Co ban bao cao tu dong,17
+GV0035,Giang vien,DH Thuong mai,Marketing,Nu,33,TS,2,1,R,2,4,Khong co kho khan gi,4,2,4,5,4,Khong,10,5,5,Mien phi cho sinh vien,14
+GV0039,Giang vien,DH Thuong mai,Xa hoi hoc,Nu,48,GS.TS,15,5,Khac,2,4,Chi phi ban quyen cao,3,1,5,4,4,Co the,10,3,1,Co giao dien tieng Viet,27
+SV0138,Sinh vien,DH Su pham HN,Cong nghe thong tin,Nam,23,Dai hoc,1,4,Excel,1,4,Khong co tai lieu tieng Viet,4,5,4,5,5,Co the,0,5,5,Co giao dien tieng Viet,18
+SV0090,Sinh vien,DH Kinh te TP.HCM,Khoa hoc may tinh,Nam,21,Dai hoc,1,3,Khac,2,3,Chi phi ban quyen cao,3,4,5,4,3,Co,0,3,3,Tich hop AI de goi y phan tich,20
+GV0040,Giang vien,DH Can Tho,Khoa hoc may tinh,Nu,56,ThS,23,5,Python,2,2,Chi phi ban quyen cao,4,5,5,5,3,Co the,0,3,3,Mien phi cho sinh vien,27
+SV0097,Sinh vien,DH Kinh te TP.HCM,Khoa hoc may tinh,Nu,21,Dai hoc,3,3,Python,2,4,Thieu tinh nang can thiet,5,4,2,4,4,Co,5,4,4,Co giao dien tieng Viet,9
+SV0154,Sinh vien,DH Can Tho,Giao duc hoc,Nu,22,Dai hoc,1,3,Khong su dung,1,5,Giao dien phuc tap,5,3,2,5,5,Co,0,4,2,Ho tro nhieu dinh dang file,14
+SV0170,Sinh vien,DH Ngoai thuong,Marketing,Nam,19,Dai hoc,4,3,R,2,3,Thieu tinh nang can thiet,4,1,4,3,3,Co,10,4,5,Co ban bao cao tu dong,18
+SV0202,Sinh vien,DH Hoa Sen,Ke toan - Kiem toan,Nam,23,Dai hoc,1,4,Excel,4,2,Thieu tinh nang can thiet,4,3,5,5,3,Co the,5,2,5,Co huong dan su dung chi tiet,13
+SV0177,Sinh vien,DH Ton Duc Thang,Tai chinh - Ngan hang,Nu,22,Dai hoc,1,3,Excel,1,4,Giao dien phuc tap,4,4,4,5,3,Co,0,4,4,Tich hop AI de goi y phan tich,9
+SV0144,Sinh vien,DH Can Tho,Marketing,Nam,18,Dai hoc,4,3,Excel,1,1,Chi phi ban quyen cao,4,3,5,4,4,Co,10,4,1,Co ban bao cao tu dong,14
+SV0031,Sinh vien,DH Ton Duc Thang,Ngu van,Nu,18,Dai hoc,3,3,Excel,4,4,Chi phi ban quyen cao,4,3,5,4,3,Co,5,4,4,Ho tro nhieu dinh dang file,20
+SV0043,Sinh vien,DH Can Tho,Cong nghe thong tin,Nu,24,Dai hoc,4,3,Excel,3,2,Giao dien phuc tap,5,4,5,5,3,Co the,5,5,3,Co giao dien tieng Viet,12
+SV0018,Sinh vien,DH Hue,Luat,Nam,20,Dai hoc,1,4,Khong su dung,2,3,Giao dien phuc tap,5,3,3,5,3,Co,0,5,4,Mien phi cho sinh vien,20
+GV0070,Giang vien,DH Da Nang,Tai chinh - Ngan hang,Nu,55,ThS,27,2,SPSS,3,2,Thieu tinh nang can thiet,3,2,4,2,4,Khong,0,4,2,Co giao dien tieng Viet,14
+SV0100,Sinh vien,DH Kinh te TP.HCM,Xa hoi hoc,Nu,24,Dai hoc,2,3,SPSS,4,3,Khong co kho khan gi,4,3,3,5,5,Co,10,3,5,Mien phi cho sinh vien,21
+SV0125,Sinh vien,DH Hue,Ke toan - Kiem toan,Nam,20,Dai hoc,2,3,R,4,1,Khong duoc dao tao su dung,4,3,4,5,4,Co,10,4,5,Ho tro nhieu dinh dang file,17
+SV0214,Sinh vien,DH Thuong mai,Ky thuat,Nam,23,Dai hoc,5,2,SPSS,1,3,Chi phi ban quyen cao,4,3,3,3,4,Co,5,4,3,Co huong dan su dung chi tiet,8
+GV0030,Giang vien,DH Su pham HN,Xa hoi hoc,Nam,31,PGS.TS,3,3,AMOS,3,5,Chi phi ban quyen cao,5,3,4,4,1,Co the,5,4,1,Ho tro nhieu dinh dang file,16
+GV0068,Giang vien,DH Hoa Sen,Y khoa,Nu,46,TS,16,5,AMOS,2,4,Khong co tai lieu tieng Viet,4,3,5,1,5,Co,10,5,4,Co giao dien tieng Viet,15
+SV0209,Sinh vien,DH Hoa Sen,Y khoa,Nam,21,Dai hoc,4,3,Python,3,2,Khong co kho khan gi,4,5,5,3,4,Co,10,2,1,Co giao dien tieng Viet,21
+SV0083,Sinh vien,DH Can Tho,Y khoa,Nam,18,Dai hoc,2,1,SPSS,1,4,Chi phi ban quyen cao,5,5,5,4,4,Co,0,3,2,Co ban bao cao tu dong,22
+SV0045,Sinh vien,DH Kinh te TP.HCM,Y khoa,Nam,18,Dai hoc,4,1,Khac,2,2,Khong co tai lieu tieng Viet,2,5,1,3,5,Khong,0,5,3,Ho tro nhieu dinh dang file,19
+SV0205,Sinh vien,DH Hue,Tai chinh - Ngan hang,Nu,20,Dai hoc,1,4,SPSS,4,3,Chi phi ban quyen cao,3,5,4,5,1,Co,0,5,4,Ho tro nhieu dinh dang file,12
+SV0133,Sinh vien,DH Hue,Marketing,Nu,22,Dai hoc,4,3,Python,3,2,Chi phi ban quyen cao,3,4,5,4,5,Co the,5,3,3,Co ban bao cao tu dong,21
+SV0192,Sinh vien,DH Ngoai thuong,Cong nghe thong tin,Nam,23,Dai hoc,3,3,SPSS,3,1,Thieu tinh nang can thiet,5,5,3,4,4,Co,0,3,4,Co ban bao cao tu dong,14
+GV0016,Giang vien,DH Quoc gia HN,Y khoa,Nu,49,PGS.TS,20,4,SPSS,5,3,Giao dien phuc tap,3,5,4,4,3,Co,0,5,5,Co ban bao cao tu dong,20
+SV0137,Sinh vien,DH Hue,Quan tri kinh doanh,Nam,23,Dai hoc,1,5,Excel,3,4,Khong duoc dao tao su dung,3,5,5,4,3,Co,5,3,5,Tich hop AI de goi y phan tich,22
+SV0161,Sinh vien,DH Ngoai thuong,Luat,Nu,21,Dai hoc,5,4,Python,3,2,Thieu tinh nang can thiet,5,5,3,4,5,Co,10,3,5,Co huong dan su dung chi tiet,18
+GV0018,Giang vien,DH Kinh te Quoc dan,Ke toan - Kiem toan,Nam,32,ThS,1,3,Excel,3,3,Khong co kho khan gi,5,4,5,5,2,Co the,0,4,3,Tich hop AI de goi y phan tich,24
+SV0014,Sinh vien,DH Ngoai thuong,Ke toan - Kiem toan,Nam,18,Dai hoc,5,3,Excel,3,5,Giao dien phuc tap,4,3,3,3,4,Co,15,5,1,Ho tro nhieu dinh dang file,17
+SV0094,Sinh vien,DH Ton Duc Thang,Luat,Nam,22,Dai hoc,2,3,Excel,4,2,Khong co kho khan gi,3,4,4,3,4,Co,5,3,3,Ho tro nhieu dinh dang file,22
+SV0132,Sinh vien,DH Hoa Sen,Cong nghe thong tin,Nam,18,Dai hoc,3,3,SPSS,2,3,Khong co kho khan gi,4,4,4,5,4,Co,0,5,3,Tich hop AI de goi y phan tich,11
+GV0066,Giang vien,DH Ton Duc Thang,Tai chinh - Ngan hang,Nam,41,ThS,10,4,Excel,2,2,Thieu tinh nang can thiet,3,3,5,4,5,Co the,10,4,3,Co ban bao cao tu dong,19
+SV0200,Sinh vien,DH Hoa Sen,Tai chinh - Ngan hang,Nu,23,Dai hoc,4,4,SPSS,4,3,Khong co kho khan gi,4,4,4,4,3,Co the,0,3,2,Co giao dien tieng Viet,20
+SV0021,Sinh vien,DH Thuong mai,Ky thuat,Nu,21,Dai hoc,3,1,R,2,3,Chi phi ban quyen cao,4,3,3,4,4,Co,0,4,5,Co ban bao cao tu dong,19
+GV0071,Giang vien,DH Kinh te Quoc dan,Giao duc hoc,Nu,55,TS,22,5,AMOS,4,2,Khong co tai lieu tieng Viet,4,2,4,5,5,Co the,10,5,3,Co giao dien tieng Viet,20
+SV0139,Sinh vien,DH Su pham HN,Ke toan - Kiem toan,Nu,23,Dai hoc,3,4,SPSS,2,3,Khong co kho khan gi,5,3,2,2,3,Co,5,4,3,Co giao dien tieng Viet,19
+GV0028,Giang vien,DH Su pham HN,Tai chinh - Ngan hang,Nam,42,ThS,10,2,AMOS,1,5,Giao dien phuc tap,5,1,5,4,3,Co the,10,5,2,Co giao dien tieng Viet,26
+SV0206,Sinh vien,DH Thuong mai,Marketing,Nu,18,Dai hoc,3,3,Excel,1,1,Khong duoc dao tao su dung,3,4,2,3,5,Co the,0,5,5,Co huong dan su dung chi tiet,10
+SV0171,Sinh vien,DH Can Tho,Xa hoi hoc,Nu,23,Dai hoc,3,3,Khong su dung,2,3,Khong co kho khan gi,2,3,5,4,4,Co,0,2,4,Co giao dien tieng Viet,12
+SV0190,Sinh vien,DH Hue,Quan tri kinh doanh,Nam,24,Dai hoc,1,3,SPSS,5,1,Giao dien phuc tap,4,3,5,2,4,Co,0,4,3,Mien phi cho sinh vien,19
+SV0186,Sinh vien,DH Ton Duc Thang,Ky thuat,Nu,21,Dai hoc,3,1,Khong su dung,4,4,Thieu tinh nang can thiet,5,3,5,2,5,Co,10,4,2,Tich hop AI de goi y phan tich,22
+GV0026,Giang vien,DH Hoa Sen,Ky thuat,Nu,39,TS,7,4,Khac,3,3,Khong co kho khan gi,2,4,4,4,4,Khong,0,3,3,Tich hop AI de goi y phan tich,17
+SV0099,Sinh vien,DH Ton Duc Thang,Y khoa,Nu,21,Dai hoc,2,4,SPSS,4,5,Khong co tai lieu tieng Viet,5,3,5,5,3,Co,0,4,5,Tich hop AI de goi y phan tich,12
+SV0019,Sinh vien,DH Quoc gia HN,Khoa hoc may tinh,Nu,19,Dai hoc,3,4,SPSS,4,4,Giao dien phuc tap,3,5,3,5,5,Co,5,4,3,Co giao dien tieng Viet,20
+SV0001,Sinh vien,DH Bach khoa HN,Ngu van,Nu,18,Dai hoc,1,3,SPSS,1,2,Khong co kho khan gi,5,2,4,1,3,Co,0,3,4,Ho tro nhieu dinh dang file,14
+SV0158,Sinh vien,DH Su pham HN,Ky thuat,Nam,18,Dai hoc,5,3,Excel,3,2,Giao dien phuc tap,5,5,5,4,3,Co,0,4,1,Mien phi cho sinh vien,8
+SV0095,Sinh vien,DH Bach khoa HN,Cong nghe thong tin,Nu,22,Dai hoc,2,2,Excel,3,3,Thieu tinh nang can thiet,5,4,4,4,4,Co the,5,5,3,Mien phi cho sinh vien,11
+SV0048,Sinh vien,DH Ton Duc Thang,Ke toan - Kiem toan,Nam,20,Dai hoc,4,3,Khong su dung,3,2,Khong duoc dao tao su dung,3,3,3,4,4,Co,0,5,2,Mien phi cho sinh vien,21
+SV0104,Sinh vien,DH Ngoai thuong,Quan tri kinh doanh,Nu,23,Dai hoc,2,3,SPSS,3,4,Khong co tai lieu tieng Viet,2,3,4,4,4,Co,0,3,1,Co huong dan su dung chi tiet,17
+SV0036,Sinh vien,DH Ton Duc Thang,Ngu van,Nu,18,Dai hoc,4,4,Excel,1,3,Chi phi ban quyen cao,3,5,5,2,3,Co,5,4,4,Ho tro nhieu dinh dang file,14
+SV0210,Sinh vien,DH Ngoai thuong,Giao duc hoc,Nu,22,Dai hoc,5,3,Excel,4,3,Khong duoc dao tao su dung,5,4,4,3,4,Co the,5,5,2,Ho tro nhieu dinh dang file,16
+GV0052,Giang vien,DH Ton Duc Thang,Xa hoi hoc,Nam,58,TS,28,3,SPSS,3,3,Giao dien phuc tap,4,5,4,4,3,Co,0,3,2,Ho tro nhieu dinh dang file,12
+SV0007,Sinh vien,DH Su pham HN,Cong nghe thong tin,Nam,24,Dai hoc,5,2,Khong su dung,4,2,Khong co kho khan gi,4,3,4,3,5,Co the,15,4,3,Co giao dien tieng Viet,22
+SV0150,Sinh vien,DH Thuong mai,Y khoa,Nu,19,Dai hoc,1,3,SPSS,3,1,Giao dien phuc tap,4,2,5,5,4,Co the,0,5,2,Co giao dien tieng Viet,16
+SV0196,Sinh vien,DH Kinh te Quoc dan,Giao duc hoc,Nam,22,Dai hoc,2,3,Excel,3,4,Khong duoc dao tao su dung,4,4,4,4,5,Co the,0,5,4,Ho tro nhieu dinh dang file,9
+GV0015,Giang vien,DH Kinh te Quoc dan,Giao duc hoc,Nu,60,TS,30,3,SPSS,3,3,Giao dien phuc tap,3,1,5,5,4,Co,0,5,5,Mien phi cho sinh vien,21
+SV0042,Sinh vien,DH Can Tho,Cong nghe thong tin,Nu,21,Dai hoc,3,4,Excel,1,3,Giao dien phuc tap,4,3,1,4,3,Co the,0,5,4,Co huong dan su dung chi tiet,15
+SV0079,Sinh vien,DH Ton Duc Thang,Khoa hoc may tinh,Nu,21,Dai hoc,5,2,Python,1,3,Chi phi ban quyen cao,5,3,2,4,5,Co the,10,4,5,Mien phi cho sinh vien,19
+SV0184,Sinh vien,DH Kinh te TP.HCM,Cong nghe thong tin,Nam,23,Dai hoc,1,3,Excel,3,3,Chi phi ban quyen cao,4,4,3,5,4,Co,10,5,5,Tich hop AI de goi y phan tich,19
+SV0005,Sinh vien,DH Ngoai thuong,Tai chinh - Ngan hang,Nam,21,Dai hoc,4,4,Excel,1,2,Khong co kho khan gi,4,3,4,5,4,Co,20,4,2,Co giao dien tieng Viet,21
+SV0024,Sinh vien,DH Can Tho,Xa hoi hoc,Nu,24,Dai hoc,1,3,SPSS,5,3,Chi phi ban quyen cao,4,5,2,3,4,Co,5,4,4,Mien phi cho sinh vien,17
+SV0166,Sinh vien,DH Hoa Sen,Giao duc hoc,Nu,21,Dai hoc,2,1,Excel,2,4,Khong duoc dao tao su dung,2,4,4,2,3,Co,20,4,4,Mien phi cho sinh vien,21
+SV0183,Sinh vien,DH Kinh te Quoc dan,Cong nghe thong tin,Nu,23,Dai hoc,4,2,Excel,1,5,Khong co kho khan gi,2,5,1,3,4,Co,0,5,2,Co ban bao cao tu dong,18
+GV0060,Giang vien,DH Thuong mai,Cong nghe thong tin,Nam,47,ThS,15,4,R,2,5,Thieu tinh nang can thiet,4,5,4,5,4,Khong,5,3,1,Ho tro nhieu dinh dang file,24
+GV0043,Giang vien,DH Ngoai thuong,Ke toan - Kiem toan,Nu,38,GS.TS,6,4,SPSS,3,3,Giao dien phuc tap,4,5,5,5,2,Co,10,5,2,Co ban bao cao tu dong,15
+SV0034,Sinh vien,DH Quoc gia HN,Ke toan - Kiem toan,Nam,23,Dai hoc,4,3,Excel,3,3,Giao dien phuc tap,2,3,2,4,5,Co,0,4,4,Ho tro nhieu dinh dang file,17
+SV0213,Sinh vien,DH Thuong mai,Marketing,Nam,23,Dai hoc,4,2,Excel,4,1,Thieu tinh nang can thiet,3,5,4,4,5,Co,5,4,3,Co huong dan su dung chi tiet,15
+SV0105,Sinh vien,DH Ngoai thuong,Y khoa,Nam,23,Dai hoc,3,1,Khac,5,1,Khong co tai lieu tieng Viet,1,3,5,5,5,Co,5,5,3,Mien phi cho sinh vien,14
+SV0208,Sinh vien,DH Hue,Luat,Nu,20,Dai hoc,2,3,Excel,3,4,Giao dien phuc tap,4,3,3,4,1,Co,0,5,3,Tich hop AI de goi y phan tich,10
+SV0143,Sinh vien,DH Hoa Sen,Giao duc hoc,Nu,21,Dai hoc,2,4,Excel,2,4,Khong co tai lieu tieng Viet,5,4,1,2,3,Co,0,5,3,Co ban bao cao tu dong,19
+SV0022,Sinh vien,DH Hue,Ky thuat,Nu,22,Dai hoc,4,4,Excel,2,4,Khong duoc dao tao su dung,4,4,4,3,4,Co the,10,3,2,Ho tro nhieu dinh dang file,18
+SV0062,Sinh vien,DH Hoa Sen,Ke toan - Kiem toan,Nu,19,Dai hoc,3,2,R,4,3,Chi phi ban quyen cao,5,2,5,2,2,Co,5,4,3,Co huong dan su dung chi tiet,20
+SV0127,Sinh vien,DH Su pham HN,Ngu van,Nam,21,Dai hoc,3,3,R,3,2,Chi phi ban quyen cao,4,3,5,2,5,Co the,0,4,4,Ho tro nhieu dinh dang file,15
+SV0116,Sinh vien,DH Kinh te Quoc dan,Luat,Nam,24,Dai hoc,3,2,Excel,2,3,Khong co kho khan gi,3,4,5,4,5,Co the,0,4,4,Co giao dien tieng Viet,18
+SV0026,Sinh vien,DH Quoc gia HN,Giao duc hoc,Nu,23,Dai hoc,4,2,SPSS,2,3,Khong co tai lieu tieng Viet,4,3,4,5,4,Co the,10,5,3,Co giao dien tieng Viet,13
+SV0179,Sinh vien,DH Ngoai thuong,Ngu van,Nu,19,Dai hoc,4,3,Khong su dung,2,2,Chi phi ban quyen cao,5,2,5,4,5,Co the,20,3,5,Co huong dan su dung chi tiet,20
+SV0123,Sinh vien,DH Bach khoa HN,Khoa hoc may tinh,Nu,21,Dai hoc,3,2,Khong su dung,4,5,Giao dien phuc tap,3,4,4,4,3,Co,0,5,4,Ho tro nhieu dinh dang file,20
+SV0101,Sinh vien,DH Hue,Ke toan - Kiem toan,Nu,21,Dai hoc,1,3,SPSS,1,3,Giao dien phuc tap,1,3,4,3,3,Co,5,3,3,Co huong dan su dung chi tiet,8
+SV0136,Sinh vien,DH Ton Duc Thang,Khoa hoc may tinh,Nam,23,Dai hoc,2,2,SPSS,4,3,Giao dien phuc tap,4,3,4,4,4,Co the,0,4,3,Tich hop AI de goi y phan tich,15
+SV0109,Sinh vien,DH Kinh te TP.HCM,Giao duc hoc,Nam,20,Dai hoc,1,4,R,4,3,Khong co tai lieu tieng Viet,4,3,3,4,3,Co,10,3,3,Co giao dien tieng Viet,16
+GV0024,Giang vien,DH Kinh te Quoc dan,Marketing,Nu,32,TS,4,2,Excel,2,5,Giao dien phuc tap,2,3,2,4,4,Co,10,4,1,Co huong dan su dung chi tiet,14
+SV0130,Sinh vien,DH Thuong mai,Khoa hoc may tinh,Nam,20,Dai hoc,1,3,Excel,5,3,Khong co tai lieu tieng Viet,4,4,3,5,4,Co the,10,3,4,Co giao dien tieng Viet,18
+SV0188,Sinh vien,DH Hue,Xa hoi hoc,Nam,23,Dai hoc,5,3,Excel,4,3,Khong co kho khan gi,5,4,5,4,4,Co the,5,2,4,Co giao dien tieng Viet,19
+GV0061,Giang vien,DH Bach khoa HN,Xa hoi hoc,Nu,44,GS.TS,12,1,SmartPLS,5,2,Thieu tinh nang can thiet,5,3,5,4,4,Co,5,4,4,Mien phi cho sinh vien,16
+SV0011,Sinh vien,DH Kinh te Quoc dan,Ke toan - Kiem toan,Nam,23,Dai hoc,4,2,Khong su dung,2,2,Khong co tai lieu tieng Viet,2,3,4,5,2,Co the,10,2,4,Ho tro nhieu dinh dang file,21
+SV0012,Sinh vien,DH Bach khoa HN,Cong nghe thong tin,Nam,21,Dai hoc,2,3,SPSS,2,1,Khong co tai lieu tieng Viet,1,3,5,5,3,Co the,10,5,4,Mien phi cho sinh vien,10
+SV0107,Sinh vien,DH Kinh te Quoc dan,Tai chinh - Ngan hang,Nu,24,Dai hoc,1,3,Excel,5,4,Giao dien phuc tap,3,2,1,4,4,Co,10,4,3,Co huong dan su dung chi tiet,20
+SV0002,Sinh vien,DH Quoc gia HN,Y khoa,Nu,24,Dai hoc,1,4,R,2,2,Thieu tinh nang can thiet,2,3,4,4,3,Co,5,3,5,Co giao dien tieng Viet,16
+SV0147,Sinh vien,DH Can Tho,Khoa hoc may tinh,Nu,23,Dai hoc,2,3,SPSS,4,2,Khong co tai lieu tieng Viet,3,5,3,5,1,Co the,10,4,2,Co huong dan su dung chi tiet,14
+SV0039,Sinh vien,DH Hue,Cong nghe thong tin,Nam,21,Dai hoc,1,3,R,5,3,Khong co tai lieu tieng Viet,4,4,5,5,4,Co,0,4,5,Ho tro nhieu dinh dang file,8
+GV0049,Giang vien,DH Quoc gia HN,Xa hoi hoc,Nu,53,GS.TS,23,1,SPSS,4,2,Giao dien phuc tap,5,5,4,4,4,Co the,0,3,3,Co giao dien tieng Viet,21
+GV0010,Giang vien,DH Kinh te TP.HCM,Ke toan - Kiem toan,Nu,57,ThS,26,4,SmartPLS,3,4,Chi phi ban quyen cao,3,3,5,3,5,Co,5,4,5,Tich hop AI de goi y phan tich,12
+SV0149,Sinh vien,DH Hue,Giao duc hoc,Nu,20,Dai hoc,4,3,Excel,4,2,Khong duoc dao tao su dung,5,3,1,4,3,Co,10,5,5,Co giao dien tieng Viet,20
+SV0112,Sinh vien,DH Can Tho,Giao duc hoc,Nu,20,Dai hoc,3,2,Khong su dung,3,4,Khong co kho khan gi,4,5,5,4,4,Co,0,3,3,Ho tro nhieu dinh dang file,17
+SV0084,Sinh vien,DH Hoa Sen,Giao duc hoc,Nu,22,Dai hoc,3,2,Khac,4,2,Khong co tai lieu tieng Viet,1,4,4,5,4,Co,0,3,5,Co ban bao cao tu dong,15
+GV0041,Giang vien,DH Hoa Sen,Xa hoi hoc,Nu,58,TS,29,4,SmartPLS,4,4,Khong co tai lieu tieng Viet,4,5,4,4,5,Co the,10,4,5,Co giao dien tieng Viet,19
+SV0064,Sinh vien,DH Kinh te TP.HCM,Quan tri kinh doanh,Nu,22,Dai hoc,4,3,Excel,4,4,Chi phi ban quyen cao,3,4,4,4,2,Co,5,4,4,Tich hop AI de goi y phan tich,9
+SV0189,Sinh vien,DH Ton Duc Thang,Ngu van,Nam,22,Dai hoc,3,3,R,1,4,Giao dien phuc tap,4,4,4,3,5,Co the,5,1,5,Ho tro nhieu dinh dang file,21
+SV0110,Sinh vien,DH Hoa Sen,Marketing,Nu,19,Dai hoc,4,2,Excel,1,3,Thieu tinh nang can thiet,2,4,3,3,4,Co,10,3,4,Co ban bao cao tu dong,18
+GV0079,Giang vien,DH Hue,Cong nghe thong tin,Nu,30,PGS.TS,1,4,SmartPLS,3,4,Khong co tai lieu tieng Viet,5,3,4,4,4,Khong,10,2,3,Mien phi cho sinh vien,14
+SV0004,Sinh vien,DH Can Tho,Khoa hoc may tinh,Nam,23,Dai hoc,5,2,Excel,2,5,Khong co kho khan gi,4,4,5,5,3,Co,0,3,2,Ho tro nhieu dinh dang file,22
+GV0020,Giang vien,DH Thuong mai,Ngu van,Nam,40,PGS.TS,12,3,SPSS,4,3,Giao dien phuc tap,5,4,4,3,5,Co the,10,5,2,Co giao dien tieng Viet,19
+SV0119,Sinh vien,DH Kinh te TP.HCM,Tai chinh - Ngan hang,Nu,23,Dai hoc,5,5,SPSS,2,4,Thieu tinh nang can thiet,4,4,4,5,3,Co,10,4,2,Ho tro nhieu dinh dang file,14
+GV0050,Giang vien,DH Ton Duc Thang,Giao duc hoc,Nam,53,ThS,25,3,R,3,5,Giao dien phuc tap,3,5,5,4,4,Co,0,3,4,Ho tro nhieu dinh dang file,22
+SV0152,Sinh vien,DH Ngoai thuong,Luat,Nam,21,Dai hoc,4,2,SPSS,2,4,Khong co tai lieu tieng Viet,3,3,2,3,4,Co the,5,2,5,Tich hop AI de goi y phan tich,10
+SV0056,Sinh vien,DH Hoa Sen,Marketing,Nam,23,Dai hoc,1,4,SPSS,2,4,Khong duoc dao tao su dung,3,3,2,5,4,Co the,5,5,4,Co giao dien tieng Viet,15
+SV0126,Sinh vien,DH Da Nang,Marketing,Nu,23,Dai hoc,2,3,SPSS,3,3,Khong co kho khan gi,4,3,5,5,4,Co,0,4,4,Ho tro nhieu dinh dang file,19
+SV0134,Sinh vien,DH Bach khoa HN,Quan tri kinh doanh,Nu,21,Dai hoc,1,2,Khong su dung,1,4,Chi phi ban quyen cao,5,3,5,4,3,Co the,5,3,2,Co huong dan su dung chi tiet,21
+SV0106,Sinh vien,DH Bach khoa HN,Luat,Nam,18,Dai hoc,3,2,Excel,3,4,Giao dien phuc tap,5,4,5,4,4,Co,0,3,3,Co huong dan su dung chi tiet,12
+GV0072,Giang vien,DH Ngoai thuong,Ke toan - Kiem toan,Nu,39,ThS,11,4,SPSS,1,5,Giao dien phuc tap,4,3,4,3,5,Co,10,5,4,Co giao dien tieng Viet,13
+SV0059,Sinh vien,DH Su pham HN,Y khoa,Nu,23,Dai hoc,3,2,Khac,3,3,Chi phi ban quyen cao,5,2,2,5,5,Co,5,4,3,Co giao dien tieng Viet,14
+SV0142,Sinh vien,DH Kinh te Quoc dan,Khoa hoc may tinh,Nu,24,Dai hoc,1,4,Khong su dung,2,3,Giao dien phuc tap,4,3,2,5,5,Co,0,4,4,Ho tro nhieu dinh dang file,22
+SV0148,Sinh vien,DH Da Nang,Cong nghe thong tin,Nam,22,Dai hoc,1,2,Excel,4,2,Khong duoc dao tao su dung,5,5,2,4,3,Co the,0,4,1,Co huong dan su dung chi tiet,12
+GV0038,Giang vien,DH Kinh te TP.HCM,Giao duc hoc,Nu,57,ThS,28,4,Python,2,5,Giao dien phuc tap,4,4,3,2,4,Co the,0,5,2,Co giao dien tieng Viet,22
+SV0157,Sinh vien,DH Can Tho,Luat,Nu,18,Dai hoc,2,2,SPSS,3,4,Khong co kho khan gi,2,5,3,5,5,Co,10,5,2,Ho tro nhieu dinh dang file,13
+SV0164,Sinh vien,DH Kinh te Quoc dan,Giao duc hoc,Nam,21,Dai hoc,5,2,SPSS,2,2,Khong co kho khan gi,4,5,4,4,3,Co,0,4,3,Co giao dien tieng Viet,13
+SV0204,Sinh vien,DH Ngoai thuong,Luat,Nam,18,Dai hoc,3,1,SPSS,4,3,Khong duoc dao tao su dung,5,5,4,4,4,Co,0,3,1,Co ban bao cao tu dong,17
+SV0203,Sinh vien,DH Thuong mai,Quan tri kinh doanh,Nu,24,Dai hoc,2,3,SPSS,1,4,Giao dien phuc tap,5,3,2,4,4,Khong,10,4,5,Co ban bao cao tu dong,18
+SV0041,Sinh vien,DH Quoc gia HN,Xa hoi hoc,Nam,18,Dai hoc,4,2,Excel,5,3,Khong duoc dao tao su dung,5,1,5,4,2,Co,5,4,3,Co giao dien tieng Viet,11
+SV0155,Sinh vien,DH Kinh te TP.HCM,Marketing,Nam,21,Dai hoc,1,3,SPSS,2,2,Thieu tinh nang can thiet,4,2,4,4,4,Co,10,4,2,Mien phi cho sinh vien,10
+SV0076,Sinh vien,DH Ngoai thuong,Xa hoi hoc,Nu,21,Dai hoc,2,3,Excel,1,4,Khong co tai lieu tieng Viet,4,1,4,3,3,Co,5,3,3,Co ban bao cao tu dong,18
+GV0007,Giang vien,DH Kinh te TP.HCM,Y khoa,Nam,44,ThS,12,5,AMOS,3,3,Giao dien phuc tap,5,5,3,3,4,Co,15,4,4,Ho tro nhieu dinh dang file,23
+GV0054,Giang vien,DH Ngoai thuong,Marketing,Nu,36,PGS.TS,4,4,SPSS,4,4,Giao dien phuc tap,4,3,3,4,4,Co,0,4,1,Ho tro nhieu dinh dang file,28
+SV0088,Sinh vien,DH Ton Duc Thang,Ke toan - Kiem toan,Nu,18,Dai hoc,4,3,SPSS,2,3,Thieu tinh nang can thiet,4,3,4,5,5,Khong,0,4,4,Tich hop AI de goi y phan tich,11
+SV0195,Sinh vien,DH Hue,Khoa hoc may tinh,Nam,20,Dai hoc,4,5,Excel,1,3,Khong co kho khan gi,5,4,5,4,3,Co the,5,3,2,Co ban bao cao tu dong,12
+SV0044,Sinh vien,DH Hue,Y khoa,Nam,21,Dai hoc,2,3,Excel,3,3,Khong co tai lieu tieng Viet,5,5,5,3,3,Co the,5,4,3,Mien phi cho sinh vien,14
+GV0077,Giang vien,DH Su pham HN,Ke toan - Kiem toan,Nam,30,TS,1,5,Excel,1,4,Khong duoc dao tao su dung,2,5,3,4,4,Co,0,4,5,Co ban bao cao tu dong,24
+GV0033,Giang vien,DH Kinh te Quoc dan,Khoa hoc may tinh,Nam,55,ThS,25,3,Excel,4,4,Khong co tai lieu tieng Viet,2,5,3,4,5,Co the,0,2,5,Co huong dan su dung chi tiet,21
+SV0120,Sinh vien,DH Ngoai thuong,Tai chinh - Ngan hang,Nu,24,Dai hoc,1,3,Khong su dung,3,1,Giao dien phuc tap,3,5,3,4,3,Co,15,4,4,Co giao dien tieng Viet,10
+SV0219,Sinh vien,DH Hoa Sen,Ngu van,Nam,18,Dai hoc,5,2,SPSS,4,3,Chi phi ban quyen cao,3,4,3,5,4,Co,0,4,4,Mien phi cho sinh vien,16
+SV0029,Sinh vien,DH Thuong mai,Cong nghe thong tin,Nam,24,Dai hoc,1,1,SPSS,4,3,Giao dien phuc tap,2,4,4,3,4,Co the,0,4,4,Co giao dien tieng Viet,20
+GV0034,Giang vien,DH Bach khoa HN,Luat,Nu,41,TS,10,3,Excel,2,3,Thieu tinh nang can thiet,4,4,5,5,4,Co,20,4,3,Co giao dien tieng Viet,21
+SV0072,Sinh vien,DH Ton Duc Thang,Marketing,Nu,19,Dai hoc,2,2,R,3,5,Khong co kho khan gi,4,3,4,3,4,Co,10,4,4,Tich hop AI de goi y phan tich,20
+SV0016,Sinh vien,DH Thuong mai,Y khoa,Nu,23,Dai hoc,1,3,SPSS,3,4,Giao dien phuc tap,4,5,4,3,5,Co,5,5,1,Tich hop AI de goi y phan tich,20
+GV0078,Giang vien,DH Ton Duc Thang,Ke toan - Kiem toan,Nam,40,PGS.TS,11,4,Stata,2,2,Khong co tai lieu tieng Viet,3,4,3,3,4,Co,15,4,3,Co huong dan su dung chi tiet,12
+SV0178,Sinh vien,DH Da Nang,Ky thuat,Nam,24,Dai hoc,5,4,Khac,4,4,Giao dien phuc tap,3,4,3,5,3,Co,0,5,3,Co ban bao cao tu dong,17
+SV0009,Sinh vien,DH Su pham HN,Ke toan - Kiem toan,Nam,21,Dai hoc,3,5,Excel,2,3,Chi phi ban quyen cao,3,2,1,4,4,Co,10,2,1,Co giao dien tieng Viet,21
+SV0033,Sinh vien,DH Ton Duc Thang,Xa hoi hoc,Nu,18,Dai hoc,5,3,SPSS,2,3,Khong duoc dao tao su dung,5,4,4,4,5,Co,0,5,3,Ho tro nhieu dinh dang file,13
+SV0086,Sinh vien,DH Thuong mai,Y khoa,Nu,20,Dai hoc,2,4,SPSS,5,3,Thieu tinh nang can thiet,5,3,4,4,2,Co,5,4,2,Ho tro nhieu dinh dang file,10
+SV0052,Sinh vien,DH Ngoai thuong,Y khoa,Nu,18,Dai hoc,4,2,SPSS,2,4,Thieu tinh nang can thiet,4,5,5,2,3,Co,10,4,5,Co huong dan su dung chi tiet,18
+SV0070,Sinh vien,DH Hoa Sen,Ke toan - Kiem toan,Nu,18,Dai hoc,3,3,SPSS,2,5,Khong co kho khan gi,4,2,4,2,4,Co,0,3,4,Co ban bao cao tu dong,18
+GV0037,Giang vien,DH Da Nang,Xa hoi hoc,Nam,35,PGS.TS,5,4,SPSS,3,5,Khong duoc dao tao su dung,5,4,4,4,4,Co,10,4,2,Co ban bao cao tu dong,16
+SV0162,Sinh vien,DH Da Nang,Y khoa,Nam,18,Dai hoc,4,2,SPSS,1,2,Chi phi ban quyen cao,4,1,4,4,3,Co,10,4,3,Mien phi cho sinh vien,20
+SV0050,Sinh vien,DH Bach khoa HN,Tai chinh - Ngan hang,Nu,20,Dai hoc,5,3,R,3,4,Khong co kho khan gi,2,4,1,5,1,Co,0,5,3,Mien phi cho sinh vien,10
+SV0185,Sinh vien,DH Bach khoa HN,Ngu van,Nu,22,Dai hoc,1,3,SPSS,5,3,Chi phi ban quyen cao,1,2,2,4,4,Khong,10,2,4,Tich hop AI de goi y phan tich,18
+GV0055,Giang vien,DH Da Nang,Khoa hoc may tinh,Nu,48,ThS,18,5,Excel,3,2,Thieu tinh nang can thiet,4,4,4,3,4,Co the,0,2,4,Co huong dan su dung chi tiet,26
+SV0035,Sinh vien,DH Thuong mai,Quan tri kinh doanh,Nu,19,Dai hoc,3,2,Excel,3,2,Chi phi ban quyen cao,5,4,4,3,5,Co,10,4,3,Mien phi cho sinh vien,13
+SV0096,Sinh vien,DH Kinh te Quoc dan,Cong nghe thong tin,Nam,20,Dai hoc,2,4,R,3,3,Khong co tai lieu tieng Viet,3,5,5,3,2,Co the,0,5,5,Co huong dan su dung chi tiet,12
+SV0199,Sinh vien,DH Quoc gia HN,Quan tri kinh doanh,Nu,22,Dai hoc,5,3,SPSS,3,2,Khong co tai lieu tieng Viet,3,4,3,3,4,Co,5,4,2,Ho tro nhieu dinh dang file,21
+SV0092,Sinh vien,DH Hoa Sen,Xa hoi hoc,Nu,18,Dai hoc,5,1,SPSS,2,3,Khong co tai lieu tieng Viet,2,5,2,5,3,Co,5,5,4,Ho tro nhieu dinh dang file,21
+GV0073,Giang vien,DH Kinh te Quoc dan,Giao duc hoc,Nu,56,ThS,25,3,SmartPLS,1,1,Khong co tai lieu tieng Viet,3,4,5,4,4,Khong,5,4,5,Co giao dien tieng Viet,19
+SV0111,Sinh vien,DH Ton Duc Thang,Xa hoi hoc,Nu,24,Dai hoc,2,4,Excel,4,2,Giao dien phuc tap,5,2,5,4,3,Co,0,5,4,Tich hop AI de goi y phan tich,14
+SV0075,Sinh vien,DH Quoc gia HN,Ke toan - Kiem toan,Nam,19,Dai hoc,2,1,Khong su dung,3,4,Khong co kho khan gi,4,4,5,1,3,Co,15,4,3,Tich hop AI de goi y phan tich,11
+GV0004,Giang vien,DH Ngoai thuong,Cong nghe thong tin,Nam,47,ThS,17,2,Python,2,3,Khong duoc dao tao su dung,3,4,4,4,3,Co,15,5,5,Co giao dien tieng Viet,27
+GV0080,Giang vien,DH Thuong mai,Y khoa,Nam,42,TS,14,2,Khac,5,4,Khong duoc dao tao su dung,4,4,4,3,2,Co,0,5,5,Mien phi cho sinh vien,17
+GV0065,Giang vien,DH Can Tho,Ky thuat,Nam,47,TS,16,3,Excel,3,5,Thieu tinh nang can thiet,3,2,5,5,5,Co the,0,4,2,Co giao dien tieng Viet,21
+GV0022,Giang vien,DH Quoc gia HN,Cong nghe thong tin,Nu,53,ThS,24,1,Excel,3,3,Khong co tai lieu tieng Viet,3,3,4,5,3,Co the,20,4,2,Co huong dan su dung chi tiet,26
+SV0038,Sinh vien,DH Da Nang,Cong nghe thong tin,Nu,18,Dai hoc,4,3,Khong su dung,4,3,Khong co kho khan gi,5,3,2,3,3,Co,0,2,4,Ho tro nhieu dinh dang file,19
+SV0113,Sinh vien,DH Hoa Sen,Ngu van,Nam,19,Dai hoc,2,2,Excel,4,3,Khong co kho khan gi,5,3,5,4,4,Co the,5,5,3,Co huong dan su dung chi tiet,19
+SV0193,Sinh vien,DH Ton Duc Thang,Quan tri kinh doanh,Nam,18,Dai hoc,2,4,Excel,3,4,Khong co kho khan gi,3,4,1,4,4,Co,10,4,4,Ho tro nhieu dinh dang file,10
+SV0103,Sinh vien,DH Hoa Sen,Ngu van,Nam,24,Dai hoc,5,3,SPSS,2,4,Chi phi ban quyen cao,4,4,4,5,2,Co the,15,3,4,Co huong dan su dung chi tiet,13
+SV0212,Sinh vien,DH Hoa Sen,Ky thuat,Nam,20,Dai hoc,3,2,R,3,4,Khong co tai lieu tieng Viet,4,4,1,5,3,Co the,5,5,5,Tich hop AI de goi y phan tich,17
+SV0122,Sinh vien,DH Kinh te TP.HCM,Khoa hoc may tinh,Nu,19,Dai hoc,2,2,SPSS,1,2,Thieu tinh nang can thiet,4,4,2,3,3,Co,5,3,2,Tich hop AI de goi y phan tich,8
+SV0051,Sinh vien,DH Hoa Sen,Khoa hoc may tinh,Nam,22,Dai hoc,5,4,Khong su dung,2,4,Khong co tai lieu tieng Viet,5,3,5,5,4,Co,10,3,4,Co ban bao cao tu dong,14
+SV0117,Sinh vien,DH Hoa Sen,Ky thuat,Nam,21,Dai hoc,1,4,Excel,2,5,Chi phi ban quyen cao,5,5,3,5,4,Co,0,5,4,Tich hop AI de goi y phan tich,22
+GV0069,Giang vien,DH Hoa Sen,Quan tri kinh doanh,Nam,59,TS,28,4,SPSS,2,4,Thieu tinh nang can thiet,4,4,5,5,5,Co the,0,4,4,Co huong dan su dung chi tiet,22
+SV0057,Sinh vien,DH Can Tho,Khoa hoc may tinh,Nu,20,Dai hoc,5,3,Khac,1,3,Khong co tai lieu tieng Viet,4,2,4,4,5,Co,0,3,4,Ho tro nhieu dinh dang file,16
+SV0118,Sinh vien,DH Can Tho,Luat,Nam,24,Dai hoc,2,2,Khac,3,4,Khong co kho khan gi,5,5,3,4,4,Co the,5,4,3,Co ban bao cao tu dong,10
+GV0059,Giang vien,DH Thuong mai,Y khoa,Nam,36,TS,4,3,SPSS,3,3,Khong co tai lieu tieng Viet,2,2,5,5,4,Co,10,3,5,Ho tro nhieu dinh dang file,12
+SV0102,Sinh vien,DH Can Tho,Xa hoi hoc,Nu,19,Dai hoc,3,3,Excel,4,4,Thieu tinh nang can thiet,4,4,5,4,3,Khong,5,4,5,Tich hop AI de goi y phan tich,14
+SV0215,Sinh vien,DH Ton Duc Thang,Tai chinh - Ngan hang,Nam,23,Dai hoc,2,3,Khong su dung,1,2,Giao dien phuc tap,4,3,5,4,5,Co the,10,5,2,Ho tro nhieu dinh dang file,15
+SV0167,Sinh vien,DH Bach khoa HN,Tai chinh - Ngan hang,Nam,19,Dai hoc,5,3,SPSS,4,4,Khong duoc dao tao su dung,4,4,4,5,3,Khong,5,5,2,Co huong dan su dung chi tiet,20
+GV0008,Giang vien,DH Kinh te TP.HCM,Luat,Nu,43,TS,15,3,Excel,1,2,Khong duoc dao tao su dung,2,4,5,3,3,Co,20,4,3,Mien phi cho sinh vien,18
+SV0121,Sinh vien,DH Hoa Sen,Tai chinh - Ngan hang,Nu,22,Dai hoc,4,3,Excel,1,3,Chi phi ban quyen cao,4,5,5,1,4,Co the,10,4,5,Co huong dan su dung chi tiet,17
+SV0037,Sinh vien,DH Quoc gia HN,Luat,Nu,21,Dai hoc,5,2,Excel,3,4,Giao dien phuc tap,4,3,2,3,4,Co,5,4,3,Co giao dien tieng Viet,11
+SV0060,Sinh vien,DH Hue,Y khoa,Nam,20,Dai hoc,1,3,Excel,3,2,Khong co kho khan gi,4,5,4,4,2,Co,0,4,4,Ho tro nhieu dinh dang file,17
+GV0044,Giang vien,DH Kinh te TP.HCM,Cong nghe thong tin,Nu,51,ThS,21,4,Excel,5,4,Giao dien phuc tap,4,4,5,5,4,Co the,0,5,3,Co ban bao cao tu dong,13
+GV0029,Giang vien,DH Kinh te Quoc dan,Luat,Nu,39,PGS.TS,9,3,SPSS,3,3,Khong duoc dao tao su dung,5,5,5,5,3,Co the,10,4,5,Ho tro nhieu dinh dang file,21
+SV0015,Sinh vien,DH Thuong mai,Cong nghe thong tin,Nam,20,Dai hoc,5,1,Excel,1,2,Thieu tinh nang can thiet,3,5,4,4,5,Co the,0,5,3,Co ban bao cao tu dong,9
+SV0081,Sinh vien,DH Hue,Ngu van,Nu,23,Dai hoc,1,3,Excel,4,4,Chi phi ban quyen cao,2,4,5,2,2,Co the,0,4,4,Ho tro nhieu dinh dang file,10
+SV0091,Sinh vien,DH Thuong mai,Marketing,Nu,18,Dai hoc,4,3,SPSS,3,1,Khong duoc dao tao su dung,4,4,5,4,4,Co,0,4,5,Ho tro nhieu dinh dang file,13
+GV0056,Giang vien,DH Da Nang,Cong nghe thong tin,Nu,40,TS,11,4,Python,5,4,Khong co tai lieu tieng Viet,4,2,5,5,2,Co,10,5,4,Co huong dan su dung chi tiet,16
+SV0027,Sinh vien,DH Kinh te TP.HCM,Ky thuat,Nam,23,Dai hoc,5,3,Khong su dung,4,3,Thieu tinh nang can thiet,4,1,3,4,4,Co,5,3,4,Co giao dien tieng Viet,22
+SV0054,Sinh vien,DH Ton Duc Thang,Ke toan - Kiem toan,Nam,22,Dai hoc,4,3,Khac,1,3,Khong co tai lieu tieng Viet,4,3,4,5,3,Co the,5,2,3,Co giao dien tieng Viet,21
+SV0023,Sinh vien,DH Bach khoa HN,Tai chinh - Ngan hang,Nam,24,Dai hoc,1,5,SPSS,2,4,Giao dien phuc tap,1,3,4,5,2,Co,5,3,4,Mien phi cho sinh vien,14
+GV0013,Giang vien,DH Bach khoa HN,Luat,Nu,57,TS,24,3,R,1,5,Khong co tai lieu tieng Viet,4,1,4,5,2,Co,0,4,5,Tich hop AI de goi y phan tich,19
+SV0172,Sinh vien,DH Kinh te Quoc dan,Marketing,Nu,24,Dai hoc,2,4,Khong su dung,1,2,Giao dien phuc tap,5,3,4,5,4,Co,10,4,4,Co giao dien tieng Viet,18
+SV0129,Sinh vien,DH Su pham HN,Marketing,Nu,23,Dai hoc,2,3,Excel,3,4,Khong co tai lieu tieng Viet,4,3,4,3,5,Co the,0,2,5,Co huong dan su dung chi tiet,13
+GV0003,Giang vien,DH Ngoai thuong,Xa hoi hoc,Nam,48,TS,19,4,SPSS,1,3,Khong duoc dao tao su dung,5,4,5,4,4,Co,20,4,3,Mien phi cho sinh vien,28
+SV0108,Sinh vien,DH Hue,Giao duc hoc,Nu,24,Dai hoc,2,4,Excel,3,4,Thieu tinh nang can thiet,3,5,5,4,4,Co,5,4,4,Co huong dan su dung chi tiet,18
+SV0146,Sinh vien,DH Ngoai thuong,Ky thuat,Nam,23,Dai hoc,3,4,Python,1,4,Thieu tinh nang can thiet,4,3,5,4,4,Co,0,5,2,Co huong dan su dung chi tiet,12
+SV0187,Sinh vien,DH Kinh te TP.HCM,Ky thuat,Nu,20,Dai hoc,1,4,SPSS,2,5,Thieu tinh nang can thiet,5,4,4,4,5,Co,0,5,5,Co huong dan su dung chi tiet,9
+SV0028,Sinh vien,DH Su pham HN,Marketing,Nam,23,Dai hoc,1,3,Khong su dung,1,2,Thieu tinh nang can thiet,3,3,5,4,5,Co the,0,2,1,Ho tro nhieu dinh dang file,8
