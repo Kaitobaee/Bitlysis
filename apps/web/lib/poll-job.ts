@@ -2,7 +2,8 @@ import { getJob } from "@/lib/api";
 import type { JobDetail, JobStatus } from "@/lib/types";
 
 const INTERVAL_MS = 1500;
-const MAX_MS = 120_000;
+// R pipeline cron chạy mỗi 15 phút — cần poll đủ lâu để không timeout trước khi có kết quả
+const MAX_MS = 1_200_000; // 20 phút
 
 export class PollTimeoutError extends Error {
   constructor() {
@@ -16,7 +17,13 @@ export function isTerminalStatus(s: JobStatus): boolean {
 }
 
 export function isBusyStatus(s: JobStatus): boolean {
-  return s === "analyzing" || s === "profiling" || s === "exporting";
+  return (
+    s === "analyzing" ||
+    s === "profiling" ||
+    s === "exporting" ||
+    s === "r_queued" ||     // Đang chờ GitHub Actions cron pick up
+    s === "r_processing"    // GitHub Actions đang chạy Rscript
+  );
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

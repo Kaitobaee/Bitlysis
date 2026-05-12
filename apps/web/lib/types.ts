@@ -2,6 +2,8 @@ export type JobStatus =
   | "uploaded"
   | "profiling"
   | "analyzing"
+  | "r_queued"       // Đang chờ GitHub Actions cron xử lý R pipeline
+  | "r_processing"   // GitHub Actions đang chạy Rscript
   | "exporting"
   | "succeeded"
   | "failed";
