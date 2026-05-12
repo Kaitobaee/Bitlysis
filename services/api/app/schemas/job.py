@@ -12,6 +12,9 @@ class JobStatus(StrEnum):
     uploaded = "uploaded"
     profiling = "profiling"
     analyzing = "analyzing"
+    # R pipeline statuses — jobs được GitHub Actions cron xử lý bằng Rscript
+    r_queued = "r_queued"        # Đang chờ GitHub Actions cron pick up
+    r_processing = "r_processing"  # GitHub Actions đang chạy Rscript
     exporting = "exporting"
     succeeded = "succeeded"
     failed = "failed"
@@ -57,6 +60,14 @@ class JobDetail(BaseModel):
         default=None,
         description="Tên file ZIP export trong upload_dir (Phase 8)",
     )
+    r_queued_at: str | None = Field(
+        default=None,
+        description="Thời điểm job được đưa vào hàng đợi R (r_queued status)",
+    )
+    r_engine: str | None = Field(
+        default=None,
+        description="Engine R đã xử lý job (bitlysis_r_pipeline hoặc None)",
+    )
 
 
 class AnalyzeAccepted(BaseModel):
@@ -64,4 +75,16 @@ class AnalyzeAccepted(BaseModel):
     status: JobStatus = JobStatus.analyzing
     message: str = Field(
         default="Accepted. Poll GET /v1/jobs/<job_id> for status.",
+    )
+
+
+class RQueuedAccepted(BaseModel):
+    """Response khi job được đưa vào hàng đợi R pipeline."""
+    job_id: str
+    status: JobStatus = JobStatus.r_queued
+    message: str = Field(
+        default=(
+            "Job queued for R pipeline processing. "
+            "GitHub Actions cron will pick up within 15 minutes."
+        ),
     )

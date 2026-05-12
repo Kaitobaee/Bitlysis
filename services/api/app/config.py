@@ -12,6 +12,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Khi TESTING=true (set bởi conftest.py / pytest), tắt mọi rate limit
+    testing: bool = Field(default=False, description="Disable rate limits in test environments")
+
     api_cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002"
 
     # Phase 11–12 — hardening (để trống = tắt TrustedHost)
@@ -66,6 +69,29 @@ class Settings(BaseSettings):
         description="Sliding window (giây) cho rate limit upload",
     )
 
+    # Rate limit cho analyze endpoints (LLM calls — tốn kém hơn)
+    analyze_rate_limit_enabled: bool = Field(default=True)
+    web_analyze_rate_limit_max_requests: int = Field(
+        default=10,
+        ge=1,
+        description="Số POST /v1/web/analyze tối đa mỗi IP / window",
+    )
+    web_analyze_rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        description="Sliding window (giây) cho rate limit web analyze",
+    )
+    job_analyze_rate_limit_max_requests: int = Field(
+        default=5,
+        ge=1,
+        description="Số POST /v1/jobs/{id}/analyze tối đa mỗi IP / window",
+    )
+    job_analyze_rate_limit_window_seconds: int = Field(
+        default=300,
+        ge=1,
+        description="Sliding window (giây) cho rate limit job analyze",
+    )
+
     profiling_max_rows: int = Field(
         default=10_000,
         ge=50,
@@ -73,24 +99,31 @@ class Settings(BaseSettings):
         description="Số dòng tối đa đọc cho profiling (cap bộ nhớ)",
     )
 
-    # Legacy R fields — giữ để client/test cũ không gãy; engine giờ là Python (ADR 0005).
+    # R pipeline fields — sử dụng bởi GitHub Actions cron job
+    r_enabled: bool = Field(
+        default=False,
+        description=(
+            "Bật R subprocess khi Rscript có trên PATH (local dev/CI). "
+            "Production: False, dùng cron."
+        ),
+    )
     r_subprocess_timeout_seconds: int = Field(
         default=180,
         ge=15,
         le=3600,
-        description="Deprecated — không còn dùng (engine Python).",
+        description="Timeout (giây) cho subprocess Rscript — dùng khi r_enabled=True.",
     )
     r_package_root: Path | None = Field(
         default=None,
-        description="Deprecated — chỉ giữ để định vị fixture tests cũ.",
+        description="Đường dẫn tới packages/r-pipeline; None = tự resolve từ repo root.",
     )
     bitlysis_rscript_path: Path | None = Field(
         default=None,
-        description="Deprecated — không còn gọi Rscript.",
+        description="Đường dẫn Rscript executable; None = tìm trên PATH.",
     )
     run_endpoint_token: str | None = Field(
         default=None,
-        description="Token bảo vệ POST /v1/run qua header X-Run-Token",
+        description="Token bảo vệ POST /v1/run và GET /v1/jobs/r-queue qua header X-Run-Token",
     )
 
     # Phase 3 — orchestrator comprehensive_analysis

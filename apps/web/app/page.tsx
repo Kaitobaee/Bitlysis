@@ -1,8 +1,15 @@
+"use client";
+
 import Link from "next/link";
 
 import { HeroLottie } from "@/components/hero-lottie";
+import { LanguageSwitch } from "@/components/language-switch";
+import { useI18n } from "@/lib/i18n";
 
+// UX-8 fix: dùng LanguageSwitch component thực sự thay vì button hardcode không có onClick
 export default function Home() {
+  const { t } = useI18n();
+
   return (
     <main className="h-screen overflow-hidden bg-[radial-gradient(circle_at_18%_22%,#f0eefe_0%,#f7f7fb_42%,#ffffff_100%)] text-[#47435f]">
       <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 md:px-10">
@@ -14,12 +21,8 @@ export default function Home() {
             <span className="text-[36px] font-black tracking-tight md:text-[38px]">bitlysis</span>
           </Link>
 
-          <button
-            type="button"
-            className="rounded-full border border-[#e2def6] bg-white px-5 py-2 text-xs font-bold uppercase tracking-[0.08em] text-[#8a86a2] transition hover:border-[#d4cdee]"
-          >
-            Ngôn ngữ hiển thị: Tiếng Việt
-          </button>
+          {/* LanguageSwitch với i18n thực sự — UX-8 */}
+          <LanguageSwitch />
         </header>
 
         <section className="grid flex-1 items-center gap-8 pb-10 md:grid-cols-[1fr_1fr] md:gap-14 md:pb-14">
@@ -34,7 +37,7 @@ export default function Home() {
             <div className="w-full max-w-xl text-center">
               <p className="text-label text-[#8f80c7]">Statistical copilot</p>
               <h1 className="mt-4 font-serif text-[42px] font-semibold leading-[1.14] tracking-[-0.01em] text-[#47435f] md:text-[56px]">
-                Phân tích dữ liệu khảo sát chuẩn học thuật, một-lần-chạy
+                {t("app.tagline")}
               </h1>
 
               <p className="mx-auto mt-5 max-w-lg text-[17px] leading-relaxed text-[#78738e] md:text-[22px]">

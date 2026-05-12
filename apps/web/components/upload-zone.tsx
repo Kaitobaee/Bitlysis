@@ -18,6 +18,10 @@ type ChatMessage = {
   content: string;
 };
 
+// Chỉ chấp nhận Excel + CSV (Excel là định dạng chính)
+const DATA_FILE_EXTS = new Set(["csv", "xlsx", "xlsm"]);
+const ACCEPT_ATTR = ".csv,.xlsx,.xlsm";
+
 function formatAssistantMessage(value: string): string {
   const cleaned = value
     .replace(/\r\n/g, "\n")
@@ -37,18 +41,25 @@ function formatAssistantMessage(value: string): string {
 export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant, onUploadDataFile }: Props) {
   const { t } = useI18n();
   const [websiteValue, setWebsiteValue] = useState("");
-  const [contentValue, setContentValue] = useState("");
   const [chatValue, setChatValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom on new message (UX-5)
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     if (!analysis) {
       setMessages([
         {
           role: "assistant",
-          content: "Nhập URL hoặc nội dung website để bắt đầu phân tích. Sau đó bạn có thể hỏi tiếp ngay trong khung này.",
+          content: t("upload.hintMessage"),
         },
       ]);
       return;
@@ -57,10 +68,10 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
     setMessages([
       {
         role: "assistant",
-        content: `Tôi đang bám vào website "${analysis.source_label}". Hỏi tôi về nguy cơ, CTA, nội dung nhạy cảm, hoặc điểm cần xác minh thêm.`,
+        content: `${t("upload.analysisReady")} "${analysis.source_label}". ${t("upload.analysisReadyHint")}`,
       },
     ]);
-  }, [analysis]);
+  }, [analysis, t]);
 
   const runAnalyzeFromInput = async (rawValue: string, userLabel: string) => {
     const cleaned = rawValue.trim();
@@ -92,14 +103,7 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
     const payload = websiteValue.trim();
     if (!payload) return;
     setWebsiteValue("");
-    await runAnalyzeFromInput(payload, "Phân tích website");
-  };
-
-  const submitContent = async () => {
-    const payload = contentValue.trim();
-    if (!payload) return;
-    setContentValue("");
-    await runAnalyzeFromInput(payload, "Phân tích nội dung");
+    await runAnalyzeFromInput(payload, t("upload.labelWebsite"));
   };
 
   const submitQuickPrompt = async (prompt: string) => {
@@ -116,80 +120,78 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
   };
 
   const onPickFile = () => {
-    if (disabled || busy) return;
+    if (disabled || busy || uploading) return;
     fileInputRef.current?.click();
   };
 
-  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || disabled || busy) return;
-
-    setBusy(true);
-    try {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-      const dataFileExt = new Set(["csv", "xlsx", "xlsm"]);
-      const textLikeExt = new Set(["txt", "md", "csv", "json", "html", "htm", "xml", "tsv", "log", "yaml", "yml", "js", "ts", "py", "java", "c", "cpp", "cs", "go", "php", "sql"]);
-      const isLikelyText = file.type.startsWith("text/") || textLikeExt.has(ext);
-      const isDataFile = dataFileExt.has(ext);
-
+  const processDataFile = async (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!DATA_FILE_EXTS.has(ext)) {
       setMessages((current) => [
         ...current,
         {
-          role: "user",
-          content: `Đã chọn file: ${file.name}`,
+          role: "assistant",
+          content: t("upload.fileTypeError"),
         },
       ]);
+      return;
+    }
 
-      if (isDataFile) {
-        await onUploadDataFile(file);
-        setMessages((current) => [
-          ...current,
-          {
-            role: "assistant",
-            content: `File dữ liệu ${file.name} đã được upload vào backend phân tích. Hệ thống đang tiếp tục profile và chuẩn bị kết quả.`,
-          },
-        ]);
-        return;
-      }
+    setMessages((current) => [
+      ...current,
+      { role: "user", content: `${t("upload.fileSelected")}: ${file.name}` },
+    ]);
 
-      let payload = "";
-      if (isLikelyText) {
-        const rawText = await file.text();
-        const cleaned = rawText.trim();
-        if (!cleaned) {
-          setMessages((current) => [
-            ...current,
-            {
-              role: "assistant",
-              content: "File rỗng hoặc không có nội dung văn bản để phân tích.",
-            },
-          ]);
-          return;
-        }
-        payload = cleaned.slice(0, 20000);
-      } else {
-        payload = [
-          "[Non-text file uploaded]",
-          `filename: ${file.name}`,
-          `mime_type: ${file.type || "unknown"}`,
-          `size_bytes: ${file.size}`,
-          "note: AI chỉ có thể phân tích metadata vì đây không phải file văn bản.",
-        ].join("\n");
-      }
-
-      await runAnalyzeFromInput(payload, `Phân tích nội dung file ${file.name}`);
+    setUploading(true);
+    setBusy(true);
+    try {
+      await onUploadDataFile(file);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: `${t("upload.fileUploaded")} ${file.name}. ${t("upload.fileUploadedHint")}`,
+        },
+      ]);
     } catch {
       setMessages((current) => [
         ...current,
         {
           role: "assistant",
-          content: "Không thể xử lý file này. Vui lòng thử lại với file khác.",
+          content: t("upload.fileUploadError"),
         },
       ]);
     } finally {
+      setUploading(false);
       setBusy(false);
     }
+  };
+
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || disabled) return;
+    await processDataFile(file);
+  };
+
+  // Drag & Drop handlers (UX-4)
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!disabled && !busy) setDragOver(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (disabled || busy || uploading) return;
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processDataFile(file);
   };
 
   return (
@@ -201,10 +203,11 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
         </div>
 
         {!analysis && (
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-2">
+            {/* Panel 1: Website Analysis */}
             <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">1. Phân tích website</p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">Dán URL website để hệ thống phân tích nội dung, rủi ro, CTA và cấu trúc trang.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">1. {t("upload.panelWebTitle")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("upload.panelWebHint")}</p>
               <input
                 value={websiteValue}
                 disabled={disabled || busy}
@@ -224,44 +227,57 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
                 onClick={() => void submitWebsite()}
                 className="mt-3 rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
               >
-                {busy ? t("upload.analyzing") : "Phân tích website"}
+                {busy ? t("upload.analyzing") : t("upload.panelWebCta")}
               </button>
             </div>
 
+            {/* Panel 2: Excel/CSV Upload with Drag & Drop (UX-4) */}
             <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">2. Phân tích file (Excel, Word)</p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">Upload file dữ liệu hoặc tài liệu để chạy luồng phân tích đã triển khai.</p>
-              <div className="mt-3 rounded-xl border border-dashed border-(--border) bg-(--surface) p-4 text-center text-xs text-(--muted)">
-                Hỗ trợ: .xlsx, .xlsm, .csv, .doc, .docx, .txt...
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">2. {t("upload.panelFileTitle")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("upload.panelFileHint")}</p>
+
+              {/* Drop zone */}
+              <div
+                className={[
+                  "mt-3 rounded-xl border-2 border-dashed p-4 text-center text-xs transition-colors",
+                  dragOver
+                    ? "border-(--accent) bg-[rgba(15,118,110,0.06)]"
+                    : "border-(--border) bg-(--surface)",
+                  disabled || busy ? "cursor-not-allowed" : "cursor-pointer",
+                ].join(" ")}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={(e) => void onDrop(e)}
+                onClick={onPickFile}
+                role="button"
+                tabIndex={0}
+                aria-label={t("upload.dropZoneLabel")}
+                onKeyDown={(e) => e.key === "Enter" && onPickFile()}
+              >
+                {uploading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--border) border-t-(--accent)" />
+                    <span className="text-(--muted)">{t("upload.uploading")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-(--muted)">
+                      {dragOver ? t("upload.dropNow") : t("upload.dropZoneText")}
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--muted)">
+                      {t("upload.acceptedFormats")}
+                    </p>
+                  </>
+                )}
               </div>
+
               <button
                 type="button"
-                disabled={disabled || busy}
+                disabled={disabled || busy || uploading}
                 onClick={onPickFile}
                 className="mt-3 rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--fg) disabled:opacity-50"
               >
-                Chọn file
-              </button>
-            </div>
-
-            <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">3. Phân tích nội dung</p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">Dán nội dung để AI tìm link liên quan và tóm tắt ngắn cho từng link.</p>
-              <textarea
-                value={contentValue}
-                disabled={disabled || busy}
-                onChange={(event) => setContentValue(event.target.value)}
-                placeholder="Dán đoạn nội dung cần phân tích..."
-                rows={4}
-                className="mt-3 w-full resize-none rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--fg) outline-none"
-              />
-              <button
-                type="button"
-                disabled={disabled || busy || !contentValue.trim()}
-                onClick={() => void submitContent()}
-                className="mt-3 rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
-              >
-                {busy ? t("upload.analyzing") : "Phân tích nội dung"}
+                {uploading ? t("upload.uploading") : t("upload.panelFileCta")}
               </button>
             </div>
           </div>
@@ -271,12 +287,13 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept="*/*"
+          accept={ACCEPT_ATTR}
           onChange={(event) => {
             void onFileChange(event);
           }}
         />
 
+        {/* Chat window with auto-scroll (UX-5) */}
         <div className="min-h-55 max-h-80 space-y-2 overflow-auto rounded-3xl border border-(--border) bg-(--surface-muted) p-3">
           {messages.map((message, idx) => (
             <div
@@ -296,6 +313,8 @@ export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant
               </div>
             </div>
           ))}
+          {/* Sentinel div for auto-scroll */}
+          <div ref={chatBottomRef} />
         </div>
 
         {analysis && (

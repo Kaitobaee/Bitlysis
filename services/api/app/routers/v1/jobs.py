@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+
 import pandas as pd
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 
 from app.config import Settings, get_settings
 from app.jobs import get_queue
 from app.repositories import get_job_repository
-from app.schemas.job import AnalyzeAccepted, JobDetail, JobStatus
+from app.schemas.job import AnalyzeAccepted, JobDetail, JobStatus, RQueuedAccepted
 from app.schemas.stats import AnalyzeRequest
 from app.services.job_data import load_job_dataframe
 
@@ -120,6 +125,94 @@ async def start_analyze(
     )
     await get_queue(settings, background_tasks).enqueue(job_id, "analyze", {"spec": spec_dump})
     return AnalyzeAccepted(job_id=job_id, status=JobStatus.analyzing)
+
+
+@router.post(
+    "/jobs/{job_id}/r-queue",
+    status_code=202,
+    response_model=RQueuedAccepted,
+    summary="Queue job for R pipeline processing via GitHub Actions",
+)
+async def queue_for_r_pipeline(
+    job_id: str,
+    settings: Settings = Depends(get_settings),
+    x_run_token: str | None = Header(default=None),
+) -> RQueuedAccepted:
+    """Chuyển job vào hàng đợi R pipeline.
+
+    Có thể gọi sau khi Python analyze xong (để bổ sung psychometrics bằng R)
+    hoặc thay thế cho Python analyze khi cần kết quả R thuần túy.
+    Bảo vệ bởi X-Run-Token nếu token được cấu hình.
+    """
+    required_token = (settings.run_endpoint_token or "").strip()
+    if required_token and x_run_token != required_token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    repo = get_job_repository(settings)
+    raw = await repo.get_job(job_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="Job không tồn tại")
+
+    st = str(raw.get("status", ""))
+    # Cho phép queue từ: uploaded, analyzing (vừa chạy Python xong), succeeded, failed
+    queueable = {
+        JobStatus.uploaded.value,
+        JobStatus.analyzing.value,
+        JobStatus.succeeded.value,
+        JobStatus.failed.value,
+    }
+    if st not in queueable:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Không thể queue R pipeline từ trạng thái: {st}",
+        )
+
+    now = datetime.now(UTC).isoformat()
+    await repo.patch_job(job_id, {
+        "status": JobStatus.r_queued.value,
+        "r_queued_at": now,
+        "status_updated_at": now,
+        "error": None,
+    })
+    return RQueuedAccepted(job_id=job_id)
+
+
+@router.get(
+    "/jobs/r-queue",
+    summary="[GitHub Actions] List jobs pending R pipeline processing",
+    description=(
+        "Trả danh sách job đang ở trạng thái r_queued. "
+        "Bảo vệ bởi X-Run-Token. Chỉ dành cho GitHub Actions cron."
+    ),
+)
+async def list_r_queued_jobs(
+    limit: int = Query(default=10, ge=1, le=50),
+    settings: Settings = Depends(get_settings),
+    x_run_token: str | None = Header(default=None),
+) -> list[dict[str, Any]]:
+    required_token = (settings.run_endpoint_token or "").strip()
+    if required_token and x_run_token != required_token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    repo = get_job_repository(settings)
+    all_jobs = await repo.list_jobs()
+    r_queued = [
+        j for j in all_jobs
+        if str(j.get("status", "")) == JobStatus.r_queued.value
+    ]
+    # Sắp xếp theo thời gian queue sớm nhất trước
+    r_queued.sort(key=lambda j: str(j.get("r_queued_at") or j.get("uploaded_at") or ""))
+
+    results = []
+    for job in r_queued[:limit]:
+        results.append({
+            "job_id": job.get("job_id"),
+            "stored_as": job.get("stored_as"),
+            "columns": job.get("columns", []),
+            "r_queued_at": job.get("r_queued_at"),
+            "analysis_spec": job.get("analysis_spec"),
+        })
+    return results
 
 
 @router.delete("/jobs/{job_id}", status_code=204)

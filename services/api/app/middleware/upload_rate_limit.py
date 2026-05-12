@@ -17,6 +17,9 @@ _hist: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _settings(request: Request) -> Settings:
+    overrides = getattr(request.app, "dependency_overrides", {})
+    if get_settings in overrides:
+        return overrides[get_settings]()
     s = getattr(request.app.state, "settings", None)
     return s if isinstance(s, Settings) else get_settings()
 
@@ -35,7 +38,7 @@ class UploadRateLimitMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Response],
     ) -> Response:
         settings = _settings(request)
-        if not settings.upload_rate_limit_enabled:
+        if settings.testing or not settings.upload_rate_limit_enabled:
             return await call_next(request)
         if request.method != "POST" or request.url.path != "/v1/upload":
             return await call_next(request)

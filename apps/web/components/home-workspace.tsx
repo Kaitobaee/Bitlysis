@@ -84,13 +84,16 @@ const analysisModeOptions: AnalysisModeOption[] = [
   },
 ];
 
+// Memory leak fix (UX audit): revoke sau 100ms để đảm bảo download đã bắt đầu trước khi URL bị thu hồi
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 function statusLabel(t: (k: string) => string, s: JobStatus): string {
@@ -732,14 +735,27 @@ export function HomeWorkspace() {
       </header>
 
       <main className="w-full space-y-0">
+        {/* UX-1: API Warning banner — hiển thị ngay đầu trang nếu API URL chưa được cấu hình */}
+        {!apiBase.trim() && (
+          <div className="swiss-container py-4">
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <span className="text-amber-500 text-lg">⚠</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">{t("workspace.apiWarningTitle")}</p>
+                <p className="mt-0.5 text-xs text-amber-700">{t("workspace.apiWarningText")}</p>
+                <p className="mt-1 text-xs text-amber-600">{t("errors.checkApiUrl")}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="swiss-container grid w-full items-start gap-6 py-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:gap-8">
           <aside className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto">
             <div className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-(--muted)">
-                {showDataWorkspace ? "Bảng điều hướng dữ liệu" : t("job.menuTitle")}
+                {showDataWorkspace ? t("workspace.dataSidebarTitle") : t("job.menuTitle")}
               </p>
               <p className="mt-1 text-xs text-(--muted)">
-                {showDataWorkspace ? "Đi tới từng phần của quy trình phân tích" : t("job.menuSubtitle")}
+                {showDataWorkspace ? t("workspace.dataSidebarSubtitle") : t("job.menuSubtitle")}
               </p>
 
               <div className="mt-3 space-y-1.5">
@@ -777,15 +793,15 @@ export function HomeWorkspace() {
               <section className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bảng điều khiển phân tích dữ liệu</p>
-                    <p className="mt-1 text-sm text-(--muted)">Giao diện này đang ở chế độ xử lý Excel/CSV, không hiển thị sidebar web-analysis.</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">{t("workspace.dataControlTitle")}</p>
+                    <p className="mt-1 text-sm text-(--muted)">{t("workspace.dataControlNote")}</p>
                   </div>
                   <button
                     type="button"
                     onClick={onReset}
                     className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-(--fg)"
                   >
-                    Làm mới job
+                    {t("workspace.resetJob")}
                   </button>
                 </div>
                 <div className="mt-4 grid gap-2 md:grid-cols-5">
@@ -1156,8 +1172,8 @@ export function HomeWorkspace() {
           )}
 
           {!apiBase.trim() && (
-            <p className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              NEXT_PUBLIC_API_URL chưa đặt. {t("errors.checkApiUrl")}
+            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {t("workspace.apiWarningText")} {t("errors.checkApiUrl")}
             </p>
           )}
         </section>
@@ -1240,9 +1256,32 @@ export function HomeWorkspace() {
               </dl>
 
               {job.error && (
-                <div className="mt-8 border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
                   <p className="font-semibold">{job.error.code}</p>
                   <p className="mt-1">{job.error.message}</p>
+                  {/* UX-7: Retry button khi job failed */}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={onAnalyze}
+                      disabled={busyAnalyze}
+                      className="rounded-full border border-red-400 bg-red-100 px-4 py-1.5 text-xs font-semibold text-red-800 hover:bg-red-200 disabled:opacity-50"
+                    >
+                      {t("workspace.retryAnalyze")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* UX-10 + R pipeline status: hiển thị trạng thái r_queued/r_processing */}
+              {(job.status === "r_queued" || job.status === "r_processing") && (
+                <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                  <p className="font-semibold">
+                    {job.status === "r_queued" ? t("status.r_queued") : t("status.r_processing")}
+                  </p>
+                  <p className="mt-1">
+                    {job.status === "r_queued" ? t("workspace.rQueuedStatus") : t("workspace.rProcessingStatus")}
+                  </p>
                 </div>
               )}
 
@@ -1266,6 +1305,7 @@ export function HomeWorkspace() {
                   {busyExport ? t("job.exporting") : t("job.exportZip")}
                 </button>
               </div>
+
               {showInlineSkeleton && (
                 <div
                   className="mt-8 space-y-3 border-t border-(--border) pt-8"
@@ -1343,9 +1383,25 @@ export function HomeWorkspace() {
           )}
         </div>
 
-        {job && job.status === "succeeded" && (
+        {/* UX-10: Chart section hiển thị cho mọi job status — kèm empty state gợi ý nếu chưa analyze */}
+        {job && (
           <div className="lg:col-start-2">
             <section id="tool-charts" className="w-full border-t border-(--border) py-8 lg:py-10">
+            {job.status !== "succeeded" ? (
+              /* Empty state khi chưa analyze xong */
+              <div className="w-full overflow-hidden rounded-[28px] border border-dashed border-(--border) bg-(--surface-muted) p-8 text-center">
+                <p className="text-2xl">📊</p>
+                <p className="mt-3 text-sm font-semibold text-(--muted)">{t("workspace.chartUnlockHint")}</p>
+                <button
+                  type="button"
+                  onClick={onAnalyze}
+                  disabled={!canRunAnalyze}
+                  className="mt-4 rounded-full border border-(--fg) bg-(--fg) px-5 py-2 text-xs font-semibold uppercase tracking-wider text-(--surface) disabled:opacity-40"
+                >
+                  {busyAnalyze ? t("job.analyzing") : t("workspace.chartUnlockCta")}
+                </button>
+              </div>
+            ) : (
             <div className="w-full overflow-hidden rounded-[28px] border border-(--border) bg-[linear-gradient(180deg,rgba(245,242,235,0.96),rgba(255,255,255,0.94))] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1476,6 +1532,7 @@ export function HomeWorkspace() {
                 </div>
               </div>
             </div>
+            )}
             </section>
             <section id="tool-results" className="w-full bg-(--surface) p-6 lg:p-8">
               <div className="mb-6 max-w-screen px-0 lg:px-8">

@@ -1,48 +1,258 @@
-name: Psychometrics Core Scheduled Run
+name: R Pipeline — Psychometrics Cron
 
-# ADR 0005: engine R đã được port sang Python. Workflow này giữ tên file cũ
-# để không phá CI subscribers; gọi `/v1/run` (psychometrics Python) thay vì R.
+# Chạy R thực sự (Rscript) để xử lý psychometrics jobs (Cronbach, EFA, PLS-SEM)
+# Kiến trúc: GitHub Actions poll API → download data → Rscript → POST kết quả về API
+# Không dùng Render.com cho R (tránh lỗi "service terminated early")
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (không POST kết quả về API)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
   schedule:
-    # Every day at 01:00 UTC
-    - cron: "0 1 * * *"
+    # Mỗi 15 phút — đủ nhanh cho demo, không quá tốn credit
+    - cron: "*/15 * * * *"
 
 jobs:
-  call-run-endpoint:
+  process-r-queue:
+    name: Process R Pipeline Queue
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
-      - name: Call Bitlysis psychometrics core endpoint
-        env:
-          RUN_ENDPOINT_URL: ${{ secrets.RUN_ENDPOINT_URL }}
-          RUN_ENDPOINT_TOKEN: ${{ secrets.RUN_ENDPOINT_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4.2"
+          use-public-rspm: true
+
+      # Cache R packages để tránh install lại mỗi lần (psych + seminr khá nặng)
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: r-pkgs-${{ runner.os }}-${{ hashFiles('packages/r-pipeline/renv.lock') }}
+          restore-keys: |
+            r-pkgs-${{ runner.os }}-
+
+      - name: Install R dependencies
+        working-directory: packages/r-pipeline
         run: |
-          if [ -z "${RUN_ENDPOINT_URL}" ]; then
-            echo "Missing RUN_ENDPOINT_URL secret"
+          Rscript -e "
+            pkgs <- c('jsonlite', 'psych', 'seminr')
+            missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+            if (length(missing) > 0) {
+              install.packages(missing, repos = 'https://cloud.r-project.org', quiet = TRUE)
+            }
+            cat('R packages ready:', paste(pkgs, collapse = ', '), '\n')
+          "
+
+      - name: Poll API for r_queued jobs
+        id: poll
+        env:
+          API_BASE_URL: ${{ secrets.RUN_ENDPOINT_URL }}
+          RUN_TOKEN: ${{ secrets.RUN_ENDPOINT_TOKEN }}
+        run: |
+          if [ -z "${API_BASE_URL}" ]; then
+            echo "❌ Missing RUN_ENDPOINT_URL secret"
             exit 1
           fi
 
-          payload='{
-            "records": [
-              {"x1": 1, "x2": 2, "x3": 3, "y1": 2, "y2": 3, "y3": 4},
-              {"x1": 2, "x2": 3, "x3": 4, "y1": 3, "y2": 4, "y3": 5},
-              {"x1": 3, "x2": 4, "x3": 5, "y1": 4, "y2": 5, "y3": 6}
-            ],
-            "analyses": [
-              {"type": "cronbach_alpha", "scale_id": "trust", "items": ["x1", "x2", "x3"]}
-            ]
-          }'
+          # Trim trailing slash
+          API_BASE_URL="${API_BASE_URL%/}"
 
-          status=$(curl -sS -o response.json -w "%{http_code}" \
-            -X POST "${RUN_ENDPOINT_URL}" \
-            -H "Content-Type: application/json" \
-            -H "X-Run-Token: ${RUN_ENDPOINT_TOKEN}" \
-            --data "${payload}")
+          echo "Polling ${API_BASE_URL}/v1/jobs/r-queue ..."
+          response=$(curl -sS -f \
+            -H "X-Run-Token: ${RUN_TOKEN}" \
+            "${API_BASE_URL}/v1/jobs/r-queue?limit=10" || echo "[]")
 
-          echo "HTTP status: ${status}"
-          cat response.json
+          echo "Queue response: ${response}"
+          echo "queue_json=${response}" >> "$GITHUB_OUTPUT"
+          echo "api_base=${API_BASE_URL}" >> "$GITHUB_OUTPUT"
 
-          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
-            exit 1
-          fi
+          job_count=$(echo "${response}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d))")
+          echo "jobs_found=${job_count}" >> "$GITHUB_OUTPUT"
+          echo "Found ${job_count} job(s) in r_queued state"
+
+      - name: Process each job with Rscript
+        if: steps.poll.outputs.jobs_found != '0'
+        env:
+          API_BASE_URL: ${{ steps.poll.outputs.api_base }}
+          RUN_TOKEN: ${{ secrets.RUN_ENDPOINT_TOKEN }}
+          QUEUE_JSON: ${{ steps.poll.outputs.queue_json }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          BITLYSIS_R_PKG_ROOT: ${{ github.workspace }}/packages/r-pipeline
+        run: |
+          set -euo pipefail
+
+          echo "${QUEUE_JSON}" > /tmp/queue.json
+
+          python3 << 'PYEOF'
+          import json, subprocess, tempfile, os, sys, urllib.request, urllib.error
+
+          api_base = os.environ["API_BASE_URL"]
+          run_token = os.environ.get("RUN_TOKEN", "")
+          dry_run = os.environ.get("DRY_RUN", "false") == "true"
+          pkg_root = os.environ["BITLYSIS_R_PKG_ROOT"]
+          cli_script = os.path.join(pkg_root, "inst", "cli", "run_analysis.R")
+
+          with open("/tmp/queue.json") as f:
+              jobs = json.load(f)
+
+          if not jobs:
+              print("No jobs to process.")
+              sys.exit(0)
+
+          def api_post(path, payload=None, method="POST"):
+              url = f"{api_base}{path}"
+              data = json.dumps(payload).encode() if payload else b""
+              req = urllib.request.Request(
+                  url, data=data, method=method,
+                  headers={
+                      "Content-Type": "application/json",
+                      "X-Run-Token": run_token,
+                  }
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      return resp.status, json.loads(resp.read())
+              except urllib.error.HTTPError as e:
+                  return e.code, {"error": e.read().decode()}
+
+          def api_get_file(path):
+              """Download CSV file from API storage."""
+              url = f"{api_base}{path}"
+              req = urllib.request.Request(url, headers={"X-Run-Token": run_token})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  return resp.read()
+
+          for job in jobs:
+              job_id = job.get("job_id")
+              stored_as = job.get("stored_as")
+              columns = job.get("columns", [])
+              analysis_spec = job.get("analysis_spec") or {}
+              print(f"\n=== Processing job {job_id} (stored: {stored_as}) ===")
+
+              # Mark as r_processing
+              if not dry_run:
+                  status_code, _ = api_post(f"/v1/jobs/{job_id}/r-processing")
+                  print(f"  Mark r_processing: HTTP {status_code}")
+
+              # Build analysis blocks from spec or use default psychometrics
+              prefer_r = analysis_spec.get("prefer_r", True)
+              analyses_from_spec = analysis_spec.get("analyses", [])
+
+              # Default: Cronbach + EFA nếu đủ cột numeric
+              numeric_cols = [c for c in columns]  # Simplified: all columns
+              analyses = analyses_from_spec if analyses_from_spec else []
+              if not analyses and len(numeric_cols) >= 2:
+                  analyses.append({
+                      "type": "cronbach_alpha",
+                      "scale_id": "auto_block",
+                      "items": numeric_cols[:20],  # Tối đa 20 items
+                  })
+              if not analyses and len(numeric_cols) >= 3:
+                  analyses.append({
+                      "type": "efa",
+                      "variables": numeric_cols[:20],
+                      "n_factors": min(3, max(2, len(numeric_cols) - 1)),
+                      "min_variables": 3,
+                      "min_n": 10,
+                  })
+
+              if not analyses:
+                  print(f"  Skipping: not enough columns for psychometrics")
+                  if not dry_run:
+                      api_post(f"/v1/jobs/{job_id}/r-result", {
+                          "ok": True,
+                          "engine": "bitlysis_r_pipeline",
+                          "returncode": 0,
+                          "results": [],
+                          "error": None,
+                          "analyses_run": [],
+                      })
+                  continue
+
+              # Chuẩn bị request JSON cho Rscript
+              with tempfile.TemporaryDirectory(prefix="bitlysis_r_") as tmpdir:
+                  # Tạo dummy CSV với columns (actual data cần download từ storage)
+                  # TODO: implement download từ /v1/jobs/{id}/data endpoint khi available
+                  # Hiện tại dùng fixture minimal để validate pipeline
+                  csv_path = os.path.join(tmpdir, "data.csv")
+                  req_path = os.path.join(tmpdir, "request.json")
+
+                  # Download CSV từ API
+                  try:
+                      csv_data = api_get_file(f"/v1/jobs/{job_id}/data")
+                      with open(csv_path, "wb") as f:
+                          f.write(csv_data)
+                      print(f"  Downloaded {len(csv_data)} bytes of data")
+                  except Exception as e:
+                      print(f"  WARNING: Cannot download data ({e}), using stored path info")
+                      # Fallback: tạo empty CSV với column headers
+                      with open(csv_path, "w") as f:
+                          f.write(",".join(columns) + "\n")
+
+                  request_payload = {
+                      "csv_path": csv_path,
+                      "analyses": analyses,
+                  }
+                  with open(req_path, "w", encoding="utf-8") as f:
+                      json.dump(request_payload, f, ensure_ascii=False)
+
+                  env = {**os.environ, "BITLYSIS_R_PKG_ROOT": pkg_root}
+                  result = subprocess.run(
+                      ["Rscript", cli_script, req_path],
+                      capture_output=True,
+                      text=True,
+                      encoding="utf-8",
+                      timeout=300,  # 5 phút max
+                      env=env,
+                  )
+
+              rc = result.returncode
+              stdout = result.stdout.strip()
+              stderr = result.stderr.strip()
+              print(f"  Rscript exit code: {rc}")
+              if stderr:
+                  print(f"  STDERR: {stderr[:500]}")
+
+              try:
+                  parsed = json.loads(stdout) if stdout else {}
+              except json.JSONDecodeError:
+                  print(f"  WARNING: Rscript stdout not JSON: {stdout[:200]}")
+                  parsed = {"ok": False, "error": "Invalid JSON from Rscript", "results": []}
+
+              ok = bool(parsed.get("ok")) and rc == 0
+              payload = {
+                  "ok": ok,
+                  "engine": parsed.get("engine", "bitlysis_r_pipeline"),
+                  "returncode": rc,
+                  "results": parsed.get("results", []),
+                  "error": parsed.get("error") if not ok else None,
+                  "stderr": stderr[:8000] if stderr else None,
+                  "analyses_run": [a.get("type") for a in analyses],
+              }
+
+              print(f"  Result: ok={ok}, results={len(payload['results'])}")
+
+              if dry_run:
+                  print(f"  DRY RUN — skipping POST to API")
+                  print(f"  Payload: {json.dumps(payload, indent=2)[:500]}")
+              else:
+                  status_code, resp_body = api_post(f"/v1/jobs/{job_id}/r-result", payload)
+                  print(f"  Posted r-result: HTTP {status_code} — {resp_body}")
+
+          print("\n✅ R pipeline cron completed.")
+          PYEOF
+
+      - name: No jobs in queue
+        if: steps.poll.outputs.jobs_found == '0'
+        run: echo "✅ No r_queued jobs found. Nothing to process."
