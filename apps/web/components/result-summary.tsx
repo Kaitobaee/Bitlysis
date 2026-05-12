@@ -234,14 +234,14 @@ function ListOfRecordsPreview({
   if (!rows.length) return <span>—</span>;
   const keys = Array.from(
     new Set(rows.flatMap((r) => Object.keys(r).filter((k) => !shouldOmitKey(k)))),
-  ).slice(0, 4);
-  const shownRows = rows.slice(0, 5);
+  );
+  const shownRows = rows;
   return (
     <div className="space-y-2">
       <div className="text-xs text-[var(--muted)]">
         {locale === "vi"
-          ? `Bảng ${rows.length} dòng, hiển thị ${shownRows.length} dòng đầu`
-          : `Table ${rows.length} rows, showing first ${shownRows.length}`}
+          ? `Bảng ${rows.length} dòng, hiển thị ${shownRows.length} dòng`
+          : `Table ${rows.length} rows, showing ${shownRows.length} rows`}
       </div>
       <div className="overflow-auto border border-[var(--border)]">
         <table className="min-w-[420px] border-collapse text-xs">
