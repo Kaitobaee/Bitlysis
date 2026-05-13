@@ -907,7 +907,7 @@ export function HomeWorkspace() {
                       type="button"
                       disabled={!canRunAnalyze}
                       onClick={() => void onAnalyze()}
-                      className="rounded-full bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-40"
+                      className="rounded-full border border-[#161615] bg-[#0f766e] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white disabled:opacity-40"
                     >
                       {busyAnalyze ? labels.analyzing : labels.analyze}
                     </button>
@@ -915,21 +915,21 @@ export function HomeWorkspace() {
                       type="button"
                       disabled={busyExport || job.status !== "succeeded"}
                       onClick={() => void onExport()}
-                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-40"
+                      className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615] disabled:opacity-40"
                     >
                       {busyExport ? labels.exporting : labels.export}
                     </button>
                     <button
                       type="button"
                       onClick={onCopyId}
-                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]"
+                      className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615]"
                     >
                       {labels.copyId}
                     </button>
                     <button
                       type="button"
                       onClick={onReset}
-                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]"
+                      className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615]"
                     >
                       {labels.reset}
                     </button>
@@ -944,7 +944,7 @@ export function HomeWorkspace() {
                       type="button"
                       disabled={busyAnalyze}
                       onClick={() => void onAnalyze()}
-                      className="mt-3 rounded-full bg-red-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white disabled:opacity-40"
+                      className="mt-3 rounded-full border border-[#161615] bg-[#0f766e] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white disabled:opacity-40"
                     >
                       {labels.retry}
                     </button>
@@ -1043,7 +1043,7 @@ export function HomeWorkspace() {
                         type="button"
                         disabled={chartBusy || !selectedChartColumn}
                         onClick={() => void onCreateChart()}
-                        className="self-end rounded-full bg-(--fg) px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-40"
+                        className="self-end rounded-full border border-[#161615] bg-[#0f766e] px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-white disabled:opacity-40"
                       >
                         {labels.chartCreate}
                       </button>

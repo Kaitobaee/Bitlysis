@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { LanguageSwitch } from "@/components/language-switch";
+import { WorkflowAnimation } from "@/components/workflow-animation";
 import { useI18n } from "@/lib/i18n";
 
 const copy = {
@@ -95,7 +96,7 @@ export default function Home() {
               <p className="w-fit border border-[#161615] bg-[#dff2e8] px-3 py-1 text-xs font-black uppercase tracking-[0.22em]">
                 {c.eyebrow}
               </p>
-              <h1 className="mt-6 max-w-5xl text-[clamp(3rem,10vw,8.4rem)] font-black uppercase leading-[1.04] tracking-normal">
+              <h1 className="mt-6 max-w-3xl text-3xl font-black uppercase leading-[1.2] tracking-normal sm:text-4xl md:text-5xl lg:text-6xl">
                 {c.headline}
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-relaxed text-[#3d3932] sm:text-xl">
@@ -158,8 +159,11 @@ export default function Home() {
             <h2 className="mt-3 text-4xl font-black uppercase leading-[1.08] sm:text-5xl">
               {c.workflowTitle}
             </h2>
+            <div className="mt-8 flex justify-start">
+              <WorkflowAnimation />
+            </div>
           </div>
-          <div className="grid gap-3">
+          <div className="flex flex-col gap-3">
             {c.workflow.map((item, index) => (
               <div key={item} className="grid grid-cols-[64px_1fr] border border-[#161615] bg-[#fffaf0]">
                 <div className="flex items-center justify-center border-r border-[#161615] bg-[#dff2e8] text-xl font-black">
@@ -171,24 +175,21 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid gap-6 py-10 lg:grid-cols-[1fr_1.2fr]">
-          <div className="relative min-h-80 overflow-hidden border border-[#161615] bg-[#161615] text-[#f6f0e6]">
+        <section className="grid gap-4 py-10 lg:grid-cols-[0.45fr_1fr]">
+          <div className="relative hidden min-h-80 overflow-hidden lg:block">
             <Image
               src="/svg/mascot-talking.svg"
               alt=""
               width={420}
               height={420}
-              className="absolute bottom-0 right-0 h-full w-full object-contain object-bottom opacity-80"
+              className="absolute bottom-0 right-0 h-full w-full object-contain object-bottom opacity-90"
             />
-            <p className="relative z-10 max-w-xs p-5 text-2xl font-black uppercase leading-[1.1]">
-              {c.useCasesTitle}
-            </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 grid-cols-2 lg:grid-cols-2">
             {c.useCases.map(([title, description]) => (
-              <div key={title} className="border border-[#161615] bg-[#fffaf0] p-5">
-                <h3 className="text-xl font-black uppercase">{title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#514b42]">{description}</p>
+              <div key={title} className="border border-[#161615] bg-[#fffaf0] p-4">
+                <h3 className="text-sm font-black uppercase">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-[#514b42]">{description}</p>
               </div>
             ))}
           </div>

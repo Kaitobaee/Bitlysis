@@ -445,7 +445,7 @@ export function UploadZone({
                 onClick={onPickFile}
                 disabled={addDisabled}
                 aria-label={c.addFile}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#161615] bg-white text-2xl leading-none text-[#161615] transition hover:bg-[#161615] hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#161615] bg-[#f6f0e6] text-2xl leading-none text-[#161615] transition hover:bg-[#dff2e8] disabled:cursor-not-allowed disabled:opacity-25"
               >
                 +
               </button>
@@ -495,7 +495,7 @@ export function UploadZone({
                 disabled={!canSubmit}
                 onClick={() => void handleSubmit()}
                 aria-label={c.send}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#161615] text-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-35"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#161615] bg-[#0f766e] text-white transition hover:bg-[#0f766e]/90 disabled:cursor-not-allowed disabled:opacity-35"
               >
                 <span className="text-lg font-black leading-none">↑</span>
               </button>
@@ -520,7 +520,7 @@ export function UploadZone({
               type="button"
               disabled={disabled || busy || (!analysis && sourceKind === "data")}
               onClick={() => void handlePrompt(prompt)}
-              className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs font-semibold text-(--fg) transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-[#161615] bg-[#f6f0e6] px-3 py-1.5 text-xs font-black uppercase text-[#161615] transition hover:bg-[#dff2e8] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {prompt}
             </button>

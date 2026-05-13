@@ -1432,10 +1432,10 @@ export function ResultSummary({ jobId, summary }: Props) {
           <button
             type="button"
             onClick={() => setShowTables((v) => !v)}
-            className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] transition ${
+            className={`rounded-full border border-[#161615] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] transition ${
               showTables
-                ? "border-[var(--fg)] bg-[var(--fg)] text-[var(--surface)]"
-                : "border-[var(--border)] bg-white text-[var(--fg)] hover:bg-[var(--surface-muted)]"
+                ? "bg-[#0f766e] text-white"
+                : "bg-[#f6f0e6] text-[#161615] hover:bg-[#dff2e8]"
             }`}
           >
             {locale === "vi" ? "Bảng" : "Tables"}
@@ -1443,10 +1443,10 @@ export function ResultSummary({ jobId, summary }: Props) {
           <button
             type="button"
             onClick={() => setShowCharts((v) => !v)}
-            className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] transition ${
+            className={`rounded-full border border-[#161615] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] transition ${
               showCharts
-                ? "border-[var(--fg)] bg-[var(--fg)] text-[var(--surface)]"
-                : "border-[var(--border)] bg-white text-[var(--fg)] hover:bg-[var(--surface-muted)]"
+                ? "bg-[#0f766e] text-white"
+                : "bg-[#f6f0e6] text-[#161615] hover:bg-[#dff2e8]"
             }`}
           >
             {locale === "vi" ? "Biểu đồ" : "Charts"}
@@ -1454,10 +1454,10 @@ export function ResultSummary({ jobId, summary }: Props) {
           <button
             type="button"
             onClick={() => setShowExportChart((v) => !v)}
-            className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] transition ${
+            className={`rounded-full border border-[#161615] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] transition ${
               showExportChart
-                ? "border-[var(--fg)] bg-[var(--fg)] text-[var(--surface)]"
-                : "border-[var(--border)] bg-white text-[var(--fg)] hover:bg-[var(--surface-muted)]"
+                ? "bg-[#0f766e] text-white"
+                : "bg-[#f6f0e6] text-[#161615] hover:bg-[#dff2e8]"
             }`}
           >
             {locale === "vi" ? "Ảnh xuất" : "Export preview"}
@@ -1465,14 +1465,14 @@ export function ResultSummary({ jobId, summary }: Props) {
           <button
             type="button"
             onClick={() => toggleAllModules(true)}
-            className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--fg)] transition hover:bg-[var(--surface-muted)]"
+            className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615] transition hover:bg-[#dff2e8]"
           >
             {locale === "vi" ? "Bật hết" : "Enable all"}
           </button>
           <button
             type="button"
             onClick={() => toggleAllModules(false)}
-            className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--fg)] transition hover:bg-[var(--surface-muted)]"
+            className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615] transition hover:bg-[#dff2e8]"
           >
             {locale === "vi" ? "Tắt hết" : "Disable all"}
           </button>
@@ -1488,10 +1488,10 @@ export function ResultSummary({ jobId, summary }: Props) {
                 onClick={() =>
                   setModuleVisibility((prev) => ({ ...prev, [k]: !prev[k] }))
                 }
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+                className={`rounded-full border border-[#161615] px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] transition ${
                   active
-                    ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                    : "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--fg)] hover:bg-white"
+                    ? "bg-[#0f766e] text-white"
+                    : "bg-[#f6f0e6] text-[#161615] hover:bg-[#dff2e8]"
                 }`}
                 title={moduleTitle(k, locale)}
               >
