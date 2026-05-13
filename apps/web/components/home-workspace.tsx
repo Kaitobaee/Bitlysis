@@ -1,91 +1,207 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import lottie, { type AnimationItem } from "lottie-web";
 import { toast } from "sonner";
 
+import { AcademicResult } from "@/components/academic-result";
 import { LanguageSwitch } from "@/components/language-switch";
 import { ResultSummary } from "@/components/result-summary";
 import { UploadZone } from "@/components/upload-zone";
-import { AcademicResult } from "@/components/academic-result";
 import {
   analyzeWebInput,
   ApiClientError,
   chatWebAnalysis,
-  getHealth,
-  getQuickChart,
   getJob,
+  getQuickChart,
   postExportZip,
-  uploadFile,
   startAnalyze,
   startExportPhase,
+  uploadFile,
 } from "@/lib/api";
 import { comprehensiveAnalysisSpec } from "@/lib/analyze-default";
 import { useI18n } from "@/lib/i18n";
 import {
   isBusyStatus,
   isTerminalStatus,
-  pollJobUntil,
   PollTimeoutError,
+  pollJobUntil,
 } from "@/lib/poll-job";
 import { toastApiError } from "@/lib/toast-error";
-import type { AcademicAnalyzeResponse, HealthInfo, JobDetail, JobStatus, QuickChartPayload, WebAnalysisMode, WebAnalysisResponse } from "@/lib/types";
+import type {
+  AcademicAnalyzeResponse,
+  JobDetail,
+  JobStatus,
+  QuickChartPayload,
+  WebAnalysisMode,
+  WebAnalysisResponse,
+} from "@/lib/types";
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type ChartKind = QuickChartPayload["kind"];
 
-type ChartOption = {
-  kind: ChartKind;
-  labelKey: string;
-  descriptionKey: string;
-  badge: string;
-  accent: string;
-};
-
-type AnalysisModeOption = {
-  value: WebAnalysisMode;
-  title: string;
-  description: string;
-};
-
-type MenuTool = {
-  id?: string;
-  label: string;
-  action?: "scroll" | "analyze" | "export";
-  disabled?: boolean;
-  hint: string;
-};
-
-const chartPalette = ["#0f766e", "#2563eb", "#dc2626", "#d97706", "#16a34a", "#7c3aed", "#0891b2", "#ea580c"];
-
-const chartOptions: ChartOption[] = [
-  { kind: "bar", labelKey: "job.chartTypeBar", descriptionKey: "job.chartDescBar", badge: "01", accent: "#0f766e" },
-  { kind: "pie", labelKey: "job.chartTypePie", descriptionKey: "job.chartDescPie", badge: "02", accent: "#2563eb" },
-  { kind: "line", labelKey: "job.chartTypeLine", descriptionKey: "job.chartDescLine", badge: "03", accent: "#7c3aed" },
-  { kind: "area", labelKey: "job.chartTypeArea", descriptionKey: "job.chartDescArea", badge: "04", accent: "#d97706" },
-  { kind: "donut", labelKey: "job.chartTypeDonut", descriptionKey: "job.chartDescDonut", badge: "05", accent: "#dc2626" },
-];
-
-const analysisModeOptions: AnalysisModeOption[] = [
-  {
-    value: "academic",
-    title: "Báo cáo học thuật",
-    description: "Làm rõ cấu trúc, luận điểm, ngữ cảnh và các mốc nội dung chính.",
+const copy = {
+  en: {
+    home: "Home",
+    title: "Analysis workspace",
+    subtitle:
+      "Ask, upload, and read the result as explanation first. Evidence, charts, and technical detail stay available when you need them.",
+    apiTitle: "Analysis API is not configured",
+    apiText:
+      "Set NEXT_PUBLIC_API_URL to enable uploads and live analysis. The workspace shell is still available for review.",
+    modeLabel: "Analysis lens",
+    modes: {
+      academic: ["Academic", "Structure, claims, sources, and learning context."],
+      marketing_seo: ["Website", "Content structure, audience intent, and page signals."],
+      business: ["Business", "Key findings, opportunities, and next actions."],
+    },
+    status: "Status",
+    source: "Source",
+    columns: "Columns",
+    rows: "Sample rows",
+    analyze: "Generate explanation",
+    analyzing: "Understanding source...",
+    export: "Download package",
+    exporting: "Preparing package...",
+    reset: "Start new analysis",
+    copyId: "Copy reference",
+    copied: "Reference copied",
+    retry: "Try again",
+    explanation: "AI Summary",
+    overview: "Result Overview",
+    whyMethod: "Why this method was selected",
+    rationale: "Rationale",
+    assumptionsApplied: "Assumptions applied",
+    notable: "Notable Results / Metrics",
+    factCheck: "Fact Check",
+    conclusion: "Conclusion",
+    screenshot: "Website Capture",
+    viewMore: "View more results",
+    findings: "Key Findings",
+    interpretation: "Suggested Interpretation",
+    evidence: "Supporting Evidence",
+    confidence: "Confidence & Limits",
+    nextSteps: "Suggested Next Steps",
+    charts: "Charts & Visuals",
+    technical: "Technical Details",
+    emptyTitle: "Bring Bitlysis something to understand",
+    emptyText:
+      "Start with a spreadsheet, URL, document excerpt, survey result, or analysis question. The first answer will be written for a human reader.",
+    noEvidence: "No explicit evidence has been returned yet. Ask Bitlysis to show supporting evidence.",
+    noFindings: "Run an analysis to reveal key findings.",
+    interpretationText:
+      "Treat this as a guided reading, not a final verdict. Use the evidence below to decide what needs a closer look.",
+    confidenceText:
+      "Bitlysis explains what it can infer from the available source. Review source quality, missing context, and any technical assumptions before acting.",
+    nextStepItems: [
+      "Ask Bitlysis to explain the most confusing point.",
+      "Open supporting evidence before sharing the result.",
+      "Use charts or technical details only when you need deeper inspection.",
+    ],
+    progress: [
+      "Reading your source",
+      "Finding patterns",
+      "Checking supporting evidence",
+      "Preparing a plain-language explanation",
+    ],
+    chartHelp: "Create a quick chart only after the explanation is clear.",
+    chartColumn: "Column",
+    chartType: "View",
+    chartCreate: "Create chart",
+    chartEmpty: "Choose a column to generate a supporting visual.",
+    advancedSummary: "Open analysis payload and processing metadata",
+    jobProcessing:
+      "The analysis engine is working. You can leave this page open while Bitlysis prepares the explanation.",
+    methodExplanation:
+      "Bitlysis chooses the analysis path from the file structure, available column types, missing values, and the methods supported by the current pipeline. This keeps the first reading focused on what the data can support.",
+    defaultConclusion:
+      "Use this as a first draft for understanding. Review the supporting evidence before adding the result to a report.",
   },
-  {
-    value: "marketing_seo",
-    title: "Marketing / SEO",
-    description: "Nhấn keyword, intent, CTA, tiêu đề và cơ hội tối ưu chuyển đổi.",
+  vi: {
+    home: "Trang chủ",
+    title: "Không gian phân tích",
+    subtitle:
+      "Hỏi, tải lên và đọc kết quả dưới dạng giải thích trước. Bằng chứng, biểu đồ và chi tiết kỹ thuật vẫn có khi bạn cần.",
+    apiTitle: "API phân tích chưa được cấu hình",
+    apiText:
+      "Đặt NEXT_PUBLIC_API_URL để bật upload và phân tích thật. Giao diện workspace vẫn có thể xem trước.",
+    modeLabel: "Góc nhìn phân tích",
+    modes: {
+      academic: ["Học thuật", "Cấu trúc, luận điểm, nguồn và ngữ cảnh học tập."],
+      marketing_seo: ["Website", "Cấu trúc nội dung, intent người đọc và tín hiệu trang."],
+      business: ["Kinh doanh", "Phát hiện chính, cơ hội và hành động tiếp theo."],
+    },
+    status: "Trạng thái",
+    source: "Nguồn",
+    columns: "Cột",
+    rows: "Dòng mẫu",
+    analyze: "Tạo giải thích",
+    analyzing: "Đang hiểu nguồn...",
+    export: "Tải gói kết quả",
+    exporting: "Đang chuẩn bị gói...",
+    reset: "Phân tích mới",
+    copyId: "Sao chép mã tham chiếu",
+    copied: "Đã sao chép mã tham chiếu",
+    retry: "Thử lại",
+    explanation: "Tóm tắt AI",
+    overview: "Tổng quan kết quả",
+    whyMethod: "Vì sao chọn phương pháp này",
+    rationale: "Lý do chọn",
+    assumptionsApplied: "Giả định đã áp dụng",
+    notable: "Kết quả / metrics đáng chú ý",
+    factCheck: "Fact check",
+    conclusion: "Kết luận",
+    screenshot: "Ảnh trang web",
+    viewMore: "Xem thêm kết quả",
+    findings: "Phát hiện chính",
+    interpretation: "Diễn giải gợi ý",
+    evidence: "Bằng chứng hỗ trợ",
+    confidence: "Độ tin cậy & giới hạn",
+    nextSteps: "Bước tiếp theo",
+    charts: "Biểu đồ & trực quan",
+    technical: "Chi tiết kỹ thuật",
+    emptyTitle: "Đưa cho Bitlysis một nguồn cần hiểu",
+    emptyText:
+      "Bắt đầu với bảng tính, URL, đoạn tài liệu, kết quả khảo sát hoặc câu hỏi phân tích. Câu trả lời đầu tiên sẽ viết cho người đọc.",
+    noEvidence: "Chưa có bằng chứng rõ ràng. Hãy hỏi Bitlysis hiển thị bằng chứng hỗ trợ.",
+    noFindings: "Chạy phân tích để xem các phát hiện chính.",
+    interpretationText:
+      "Hãy xem đây là phần đọc có hướng dẫn, không phải kết luận cuối cùng. Dùng bằng chứng bên dưới để quyết định điểm nào cần xem kỹ.",
+    confidenceText:
+      "Bitlysis giải thích điều có thể suy ra từ nguồn hiện có. Hãy kiểm tra chất lượng nguồn, ngữ cảnh còn thiếu và giả định kỹ thuật trước khi hành động.",
+    nextStepItems: [
+      "Hỏi Bitlysis giải thích điểm khó hiểu nhất.",
+      "Mở bằng chứng hỗ trợ trước khi chia sẻ kết quả.",
+      "Chỉ dùng biểu đồ hoặc chi tiết kỹ thuật khi cần kiểm tra sâu hơn.",
+    ],
+    progress: [
+      "Đang đọc nguồn của bạn",
+      "Đang tìm mẫu đáng chú ý",
+      "Đang kiểm tra bằng chứng hỗ trợ",
+      "Đang chuẩn bị giải thích dễ hiểu",
+    ],
+    chartHelp: "Chỉ tạo biểu đồ nhanh sau khi phần giải thích đã rõ.",
+    chartColumn: "Cột",
+    chartType: "Kiểu xem",
+    chartCreate: "Tạo biểu đồ",
+    chartEmpty: "Chọn một cột để tạo trực quan hỗ trợ.",
+    advancedSummary: "Mở payload phân tích và metadata xử lý",
+    jobProcessing:
+      "Bộ máy phân tích đang xử lý. Bạn có thể giữ trang này mở trong lúc Bitlysis chuẩn bị phần giải thích.",
+    methodExplanation:
+      "Bitlysis chọn hướng phân tích dựa trên cấu trúc file, loại cột, dữ liệu thiếu và các phương pháp mà pipeline hiện hỗ trợ. Cách này giúp phần đọc đầu tiên tập trung vào điều dữ liệu thật sự có thể nói.",
+    defaultConclusion:
+      "Hãy xem đây là bản nháp đầu tiên để hiểu kết quả. Trước khi đưa vào báo cáo, nên kiểm tra thêm bằng chứng hỗ trợ.",
   },
-  {
-    value: "business",
-    title: "Phân tích business",
-    description: "Tập trung insight, cơ hội, rủi ro và hành động ưu tiên.",
-  },
-];
+} as const;
 
-// Memory leak fix (UX audit): revoke sau 100ms để đảm bảo download đã bắt đầu trước khi URL bị thu hồi
+const chartKinds: ChartKind[] = ["bar", "pie", "line", "area", "donut"];
+type WorkspaceLabels = (typeof copy)["en"] | (typeof copy)["vi"];
+
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -97,220 +213,368 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
-function statusLabel(t: (k: string) => string, s: JobStatus): string {
-  const k = `status.${s}` as const;
-  const out = t(k);
-  return out === k ? s : out;
-}
-
-function chartKindLabel(t: (k: string) => string, kind: ChartKind): string {
-  const labels: Record<ChartKind, string> = {
-    bar: t("job.chartTypeBar"),
-    pie: t("job.chartTypePie"),
-    line: t("job.chartTypeLine"),
-    area: t("job.chartTypeArea"),
-    donut: t("job.chartTypeDonut"),
-  };
-  return labels[kind];
+function statusLabel(status: JobStatus): string {
+  return status.replace(/_/g, " ");
 }
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
+  const units = ["B", "KB", "MB", "GB"];
   const exp = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
   const converted = value / 1024 ** exp;
-  return `${converted.toFixed(exp === 0 ? 0 : 2)} ${units[exp]}`;
+  return `${converted.toFixed(exp === 0 ? 0 : 1)} ${units[exp]}`;
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") return JSON.stringify(item);
+      return "";
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function formatPrimitive(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
+function metricRows(value: unknown): Array<{ label: string; value: string }> {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        const row = asRecord(item);
+        if (!row) return null;
+        const label = firstString(row.label, row.metric, row.name, row.key);
+        const metricValue = row.value ?? row.count ?? row.total ?? row.score;
+        return label ? { label, value: formatPrimitive(metricValue) } : null;
+      })
+      .filter((row): row is { label: string; value: string } => row !== null)
+      .slice(0, 6);
+  }
+
+  const record = asRecord(value);
+  if (!record) return [];
+  return Object.entries(record)
+    .filter(([, rowValue]) => rowValue !== null && rowValue !== undefined && typeof rowValue !== "object")
+    .slice(0, 6)
+    .map(([label, rowValue]) => ({ label: label.replace(/_/g, " "), value: formatPrimitive(rowValue) }));
+}
+
+function buildJobInsight(job: JobDetail | null, locale: "en" | "vi") {
+  const summary = asRecord(job?.result_summary);
+  const results = asRecord(summary?.results);
+  const academic = asRecord(summary?.academic_summary);
+  const profiling = asRecord(summary?.profiling);
+  const overview = asRecord(profiling?.overview) ?? profiling;
+  const rowCount = overview?.row_count ?? profiling?.row_count_profiled ?? job?.row_preview_count;
+  const columnCount = overview?.column_count ?? job?.columns.length;
+  const headline = firstString(
+    summary?.ai_summary,
+    summary?.summary,
+    results?.summary,
+    locale === "vi"
+      ? "Bitlysis đã chuẩn bị một phần đọc có cấu trúc từ nguồn này."
+      : "Bitlysis has prepared a structured reading of this source.",
+  );
+  const findings = [
+    ...stringList(summary?.highlights),
+    ...stringList(summary?.findings),
+    ...stringList(results?.highlights),
+  ];
+  const methodRationale = firstString(academic?.rationale, summary?.rationale, results?.rationale);
+  const methodAssumptions = [
+    ...stringList(academic?.assumptions),
+    ...stringList(summary?.assumptions),
+    ...stringList(results?.assumptions),
+  ];
+  const fallbackFindings =
+    job && findings.length === 0
+      ? [
+          locale === "vi"
+            ? `${job.filename} có ${columnCount ?? "-"} cột và ${rowCount ?? "-"} dòng mẫu đã đọc.`
+            : `${job.filename} includes ${columnCount ?? "-"} columns and ${rowCount ?? "-"} profiled sample rows.`,
+          locale === "vi"
+            ? `Trạng thái hiện tại: ${statusLabel(job.status)}.`
+            : `Current status: ${statusLabel(job.status)}.`,
+        ]
+      : findings;
+
+  return {
+    headline,
+    methodRationale,
+    methodAssumptions: Array.from(new Set(methodAssumptions)).slice(0, 6),
+    findings: fallbackFindings.slice(0, 5),
+    metrics: [
+      { label: locale === "vi" ? "Số cột" : "Columns", value: formatPrimitive(columnCount) },
+      { label: locale === "vi" ? "Dòng mẫu" : "Sample rows", value: formatPrimitive(rowCount) },
+      { label: locale === "vi" ? "Trạng thái" : "Status", value: job ? statusLabel(job.status) : "-" },
+      ...metricRows(summary?.metrics).slice(0, 3),
+    ],
+  };
+}
+
+function ProgressAnalysis({ messages }: { messages: readonly string[] }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const animation: AnimationItem = lottie.loadAnimation({
+      container: containerRef.current,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+      path: "/animations/json/loading.json",
+    });
+    return () => animation.destroy();
+  }, []);
+
+  return (
+    <div className="rounded-[24px] border border-(--border) bg-(--surface) p-4" aria-live="polite" aria-busy="true">
+      <div className="flex items-center gap-4">
+        <div ref={containerRef} className="h-16 w-16 motion-reduce:hidden" />
+        <div className="hidden h-12 w-12 rounded-full border border-(--border) bg-(--accent-soft) motion-reduce:block" />
+        <div className="space-y-1">
+          {messages.map((message) => (
+            <p key={message} className="text-sm text-(--muted)">
+              {message}
+            </p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[24px] border border-(--border) bg-(--surface) p-5 shadow-[0_12px_32px_rgba(15,23,42,0.04)]">
+      <h2 className="text-label text-(--accent)">{title}</h2>
+      <div className="mt-3 text-sm leading-relaxed text-(--fg)">{children}</div>
+    </section>
+  );
+}
+
+function WebInsightReport({
+  analysis,
+  labels,
+}: {
+  analysis: WebAnalysisResponse;
+  labels: WorkspaceLabels;
+}) {
+  const metrics = metricRows(analysis.metrics);
+  const notable = [...analysis.highlights, ...analysis.findings].slice(0, 4);
+
+  return (
+    <div className="space-y-4">
+      <InsightCard title={labels.overview}>
+        <p>{analysis.summary}</p>
+      </InsightCard>
+
+      <InsightCard title={labels.notable}>
+        <div className="grid gap-3 md:grid-cols-2">
+          {metrics.map((metric) => (
+            <div key={`${metric.label}-${metric.value}`} className="rounded-2xl bg-(--surface-muted) p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">{metric.label}</p>
+              <p className="mt-1 text-base font-semibold">{metric.value}</p>
+            </div>
+          ))}
+          {notable.map((item) => (
+            <p key={item} className="rounded-2xl bg-(--surface-muted) p-3">{item}</p>
+          ))}
+          {!metrics.length && !notable.length ? <p>{labels.noFindings}</p> : null}
+        </div>
+      </InsightCard>
+
+      <InsightCard title={labels.conclusion}>
+        <p>{labels.defaultConclusion}</p>
+      </InsightCard>
+
+      {analysis.website_screenshot ? (
+        <InsightCard title={labels.screenshot}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={analysis.website_screenshot}
+            alt={labels.screenshot}
+            className="max-h-[720px] w-full rounded-2xl border border-(--border) object-contain"
+          />
+        </InsightCard>
+      ) : null}
+
+      <details className="rounded-[24px] border border-(--border) bg-(--surface) p-5">
+        <summary className="cursor-pointer font-semibold text-(--accent)">{labels.viewMore}</summary>
+        <div className="mt-5 space-y-4">
+          <InsightCard title={labels.findings}>
+            {analysis.findings.length || analysis.highlights.length ? (
+              <ul className="space-y-2">
+                {[...analysis.highlights, ...analysis.findings].slice(0, 8).map((item) => (
+                  <li key={item} className="rounded-2xl bg-(--surface-muted) px-3 py-2">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>{labels.noFindings}</p>
+            )}
+          </InsightCard>
+          <InsightCard title={labels.evidence}>
+            {analysis.evidence.length ? (
+              <ul className="space-y-2">
+                {analysis.evidence.slice(0, 8).map((item) => (
+                  <li key={`${item.label}-${item.detail}`} className="rounded-2xl border border-(--border) p-3">
+                    <strong className="block text-(--fg)">{item.label}</strong>
+                    <span className="text-(--muted)">{item.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>{labels.noEvidence}</p>
+            )}
+          </InsightCard>
+          <InsightCard title={labels.confidence}>
+            <p>{labels.confidenceText}</p>
+          </InsightCard>
+          <InsightCard title={labels.nextSteps}>
+            <ul className="space-y-2">
+              {labels.nextStepItems.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </InsightCard>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function AcademicBriefReport({
+  result,
+  labels,
+}: {
+  result: AcademicAnalyzeResponse;
+  labels: WorkspaceLabels;
+}) {
+  const supportPct = Math.round(result.overall_support_score * 100);
+  const checkedFacts = result.fact_checks.slice(0, 4);
+
+  return (
+    <div className="space-y-4">
+      <InsightCard title={labels.overview}>
+        <p>{result.summary}</p>
+      </InsightCard>
+      <InsightCard title={labels.notable}>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl bg-(--surface-muted) p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">Papers</p>
+            <p className="mt-1 text-base font-semibold">{result.papers.length}</p>
+          </div>
+          <div className="rounded-2xl bg-(--surface-muted) p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">Support</p>
+            <p className="mt-1 text-base font-semibold">{supportPct}%</p>
+          </div>
+          <div className="rounded-2xl bg-(--surface-muted) p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">Keywords</p>
+            <p className="mt-1 text-base font-semibold">{result.keywords.length}</p>
+          </div>
+        </div>
+      </InsightCard>
+      <InsightCard title={labels.factCheck}>
+        {checkedFacts.length ? (
+          <ul className="space-y-2">
+            {checkedFacts.map((fact) => (
+              <li key={fact.claim} className="rounded-2xl bg-(--surface-muted) p-3">
+                <strong className="block">{fact.verdict.replace(/_/g, " ")}</strong>
+                <span className="text-(--muted)">{fact.claim}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>{labels.noEvidence}</p>
+        )}
+      </InsightCard>
+      <InsightCard title={labels.conclusion}>
+        <p>{labels.defaultConclusion}</p>
+      </InsightCard>
+      <details className="rounded-[24px] border border-(--border) bg-(--surface) p-5">
+        <summary className="cursor-pointer font-semibold text-(--accent)">{labels.viewMore}</summary>
+        <div className="mt-5">
+          <AcademicResult result={result} />
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function QuickChartView({ chart }: { chart: QuickChartPayload }) {
+  const max = Math.max(1, ...chart.values);
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="font-semibold">{chart.title}</h3>
+        <p className="text-sm text-(--muted)">{chart.column}</p>
+      </div>
+      {chart.labels.map((label, index) => {
+        const value = chart.values[index] ?? 0;
+        const width = `${Math.max(4, (value / max) * 100).toFixed(1)}%`;
+        return (
+          <div key={`${label}-${index}`} className="space-y-1">
+            <div className="flex justify-between gap-3 text-xs">
+              <span className="truncate">{label}</span>
+              <span className="font-semibold">{value}</span>
+            </div>
+            <div className="h-2 rounded-full bg-(--surface-muted)">
+              <div className="h-full rounded-full bg-(--accent)" style={{ width }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function HomeWorkspace() {
-  const { t } = useI18n();
+  const { locale } = useI18n();
+  const labels = copy[locale];
   const router = useRouter();
   const searchParams = useSearchParams();
   const [job, setJob] = useState<JobDetail | null>(null);
-  const [analyzingPrompt, setAnalyzingPrompt] = useState(false);
-  const [busyAnalyze, setBusyAnalyze] = useState(false);
-  const [busyExport, setBusyExport] = useState(false);
-  const [selectedChartColumn, setSelectedChartColumn] = useState<string>("");
-  const [chartBusy, setChartBusy] = useState(false);
-  const [quickChart, setQuickChart] = useState<QuickChartPayload | null>(null);
   const [webAnalysis, setWebAnalysis] = useState<WebAnalysisResponse | null>(null);
   const [webAnalysisMode, setWebAnalysisMode] = useState<WebAnalysisMode>("business");
-  const [health, setHealth] = useState<HealthInfo | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
   const [academicResult, setAcademicResult] = useState<AcademicAnalyzeResponse | null>(null);
+  const [busyAnalyze, setBusyAnalyze] = useState(false);
+  const [busyPrompt, setBusyPrompt] = useState(false);
+  const [busyExport, setBusyExport] = useState(false);
+  const [selectedChartColumn, setSelectedChartColumn] = useState("");
+  const [selectedChartKind, setSelectedChartKind] = useState<ChartKind>("bar");
+  const [quickChart, setQuickChart] = useState<QuickChartPayload | null>(null);
+  const [chartBusy, setChartBusy] = useState(false);
   const pollAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    if (!apiBase.trim()) return;
-    let cancelled = false;
-    getHealth()
-      .then((res) => {
-        if (!cancelled) {
-          setHealth(res);
-          setHealthError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setHealth(null);
-          setHealthError(err instanceof Error ? err.message : "health_check_failed");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const renderBarChart = (chart: QuickChartPayload) => {
-    const max = Math.max(1, ...chart.values);
-    return (
-      <div className="space-y-3">
-        {chart.labels.map((label, idx) => {
-          const value = chart.values[idx] ?? 0;
-          const width = Math.max(4, (value / max) * 100);
-          return (
-            <div key={`${label}-${idx}`} className="space-y-2">
-              <div className="flex items-center justify-between gap-3 text-xs text-(--muted)">
-                <span className="truncate font-medium text-(--fg)">{label}</span>
-                <span className="font-semibold text-(--fg)">{value}</span>
-              </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-(--surface-muted)">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${width.toFixed(1)}%`,
-                    background: "linear-gradient(90deg, #0f766e 0%, #2563eb 100%)",
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderPieChart = (chart: QuickChartPayload, donut = false) => {
-    const total = Math.max(1, chart.total);
-    const colors = chartPalette;
-    let acc = 0;
-    const stops = chart.values.map((v, i) => {
-      const start = (acc / total) * 100;
-      acc += v;
-      const end = (acc / total) * 100;
-      return `${colors[i % colors.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
-    });
-    return (
-      <div className="flex flex-wrap items-center gap-6">
-        <div className="relative h-44 w-44 shrink-0 rounded-full border border-(--border) shadow-[0_18px_48px_rgba(0,0,0,0.08)]" style={{ background: `conic-gradient(${stops.join(", ")})` }}>
-          {donut && (
-            <div className="absolute inset-[22%] rounded-full border border-(--border) bg-(--surface) shadow-inner" />
-          )}
-        </div>
-        <div className="min-w-55 flex-1 space-y-2 text-xs">
-          {chart.labels.map((label, idx) => {
-            const value = chart.values[idx] ?? 0;
-            const pct = (value / total) * 100;
-            return (
-              <div key={`${label}-${idx}`} className="flex items-center justify-between gap-3 rounded-full border border-(--border) bg-(--surface) px-3 py-2">
-                <span className="inline-flex min-w-0 items-center gap-2 truncate">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[idx % colors.length] }} />
-                  <span className="truncate font-medium text-(--fg)">{label}</span>
-                </span>
-                <span className="font-semibold text-(--fg)">{value} ({pct.toFixed(1)}%)</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderTrendChart = (chart: QuickChartPayload, filled: boolean) => {
-    const width = 760;
-    const height = 280;
-    const left = 34;
-    const right = 18;
-    const top = 20;
-    const bottom = 40;
-    const plotWidth = width - left - right;
-    const plotHeight = height - top - bottom;
-    const max = Math.max(1, ...chart.values);
-    const min = Math.min(...chart.values, 0);
-    const range = Math.max(1, max - min);
-    const points = chart.values.map((value, idx) => {
-      const x = left + (chart.values.length === 1 ? plotWidth / 2 : (idx / (chart.values.length - 1)) * plotWidth);
-      const normalized = (value - min) / range;
-      const y = top + (1 - normalized) * plotHeight;
-      return { x, y, value };
-    });
-    const linePath = points.map((point, idx) => `${idx === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
-    const lastPoint = points[points.length - 1] ?? { x: left, y: height - bottom };
-    const firstPoint = points[0] ?? { x: left, y: height - bottom };
-    const areaPath = `${linePath} L ${lastPoint.x.toFixed(1)} ${height - bottom} L ${firstPoint.x.toFixed(1)} ${height - bottom} Z`;
-
-    return (
-      <div className="space-y-4">
-        <div className="overflow-hidden rounded-3xl border border-(--border) bg-[linear-gradient(180deg,rgba(15,118,110,0.08),rgba(255,255,255,0.92))] p-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
-          <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full" role="img" aria-label={chart.title}>
-            <defs>
-              <linearGradient id="trendLine" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="#0f766e" />
-                <stop offset="55%" stopColor="#2563eb" />
-                <stop offset="100%" stopColor="#7c3aed" />
-              </linearGradient>
-              <linearGradient id="trendArea" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="rgba(37,99,235,0.40)" />
-                <stop offset="100%" stopColor="rgba(37,99,235,0.02)" />
-              </linearGradient>
-            </defs>
-            {[0, 1, 2, 3].map((tick) => {
-              const y = top + (tick / 3) * plotHeight;
-              return <line key={tick} x1={left} x2={width - right} y1={y} y2={y} stroke="rgba(148,163,184,0.18)" strokeDasharray="4 6" />;
-            })}
-            <line x1={left} x2={width - right} y1={height - bottom} y2={height - bottom} stroke="rgba(15,23,42,0.28)" />
-            <line x1={left} x2={left} y1={top} y2={height - bottom} stroke="rgba(15,23,42,0.18)" />
-            {filled && <path d={areaPath} fill="url(#trendArea)" />}
-            <path d={linePath} fill="none" stroke="url(#trendLine)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            {points.map((point, idx) => (
-              <g key={`${chart.labels[idx] ?? idx}-${idx}`}>
-                <circle cx={point.x} cy={point.y} r="6" fill="#fff" stroke={chartPalette[idx % chartPalette.length]} strokeWidth="4" />
-                <text x={point.x} y={height - 12} textAnchor="middle" className="fill-(--muted) text-[11px] font-medium">
-                  {chart.labels[idx]}
-                </text>
-                <text x={point.x} y={point.y - 14} textAnchor="middle" className="fill-(--fg) text-[11px] font-semibold">
-                  {point.value}
-                </text>
-              </g>
-            ))}
-          </svg>
-        </div>
-      </div>
-    );
-  };
-
-  const renderChart = (chart: QuickChartPayload) => {
-    switch (chart.kind) {
-      case "pie":
-        return renderPieChart(chart, false);
-      case "donut":
-        return renderPieChart(chart, true);
-      case "line":
-        return renderTrendChart(chart, false);
-      case "area":
-        return renderTrendChart(chart, true);
-      case "bar":
-      default:
-        return renderBarChart(chart);
-    }
-  };
 
   const syncUrlJob = useCallback(
     (id: string | null) => {
@@ -329,13 +593,13 @@ export function HomeWorkspace() {
     if (!id) return;
     let cancelled = false;
     getJob(id)
-      .then((j) => {
-        if (!cancelled) setJob(j);
+      .then((latest) => {
+        if (!cancelled) setJob(latest);
       })
-      .catch((e) => {
+      .catch((error) => {
         if (!cancelled) {
-          toastApiError(e, t, t("toast.pollErr"));
-          if (e instanceof ApiClientError && e.status === 404) {
+          toastApiError(error, (key) => key, "Could not read analysis status.");
+          if (error instanceof ApiClientError && error.status === 404) {
             syncUrlJob(null);
           }
         }
@@ -343,75 +607,94 @@ export function HomeWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, t, syncUrlJob]);
+  }, [searchParams, syncUrlJob]);
 
   const onAnalyzeWebsite = useCallback(
     async (value: string) => {
       if (!apiBase.trim()) {
-        toast.error(t("toast.uploadErr"), {
-          description: t("errors.checkApiUrl"),
-          duration: 12_000,
-        });
+        toast.error(labels.apiTitle, { description: labels.apiText, duration: 12_000 });
         return;
       }
 
-      setAnalyzingPrompt(true);
+      setBusyPrompt(true);
       try {
         const result = await analyzeWebInput(value, webAnalysisMode);
         setWebAnalysis(result);
-        toast.success(t("toast.analyzeOk"));
+        setJob(null);
+        setAcademicResult(null);
+        setQuickChart(null);
       } catch (error) {
-        toastApiError(error, t, t("toast.analyzeErr"));
+        toastApiError(error, (key) => key, "Could not analyze this source.");
       } finally {
-        setAnalyzingPrompt(false);
+        setBusyPrompt(false);
       }
     },
-    [t, webAnalysisMode],
+    [labels.apiText, labels.apiTitle, webAnalysisMode],
   );
 
   const onAskAssistant = useCallback(
     async (question: string) => {
-      if (!webAnalysis) {
-        throw new Error("analysis_missing");
-      }
-      if (!apiBase.trim()) {
-        throw new Error(t("errors.checkApiUrl"));
-      }
-      setAnalyzingPrompt(true);
+      if (!webAnalysis) throw new Error("analysis_missing");
+      if (!apiBase.trim()) throw new Error(labels.apiText);
+      setBusyPrompt(true);
       try {
         const result = await chatWebAnalysis(webAnalysis, question);
         return result.answer;
       } finally {
-        setAnalyzingPrompt(false);
+        setBusyPrompt(false);
       }
     },
-    [t, webAnalysis],
+    [labels.apiText, webAnalysis],
   );
 
   const onUploadDataFile = useCallback(
     async (file: File) => {
       if (!apiBase.trim()) {
-        toast.error(t("toast.uploadErr"), {
-          description: t("errors.checkApiUrl"),
-          duration: 12_000,
-        });
+        toast.error(labels.apiTitle, { description: labels.apiText, duration: 12_000 });
         return;
       }
 
       try {
         const uploaded = await uploadFile(file);
         const latest = await getJob(uploaded.job_id);
+        setJob(latest);
         setWebAnalysis(null);
+        setAcademicResult(null);
         setQuickChart(null);
         setSelectedChartColumn("");
-        setJob(latest);
         syncUrlJob(uploaded.job_id);
-        toast.success(t("toast.uploadOk"));
-      } catch (e) {
-        toastApiError(e, t, t("toast.uploadErr"));
+        pollAbortRef.current?.abort();
+        const ac = new AbortController();
+        pollAbortRef.current = ac;
+        setBusyAnalyze(true);
+        await startAnalyze(
+          uploaded.job_id,
+          comprehensiveAnalysisSpec() as unknown as Record<string, unknown>,
+        );
+        const final = await pollJobUntil(
+          uploaded.job_id,
+          (nextJob) => isTerminalStatus(nextJob.status),
+          {
+            signal: ac.signal,
+            onUpdate: setJob,
+          },
+        );
+        setJob(final);
+        if (final.status === "failed") {
+          toast.error(final.error?.message ?? "Analysis failed.");
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof PollTimeoutError) {
+          toast.error("Could not finish polling analysis status.");
+          return;
+        }
+        toastApiError(error, (key) => key, "Upload failed.");
+      } finally {
+        setBusyAnalyze(false);
       }
     },
-    [t, syncUrlJob],
+    [labels.apiText, labels.apiTitle, syncUrlJob],
   );
 
   const onAnalyze = useCallback(async () => {
@@ -425,32 +708,25 @@ export function HomeWorkspace() {
         job.job_id,
         comprehensiveAnalysisSpec() as unknown as Record<string, unknown>,
       );
-      toast.success(t("toast.analyzeOk"));
-      const final = await pollJobUntil(
-        job.job_id,
-        (j) => isTerminalStatus(j.status),
-        {
-          signal: ac.signal,
-          onUpdate: setJob,
-        },
-      );
+      const final = await pollJobUntil(job.job_id, (latest) => isTerminalStatus(latest.status), {
+        signal: ac.signal,
+        onUpdate: setJob,
+      });
       setJob(final);
       if (final.status === "failed") {
-        toast.error(final.error?.message ?? t("status.failed"));
+        toast.error(final.error?.message ?? "Analysis failed.");
       }
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      if (e instanceof PollTimeoutError) {
-        toast.error(t("toast.pollErr"), {
-          description: t("errors.checkDocs"),
-        });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (error instanceof PollTimeoutError) {
+        toast.error("Could not finish polling analysis status.");
         return;
       }
-      toastApiError(e, t, t("toast.analyzeErr"));
+      toastApiError(error, (key) => key, "Could not start analysis.");
     } finally {
       setBusyAnalyze(false);
     }
-  }, [job, t]);
+  }, [job]);
 
   const onExport = useCallback(async () => {
     if (!job) return;
@@ -460,55 +736,49 @@ export function HomeWorkspace() {
       try {
         const blob = await runPost();
         triggerDownload(blob, `${job.job_id}_export.zip`);
-        toast.success(t("toast.exportOk"));
-      } catch (e) {
+      } catch (error) {
         if (
-          e instanceof ApiClientError &&
-          e.status === 409 &&
-          e.details &&
-          typeof e.details === "object" &&
-          "code" in e.details &&
-          (e.details as { code: string }).code ===
-            "heavy_export_requires_export_phase"
+          error instanceof ApiClientError &&
+          error.status === 409 &&
+          error.details &&
+          typeof error.details === "object" &&
+          "code" in error.details &&
+          (error.details as { code: string }).code === "heavy_export_requires_export_phase"
         ) {
           await startExportPhase(job.job_id);
           const blob = await runPost();
           triggerDownload(blob, `${job.job_id}_export.zip`);
-          toast.success(t("toast.exportOk"));
         } else {
-          throw e;
+          throw error;
         }
       }
-      const j = await getJob(job.job_id);
-      setJob(j);
-    } catch (e) {
-      toastApiError(e, t, t("toast.exportErr"));
+      const latest = await getJob(job.job_id);
+      setJob(latest);
+    } catch (error) {
+      toastApiError(error, (key) => key, "Could not prepare export.");
     } finally {
       setBusyExport(false);
     }
-  }, [job, t]);
+  }, [job]);
 
-  const onCreateChart = useCallback(async (chartType: ChartKind) => {
-    if (!job || !selectedChartColumn) {
-      toast.error(t("job.chartSelectColumn"));
-      return;
-    }
+  const onCreateChart = useCallback(async () => {
+    if (!job || !selectedChartColumn) return;
     setChartBusy(true);
     try {
-      const chart = await getQuickChart(job.job_id, selectedChartColumn, chartType);
+      const chart = await getQuickChart(job.job_id, selectedChartColumn, selectedChartKind);
       setQuickChart(chart);
-      toast.success(`${chartKindLabel(t, chartType)} ${t("job.chartCreated")}`);
-    } catch (e) {
-      toastApiError(e, t, t("toast.chartErr"));
+    } catch (error) {
+      toastApiError(error, (key) => key, "Could not create chart.");
     } finally {
       setChartBusy(false);
     }
-  }, [job, selectedChartColumn, t]);
+  }, [job, selectedChartColumn, selectedChartKind]);
 
   const onReset = useCallback(() => {
     pollAbortRef.current?.abort();
     setJob(null);
     setWebAnalysis(null);
+    setAcademicResult(null);
     setQuickChart(null);
     setSelectedChartColumn("");
     syncUrlJob(null);
@@ -517,1070 +787,307 @@ export function HomeWorkspace() {
   const onCopyId = useCallback(() => {
     if (!job) return;
     void navigator.clipboard.writeText(job.job_id);
-    toast.success(t("job.copied"));
-  }, [job, t]);
+    toast.success(labels.copied);
+  }, [job, labels.copied]);
 
-  const showInlineSkeleton =
-    job !== null &&
-    (busyAnalyze || isBusyStatus(job.status)) &&
-    !isTerminalStatus(job.status);
-
+  const showProgress =
+    busyAnalyze ||
+    busyPrompt ||
+    (job !== null && isBusyStatus(job.status) && !isTerminalStatus(job.status));
   const canRunAnalyze =
-    job &&
-    (job.status === "uploaded" || job.status === "failed") &&
-    !busyAnalyze;
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (!element) return;
-    element.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const dangerScore = webAnalysis
-    ? Math.max(0, Math.min(100, webAnalysis.fraud_score ?? 0))
-    : 0;
-  const safeFindings = webAnalysis && Array.isArray(webAnalysis.findings) ? webAnalysis.findings : [];
-  const safeHighlights = webAnalysis && Array.isArray(webAnalysis.highlights) ? webAnalysis.highlights : [];
-  const safeRecommendations = webAnalysis && Array.isArray(webAnalysis.recommendations) ? webAnalysis.recommendations : [];
-  const safeEvidence = webAnalysis && Array.isArray(webAnalysis.evidence) ? webAnalysis.evidence : [];
-  const safeSections = webAnalysis && Array.isArray(webAnalysis.sections) ? webAnalysis.sections : [];
-  const safeDataFacts = webAnalysis && Array.isArray(webAnalysis.data_facts) ? webAnalysis.data_facts : [];
-  const safeRelatedWebsites = webAnalysis && Array.isArray(webAnalysis.related_websites) ? webAnalysis.related_websites : [];
-  const isContentAnalysis = webAnalysis?.source_type === "text";
-  const tokenizeForRelevance = (text: string): string[] =>
-    String(text ?? "")
-      .toLowerCase()
-      .split(/\s+/)
-      .map((token) => token.replace(/[^a-z0-9à-ỹ]/gi, ""))
-      .filter((token) => token.length >= 4);
-  const referenceTokens = Array.from(
-    new Set(tokenizeForRelevance(`${webAnalysis?.summary ?? ""} ${safeFindings.join(" ")}`)),
-  ).slice(0, 18);
-  const getSourceHost = (url: string): string => {
-    try {
-      return new URL(url).hostname.replace(/^www\./i, "");
-    } catch {
-      return url;
-    }
-  };
-  const relatedArticleComparison = safeRelatedWebsites
-    .map((site) => {
-      const siteTokens = tokenizeForRelevance(`${site.title} ${site.summary ?? ""}`);
-      const overlap = referenceTokens.filter((token) => siteTokens.includes(token)).length;
-      const relevance = Math.min(
-        100,
-        25 + overlap * 12 + (site.summary ? 14 : 0) + (site.relation === "news" ? 12 : 0),
-      );
-      return {
-        ...site,
-        sourceHost: getSourceHost(site.url),
-        overlap,
-        relevance,
-      };
-    })
-    .sort((a, b) => b.relevance - a.relevance)
-    .slice(0, 6);
-  const reportSummaryPoints = [
-    webAnalysis?.summary || "Chưa có tóm tắt tổng quan.",
-    safeFindings[0] || "Chưa có phát hiện chính từ AI.",
-    `Đối chiếu được ${relatedArticleComparison.length} bài liên quan để tham chiếu nội dung.`,
-  ];
-  const factTypeCounts = safeDataFacts.reduce<Record<string, number>>((acc, item) => {
-    const key = String(item.type ?? "other");
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {});
-  const factChartLabels = Object.keys(factTypeCounts);
-  const _factChartValues = factChartLabels.map((label) => factTypeCounts[label] ?? 0);
-  
-  // Helper: Check if chart data is valid and meaningful
-  const _isValidChartData = (labels: unknown[] | undefined, values: unknown[] | undefined): boolean => {
-    if (!Array.isArray(labels) || !Array.isArray(values) || labels.length === 0 || values.length === 0) {
-      return false;
-    }
-    // Must have same length
-    if (labels.length !== values.length) {
-      return false;
-    }
-    // Must have at least 2 items
-    if (labels.length < 2) {
-      return false;
-    }
-    // Values must be numbers and at least one should be > 0
-    const numValues = values.map((v) => Number(v) || 0);
-    const hasNonZeroValue = numValues.some((v) => v > 0);
-    return hasNonZeroValue;
-  };
-
-  const analysisText = webAnalysis
-    ? [
-        String(webAnalysis.source_label ?? ""),
-        String(webAnalysis.page_title ?? ""),
-        String(webAnalysis.summary ?? ""),
-        safeFindings.join(" "),
-        safeSections
-          .map((s) => `${String(s?.heading ?? "")} ${String(s?.snippet ?? "")}`)
-          .join(" "),
-      ]
-        .join(" ")
-        .toLowerCase()
-    : "";
-  const gamblingKeywords = [
-    "casino",
-    "ca cuoc",
-    "cá cược",
-    "bet",
-    "poker",
-    "bacarat",
-    "blackjack",
-    "slot",
-    "nha cai",
-    "nhà cái",
-    "gambling",
-    "lo de",
-    "lô đề",
-  ];
-  const adultKeywords = [
-    "18+",
-    "adult",
-    "sex",
-    "porn",
-    "nude",
-    "xxx",
-    "khiêu dâm",
-    "nhạy cảm",
-    "tình dục",
-  ];
-  const hasGamblingContent = gamblingKeywords.some((kw) => analysisText.includes(kw));
-  const hasAdultContent = adultKeywords.some((kw) => analysisText.includes(kw));
-  const showSensitiveWarning = hasGamblingContent || hasAdultContent;
-  const screenshotSource = webAnalysis?.website_screenshot?.startsWith("data:image/png;base64,")
-    ? "real"
-    : webAnalysis?.website_screenshot
-      ? "fallback"
-      : null;
-  const quickAction = safeRecommendations[0] ?? "Tiếp tục kiểm tra nội dung trước khi ra quyết định.";
-  const evidenceStrength = Math.min(
-    100,
-    safeEvidence.length * 18 +
-      safeSections.length * 6 +
-      safeDataFacts.length * 4 +
-      (webAnalysis?.cta_detected ? 8 : 0),
-  );
-  const confidenceScore = webAnalysis
-    ? Math.max(25, Math.min(95, Math.round(30 + evidenceStrength * 0.55)))
-    : 0;
-  const confidenceLabel =
-    confidenceScore >= 75
-      ? "Độ tin cậy cao"
-      : confidenceScore >= 50
-        ? "Độ tin cậy trung bình"
-        : "Độ tin cậy thấp";
-  const riskBreakdown = [
-    {
-      label: "Nội dung nhạy cảm",
-      score: hasGamblingContent || hasAdultContent ? Math.min(100, 65 + (hasGamblingContent && hasAdultContent ? 25 : 12)) : Math.round(dangerScore * 0.35),
-      reason: hasGamblingContent || hasAdultContent ? "Có tín hiệu keyword nhạy cảm trong nội dung." : "Không thấy nhiều từ khóa nhạy cảm trực tiếp.",
-    },
-    {
-      label: "CTA và hành vi dẫn dụ",
-      score: webAnalysis?.cta_detected ? (String(webAnalysis.cta_detected.action_keyword ?? "").toLowerCase().includes("buy") ? 58 : 34) : 14,
-      reason: webAnalysis?.cta_detected ? "Có CTA rõ ràng, cần kiểm tra mức minh bạch và ngữ cảnh." : "Không có CTA rõ ràng, mức rủi ro từ yếu tố này thấp.",
-    },
-    {
-      label: "Thiếu bằng chứng",
-      score: Math.max(0, 70 - Math.min(70, safeDataFacts.length * 10 + safeEvidence.length * 9)),
-      reason: safeDataFacts.length || safeEvidence.length ? "Đã có một phần bằng chứng để đối chiếu." : "Thiếu mốc dữ liệu rõ ràng, cần xác minh thêm.",
-    },
-    {
-      label: "Đánh giá tổng hợp AI",
-      score: Math.round(dangerScore),
-      reason: "Điểm tổng hợp sau khi kết hợp heuristic và AI.",
-    },
-  ];
-  const menuTools: MenuTool[] = [
-    { id: "tool-chat", label: t("job.menuChat"), action: "scroll", hint: t("job.menuChatHint") },
-    { id: "tool-mode", label: t("job.menuMode"), action: "scroll", hint: t("job.menuModeHint") },
-    { label: t("job.menuAnalyze"), action: "analyze", disabled: !canRunAnalyze, hint: t("job.menuAnalyzeHint") },
-    { id: "tool-ai-output", label: t("job.menuRiskScore"), action: "scroll", hint: t("job.menuRiskScoreHint") },
-    { id: "tool-ai-output", label: t("job.menuFindings"), action: "scroll", hint: t("job.menuFindingsHint") },
-    { id: "tool-job", label: t("job.status"), action: "scroll", hint: t("job.menuAnalyzeHint") },
-    { id: "tool-charts", label: t("job.chartSectionTitle"), action: "scroll", hint: t("job.chartSectionSubtitle") },
-    { id: "tool-results", label: t("result.title"), action: "scroll", hint: t("result.highlights") },
-    { id: "tool-backend", label: t("job.menuBackend"), action: "scroll", hint: t("job.menuBackendHint") },
-    { label: t("job.menuExport"), action: "export", disabled: busyExport || !job || job.status !== "succeeded", hint: t("job.menuExportHint") },
-  ];
-  const dataSidebarTools: MenuTool[] = [
-    { id: "tool-job", label: "Trạng thái job", action: "scroll", hint: "Xem tiến trình upload và phân tích" },
-    { id: "tool-charts", label: "Khám phá biểu đồ", action: "scroll", hint: "Chọn cột để dựng biểu đồ" },
-    { id: "tool-results", label: "Kết quả có cấu trúc", action: "scroll", hint: "Xem tóm tắt phân tích" },
-    { id: "tool-backend", label: "Minh bạch backend", action: "scroll", hint: "Xem metadata và provenance" },
-    { label: t("job.menuAnalyze"), action: "analyze", disabled: !canRunAnalyze, hint: t("job.menuAnalyzeHint") },
-    { label: t("job.menuExport"), action: "export", disabled: busyExport || !job || job.status !== "succeeded", hint: t("job.menuExportHint") },
-  ];
-  const showDataWorkspace = Boolean(job) && !webAnalysis;
-  const sidebarTools = showDataWorkspace ? dataSidebarTools : menuTools;
-  const jobStatus = job?.status;
+    job && (job.status === "uploaded" || job.status === "failed") && !busyAnalyze;
+  const jobInsight = buildJobInsight(job, locale);
 
   return (
-    <div className="swiss-page">
-      <header className="swiss-container flex flex-col gap-4 border-b border-(--border) pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-serif text-4xl font-medium tracking-tight text-(--fg) sm:text-5xl">
-            {t("app.title")}
-          </h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-(--muted)">
-            {t("app.tagline")}
-          </p>
+    <div className="min-h-screen bg-(--page-bg) text-(--fg)">
+      <header className="sticky top-0 z-20 border-b border-(--border) bg-[rgba(250,249,246,0.9)] backdrop-blur">
+        <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-3 font-black uppercase tracking-[0.08em]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-(--fg) text-(--surface)">
+              B
+            </span>
+            Bitlysis
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="hidden text-sm font-semibold text-(--muted) hover:text-(--fg) sm:inline">
+              {labels.home}
+            </Link>
+            <LanguageSwitch />
+          </div>
         </div>
-        <LanguageSwitch />
       </header>
 
-      <main className="w-full space-y-0">
-        {/* UX-1: API Warning banner — hiển thị ngay đầu trang nếu API URL chưa được cấu hình */}
-        {!apiBase.trim() && (
-          <div className="swiss-container py-4">
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
-              <span className="text-amber-500 text-lg">⚠</span>
+      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)] lg:px-8">
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          <section className="rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+            <div className="flex items-start justify-between gap-5">
               <div>
-                <p className="text-sm font-semibold text-amber-800">{t("workspace.apiWarningTitle")}</p>
-                <p className="mt-0.5 text-xs text-amber-700">{t("workspace.apiWarningText")}</p>
-                <p className="mt-1 text-xs text-amber-600">{t("errors.checkApiUrl")}</p>
+                <p className="text-label text-(--accent)">{labels.modeLabel}</p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight">{labels.title}</h1>
+                <p className="mt-3 text-sm leading-relaxed text-(--muted)">{labels.subtitle}</p>
               </div>
+              <Image
+                src="/svg/robot-researching.svg"
+                alt=""
+                width={96}
+                height={96}
+                className="hidden h-20 w-20 object-contain opacity-80 sm:block"
+              />
             </div>
-          </div>
-        )}
-        <div className="swiss-container grid w-full items-start gap-6 py-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:gap-8">
-          <aside className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto">
-            <div className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-(--muted)">
-                {showDataWorkspace ? t("workspace.dataSidebarTitle") : t("job.menuTitle")}
-              </p>
-              <p className="mt-1 text-xs text-(--muted)">
-                {showDataWorkspace ? t("workspace.dataSidebarSubtitle") : t("job.menuSubtitle")}
-              </p>
 
-              <div className="mt-3 space-y-1.5">
-                {sidebarTools.map((item, index) => (
-                  <button
-                    key={`${item.label}-${index}`}
-                    type="button"
-                    disabled={item.disabled}
-                    onClick={() => {
-                      if (item.action === "analyze") {
-                        void onAnalyze();
-                        return;
-                      }
-                      if (item.action === "export") {
-                        void onExport();
-                        return;
-                      }
-                      if (item.id) {
-                        scrollToSection(item.id);
-                      }
-                    }}
-                    className="flex w-full items-center justify-between rounded-2xl border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-left text-sm text-(--fg) transition hover:-translate-y-px hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-                    title={item.hint}
-                  >
-                    <span className="font-medium">{item.label}</span>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-(--muted)">{String(index + 1).padStart(2, "0")}</span>
-                  </button>
-                ))}
+            {!apiBase.trim() ? (
+              <div className="mt-5 rounded-2xl border border-[rgba(146,64,14,0.28)] bg-[rgba(251,191,36,0.12)] p-4 text-sm text-(--amber-fg)">
+                <strong>{labels.apiTitle}</strong>
+                <p className="mt-1 leading-relaxed">{labels.apiText}</p>
               </div>
-            </div>
-          </aside>
+            ) : null}
 
-          <div className="min-w-0 w-full space-y-6">
-            {showDataWorkspace && (
-              <section className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">{t("workspace.dataControlTitle")}</p>
-                    <p className="mt-1 text-sm text-(--muted)">{t("workspace.dataControlNote")}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onReset}
-                    className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-(--fg)"
-                  >
-                    {t("workspace.resetJob")}
-                  </button>
-                </div>
-                <div className="mt-4 grid gap-2 md:grid-cols-5">
-                  {[
-                    { title: "1. Upload", active: true },
-                    { title: "2. Analyze", active: isBusyStatus(jobStatus ?? "uploaded") || jobStatus === "uploaded" },
-                    { title: "3. Charts", active: jobStatus === "succeeded" },
-                    { title: "4. Results", active: jobStatus === "succeeded" },
-                    { title: "5. Backend", active: true },
-                  ].map((step) => (
-                    <div
-                      key={step.title}
-                      className={`rounded-2xl border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${step.active ? "border-(--fg) bg-white text-(--fg)" : "border-(--border) bg-(--surface-muted) text-(--muted)"}`}
-                    >
-                      {step.title}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-            <section className="rounded-3xl border border-(--border) bg-[linear-gradient(135deg,rgba(15,118,110,0.08),rgba(37,99,235,0.06),rgba(255,255,255,0.95))] p-4 sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">
-                Luồng phân tích Bitlysis
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                {[
-                  "1. Nhập dữ liệu / nội dung",
-                  "2. AI hỗ trợ & nhận diện rủi ro",
-                  "3. Chạy pipeline thống kê",
-                  "4. Khám phá biểu đồ",
-                  "5. Kết quả + minh bạch backend",
-                ].map((step) => (
-                  <div key={step} className="rounded-2xl border border-(--border) bg-white/85 px-3 py-2 text-xs font-medium text-(--fg)">
-                    {step}
-                  </div>
-                ))}
-              </div>
-            </section>
-            <section id="tool-chat" className="w-full space-y-6 scroll-mt-6">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 1</p>
-            <h2 className="text-label text-(--muted)">Nhập dữ liệu và làm việc với AI</h2>
-          </div>
+          </section>
+
           <UploadZone
-            disabled={analyzingPrompt}
+            disabled={!apiBase.trim()}
             analysis={webAnalysis}
+            analysisMode={webAnalysisMode}
+            onAnalysisModeChange={setWebAnalysisMode}
             onAnalyzePrompt={onAnalyzeWebsite}
             onAskAssistant={onAskAssistant}
             onUploadDataFile={onUploadDataFile}
-            onAcademicResult={(result) => setAcademicResult(result)}
+            onAcademicResult={setAcademicResult}
           />
+        </aside>
 
-          {/* Academic result panel — hiển thị sau khi phân tích nội dung */}
-          {academicResult && (
-            <div id="tool-academic" className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-4 scroll-mt-6">
-              <div className="flex items-start justify-between gap-3 border-b border-(--border) pb-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">
-                    {t("academic.factCheckTitle")}
-                  </p>
-                  <p className="mt-0.5 text-sm font-semibold text-(--fg)">
-                    {academicResult.papers.length} {t("academic.papersFound")} · {academicResult.keywords.length} keywords
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAcademicResult(null)}
-                  className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold text-(--muted) hover:bg-white"
-                >
-                  ✕
-                </button>
+        <div className="space-y-5">
+          {showProgress ? <ProgressAnalysis messages={labels.progress} /> : null}
+
+          {!webAnalysis && !job && !academicResult ? (
+            <section className="relative overflow-hidden rounded-[32px] border border-dashed border-(--border) bg-(--surface) p-8 shadow-[0_18px_48px_rgba(15,23,42,0.04)]">
+              <div className="max-w-xl">
+                <p className="text-label text-(--accent)">{labels.explanation}</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight">{labels.emptyTitle}</h2>
+                <p className="mt-3 text-sm leading-relaxed text-(--muted)">{labels.emptyText}</p>
               </div>
-              <AcademicResult result={academicResult} />
-            </div>
-          )}
+              <Image
+                src="/svg/mascot-talking.svg"
+                alt=""
+                width={260}
+                height={260}
+                className="pointer-events-none ml-auto mt-6 h-44 w-44 object-contain opacity-80 sm:absolute sm:bottom-0 sm:right-4 sm:mt-0"
+              />
+            </section>
+          ) : null}
 
-          <div id="tool-mode" className="space-y-3 rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5 scroll-mt-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Chọn phong cách phân tích</p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {analysisModeOptions.map((option) => {
-                const active = webAnalysisMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setWebAnalysisMode(option.value)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${active ? "border-(--fg) bg-white shadow-sm" : "border-(--border) bg-(--surface) hover:-translate-y-px hover:bg-white"}`}
-                  >
-                    <div className="text-sm font-semibold text-(--fg)">{option.title}</div>
-                    <div className="mt-1 text-xs leading-relaxed text-(--muted)">{option.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {webAnalysis ? <WebInsightReport analysis={webAnalysis} labels={labels} /> : null}
 
-          {webAnalysis && (
-            <div
-              id="tool-ai-output"
-              className={`space-y-4 rounded-2xl border bg-(--surface) p-4 ${
-                showSensitiveWarning ? "border-red-300 shadow-[0_0_0_2px_rgba(239,68,68,0.15)]" : "border-(--border)"
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-(--border) pb-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 2</p>
-                  <p className="text-sm font-semibold text-(--fg)">Tổng hợp AI hỗ trợ và nhận diện nội dung</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold text-(--muted)">
-                    AI Support Layer
-                  </span>
-                  <span className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 text-xs font-semibold text-(--muted)">
-                    {confidenceLabel}
-                  </span>
-                </div>
-              </div>
+          {academicResult ? <AcademicBriefReport result={academicResult} labels={labels} /> : null}
 
-              {showSensitiveWarning && (
-                <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2.5 text-red-900">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em]">Cảnh báo nội dung nhạy cảm</p>
-                  <p className="mt-1.5 text-sm leading-relaxed">
-                    {hasGamblingContent && hasAdultContent
-                      ? "Hệ thống phát hiện nội dung liên quan đến đánh bạc và 18+. Người dùng nên thận trọng trước khi tương tác."
-                      : hasGamblingContent
-                        ? "Hệ thống phát hiện nội dung liên quan đến đánh bạc/cá cược. Người dùng nên thận trọng trước khi tương tác."
-                        : "Hệ thống phát hiện nội dung 18+ hoặc nhạy cảm. Vui lòng cân nhắc trước khi tiếp tục."}
-                  </p>
-                </div>
-              )}
-
-              <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Tóm tắt website</p>
-                        <p className="mt-2 text-sm leading-relaxed text-(--fg)">{webAnalysis.summary}</p>
-                      </div>
-                      <div className="min-w-40 rounded-lg border border-(--border) bg-(--surface) px-3 py-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Hành động ưu tiên</p>
-                        <p className="mt-1 text-sm leading-relaxed text-(--fg)">{quickAction}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Website liên quan</p>
-                      <span className="text-[11px] uppercase tracking-[0.16em] text-(--muted)">
-                        {safeRelatedWebsites.length ? `${safeRelatedWebsites.length} mục` : "0 mục"}
+          {job ? (
+            <div className="space-y-5">
+              <section className="rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-label text-(--accent)">{labels.source}</p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight">{job.filename}</h2>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-(--surface-muted) px-3 py-1">
+                        {labels.status}: {statusLabel(job.status)}
+                      </span>
+                      <span className="rounded-full bg-(--surface-muted) px-3 py-1">
+                        {formatBytes(job.size_bytes)}
+                      </span>
+                      <span className="rounded-full bg-(--surface-muted) px-3 py-1">
+                        {labels.columns}: {job.columns.length}
+                      </span>
+                      <span className="rounded-full bg-(--surface-muted) px-3 py-1">
+                        {labels.rows}: {job.row_preview_count}
                       </span>
                     </div>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {safeRelatedWebsites.length ? (
-                        safeRelatedWebsites.slice(0, 4).map((site, idx) => (
-                          <div key={`${site.url}-${idx}`} className="rounded-lg border border-(--border) bg-(--surface) p-3">
-                            <div className="text-sm font-semibold text-(--fg)">{site.title}</div>
-                            <a
-                              href={site.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-1 block break-all text-xs text-(--muted) underline-offset-4 hover:underline"
-                            >
-                              {site.url}
-                            </a>
-                            {site.summary ? (
-                              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{site.summary}</p>
-                            ) : null}
-                            <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-(--muted)">{site.relation}</div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-(--muted)">Chưa trích xuất được website liên quan từ trang đang phân tích.</p>
-                      )}
-                    </div>
                   </div>
-
-                  {isContentAnalysis && (
-                    <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Tóm tắt báo cáo</p>
-                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-(--fg)">
-                        {reportSummaryPoints.map((point, idx) => (
-                          <li key={`${point}-${idx}`}>{point}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Mức độ nguy hiểm</p>
-                      <span className="text-2xl font-bold text-(--fg)">{dangerScore.toFixed(1)}%</span>
-                    </div>
-                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-(--surface)">
-                      <div
-                        className={`h-full transition-all ${
-                          dangerScore >= 70
-                            ? "bg-red-500"
-                            : dangerScore >= 40
-                              ? "bg-amber-500"
-                              : "bg-green-500"
-                        }`}
-                        style={{ width: `${dangerScore}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 text-xs text-(--muted)">
-                      {dangerScore >= 70 ? "Nguy hiểm cao" : dangerScore >= 40 ? "Nguy hiểm trung bình" : "An toàn"}
-                    </div>
-                    <div className="mt-3 rounded-lg border border-(--border) bg-(--surface) p-2.5">
-                      <div className="flex items-center justify-between text-xs text-(--muted)">
-                        <span>Confidence</span>
-                        <span className="font-semibold text-(--fg)">{confidenceScore}%</span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-(--surface-muted)">
-                        <div
-                          className="h-full bg-[linear-gradient(90deg,#0f766e_0%,#2563eb_100%)]"
-                          style={{ width: `${confidenceScore}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Nguồn</p>
-                      <p className="mt-2 text-sm font-medium text-(--fg)">{webAnalysis.source_label}</p>
-                      <p className="mt-1 text-xs text-(--muted)">{webAnalysis.source_type}</p>
-                    </div>
-                    <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">CTA</p>
-                      {webAnalysis.cta_detected ? (
-                        <div className="mt-2 space-y-1 text-sm text-(--fg)">
-                          <div className="font-medium">{webAnalysis.cta_detected.text}</div>
-                          <div className="text-xs text-(--muted)">
-                            {webAnalysis.cta_detected.type} · {webAnalysis.cta_detected.action_keyword}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-(--muted)">Không phát hiện CTA rõ ràng.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {isContentAnalysis && (
-                <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Bảng so sánh bài báo liên quan</p>
-                    <span className="text-[11px] uppercase tracking-[0.16em] text-(--muted)">
-                      {relatedArticleComparison.length ? `${relatedArticleComparison.length} bài` : "0 bài"}
-                    </span>
-                  </div>
-                  {relatedArticleComparison.length ? (
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="min-w-full border-separate border-spacing-y-2 text-sm">
-                        <thead>
-                          <tr className="text-left text-xs uppercase tracking-[0.14em] text-(--muted)">
-                            <th className="px-3 py-1.5">Bài báo</th>
-                            <th className="px-3 py-1.5">Nguồn</th>
-                            <th className="px-3 py-1.5">Tóm tắt</th>
-                            <th className="px-3 py-1.5">Mức phù hợp</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {relatedArticleComparison.map((item, idx) => (
-                            <tr key={`${item.url}-${idx}`} className="rounded-lg bg-(--surface)">
-                              <td className="rounded-l-lg border border-(--border) px-3 py-2 align-top">
-                                <a
-                                  href={item.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="font-semibold text-(--fg) underline-offset-4 hover:underline"
-                                >
-                                  {item.title}
-                                </a>
-                              </td>
-                              <td className="border-y border-(--border) px-3 py-2 align-top text-(--muted)">{item.sourceHost}</td>
-                              <td className="border-y border-(--border) px-3 py-2 align-top text-(--fg)">
-                                {item.summary || "Chưa có tóm tắt cho bài báo này."}
-                              </td>
-                              <td className="rounded-r-lg border border-(--border) px-3 py-2 align-top">
-                                <div className="font-semibold text-(--fg)">{item.relevance}%</div>
-                                <div className="mt-1 h-1.5 w-20 overflow-hidden rounded-full bg-(--surface-muted)">
-                                  <div className="h-full bg-[linear-gradient(90deg,#0f766e_0%,#2563eb_100%)]" style={{ width: `${item.relevance}%` }} />
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-(--muted)">Chưa có bài báo để so sánh. Hãy nhập nội dung chi tiết hơn để hệ thống tìm nguồn liên quan.</p>
-                  )}
-                </div>
-              )}
-
-              <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Breakdown rủi ro</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {riskBreakdown.map((item) => (
-                    <div key={item.label} className="rounded-lg border border-(--border) bg-(--surface) p-3">
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="font-medium text-(--fg)">{item.label}</span>
-                        <span className="font-semibold text-(--fg)">{item.score}%</span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-(--surface-muted)">
-                        <div
-                          className="h-full bg-[linear-gradient(90deg,#d97706_0%,#dc2626_100%)]"
-                          style={{ width: `${Math.max(2, Math.min(100, item.score))}%` }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs leading-relaxed text-(--muted)">{item.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">AI findings</p>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-(--fg)">
-                    {safeFindings.slice(0, 4).map((item, idx) => (
-                      <li key={`${item}-${idx}`}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Điểm nổi bật</p>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-(--fg)">
-                    {safeHighlights.length ? (
-                      safeHighlights.slice(0, 4).map((item, idx) => <li key={`${item}-${idx}`}>{item}</li>)
-                    ) : (
-                      <li className="list-none text-(--muted)">Chưa có highlight bổ sung.</li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Bằng chứng</p>
-                  <div className="mt-2 space-y-2">
-                    {safeEvidence.length ? (
-                      safeEvidence.slice(0, 4).map((item, idx) => (
-                        <div key={`${item.label}-${idx}`} className="rounded-lg border border-(--border) bg-(--surface) p-3">
-                          <div className="text-sm font-semibold text-(--fg)">{item.label}</div>
-                          <div className="mt-1 text-xs leading-relaxed text-(--muted)">{item.detail}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-(--muted)">Chưa có bằng chứng từ phân tích.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">AI sections</p>
-                  <div className="mt-2 space-y-2">
-                    {safeSections.slice(0, 3).map((section, idx) => (
-                      <div key={`${section.heading}-${idx}`} className="rounded-lg border border-(--border) bg-(--surface) p-3">
-                        <div className="font-semibold text-(--fg)">{section.heading}</div>
-                        <div className="mt-1 text-xs leading-relaxed text-(--muted)">{section.snippet}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {webAnalysis.website_screenshot && (
-                <div className="overflow-hidden rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">Ảnh đại diện website</p>
-                      <p className="mt-1 text-sm text-(--fg)">Ảnh chụp toàn trang để người dùng nhận diện nhanh giao diện thật.</p>
-                    </div>
-                    <span className="rounded-full border border-(--border) bg-(--surface) px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">
-                      {screenshotSource === "real" ? "real capture" : "fallback preview"}
-                    </span>
-                  </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- base64 screenshot, next/image không hỗ trợ */}
-                  <img
-                    src={webAnalysis.website_screenshot}
-                    alt={`Ảnh chụp website ${webAnalysis.source_label}`}
-                    className="mt-3 w-full rounded-xl border border-(--border) object-cover shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
-                  />
-                </div>
-              )}
-
-            </div>
-          )}
-
-          {!apiBase.trim() && (
-            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              {t("workspace.apiWarningText")} {t("errors.checkApiUrl")}
-            </p>
-          )}
-        </section>
-
-        {job && (
-          <section id="tool-job" className="w-full space-y-6 rounded-3xl border border-(--border) bg-(--surface) p-4 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 3</p>
-                <h2 className="text-label text-(--muted)">Chạy pipeline phân tích dữ liệu</h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  className="text-xs font-semibold uppercase tracking-wider text-(--accent) underline-offset-4 hover:underline"
-                  href={apiBase ? `${apiBase.replace(/\/$/, "")}/docs` : "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("job.openApi")}
-                </a>
-                <button
-                  type="button"
-                  onClick={onReset}
-                  className="text-xs font-semibold uppercase tracking-wider text-(--muted) hover:text-(--fg)"
-                >
-                  {t("job.reset")}
-                </button>
-              </div>
-            </div>
-
-            <div className="border border-(--border) bg-(--surface) p-8">
-              <div className="flex flex-wrap items-baseline justify-between gap-4">
-                <div>
-                  <p className="text-label text-(--muted)">{t("job.id")}</p>
-                  <p className="mt-1 font-mono text-sm break-all">{job.job_id}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onCopyId}
-                  className="shrink-0 border border-(--border) px-3 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-(--surface-muted)"
-                >
-                  {t("job.copyId")}
-                </button>
-              </div>
-              <dl className="mt-8 grid gap-6 sm:grid-cols-2">
-                <div>
-                  <dt className="text-label text-(--muted)">
-                    {t("job.status")}
-                  </dt>
-                  <dd className="mt-2 flex items-center gap-2 text-lg font-semibold text-(--fg)">
-                    {statusLabel(t, job.status)}
-                    {isBusyStatus(job.status) && (
-                      <span
-                        className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-(--accent)"
-                        aria-hidden
-                      />
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label text-(--muted)">
-                    {t("job.filename")}
-                  </dt>
-                  <dd className="mt-2 text-sm text-(--fg)">{job.filename}</dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-label text-(--muted)">
-                    {t("job.columns")}
-                  </dt>
-                  <dd className="mt-2 font-mono text-xs leading-relaxed text-(--fg)">
-                    {job.columns.join(", ")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label text-(--muted)">
-                    {t("job.rowsSample")}
-                  </dt>
-                  <dd className="mt-2 font-mono text-sm">{job.row_preview_count}</dd>
-                </div>
-              </dl>
-
-              {job.error && (
-                <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-                  <p className="font-semibold">{job.error.code}</p>
-                  <p className="mt-1">{job.error.message}</p>
-                  {/* UX-7: Retry button khi job failed */}
-                  <div className="mt-3 flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={onAnalyze}
-                      disabled={busyAnalyze}
-                      className="rounded-full border border-red-400 bg-red-100 px-4 py-1.5 text-xs font-semibold text-red-800 hover:bg-red-200 disabled:opacity-50"
+                      disabled={!canRunAnalyze}
+                      onClick={() => void onAnalyze()}
+                      className="rounded-full bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-40"
                     >
-                      {t("workspace.retryAnalyze")}
+                      {busyAnalyze ? labels.analyzing : labels.analyze}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyExport || job.status !== "succeeded"}
+                      onClick={() => void onExport()}
+                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-40"
+                    >
+                      {busyExport ? labels.exporting : labels.export}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCopyId}
+                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]"
+                    >
+                      {labels.copyId}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onReset}
+                      className="rounded-full border border-(--border) bg-(--surface-muted) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]"
+                    >
+                      {labels.reset}
                     </button>
                   </div>
                 </div>
-              )}
 
-              {/* UX-10 + R pipeline status: hiển thị trạng thái r_queued/r_processing */}
-              {(job.status === "r_queued" || job.status === "r_processing") && (
-                <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                  <p className="font-semibold">
-                    {job.status === "r_queued" ? t("status.r_queued") : t("status.r_processing")}
+                {job.error ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                    <strong>{job.error.code}</strong>
+                    <p className="mt-1">{job.error.message}</p>
+                    <button
+                      type="button"
+                      disabled={busyAnalyze}
+                      onClick={() => void onAnalyze()}
+                      className="mt-3 rounded-full bg-red-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white disabled:opacity-40"
+                    >
+                      {labels.retry}
+                    </button>
+                  </div>
+                ) : null}
+
+                {isBusyStatus(job.status) && !isTerminalStatus(job.status) ? (
+                  <p className="mt-5 rounded-2xl bg-(--surface-muted) p-4 text-sm leading-relaxed text-(--muted)">
+                    {labels.jobProcessing}
                   </p>
-                  <p className="mt-1">
-                    {job.status === "r_queued" ? t("workspace.rQueuedStatus") : t("workspace.rProcessingStatus")}
-                  </p>
-                </div>
-              )}
+                ) : null}
+              </section>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={!canRunAnalyze}
-                  onClick={onAnalyze}
-                  className="border border-(--fg) bg-(--fg) px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-(--surface) disabled:cursor-not-allowed disabled:opacity-40 hover:opacity-90"
-                >
-                  {busyAnalyze ? t("job.analyzing") : t("job.analyzeFull")}
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    busyExport || !job || job.status !== "succeeded"
-                  }
-                  onClick={onExport}
-                  className="border border-(--border) bg-transparent px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-(--fg) disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--surface-muted)"
-                >
-                  {busyExport ? t("job.exporting") : t("job.exportZip")}
-                </button>
-              </div>
+              <InsightCard title={labels.overview}>
+                <p>{jobInsight.headline}</p>
+              </InsightCard>
 
-              {showInlineSkeleton && (
-                <div
-                  className="mt-8 space-y-3 border-t border-(--border) pt-8"
-                  aria-busy="true"
-                  aria-live="polite"
-                >
-                  <p className="text-label text-(--muted)">
-                    {t("job.polling")}
-                  </p>
-                  <div className="h-2 w-full animate-pulse bg-(--skeleton)" />
-                  <div className="h-2 w-4/5 animate-pulse bg-(--skeleton)" />
-                  <div className="h-24 w-full animate-pulse bg-(--skeleton)" />
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-          {job && (
-            <section id="tool-backend" className="w-full rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 5B</p>
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-(--muted)">{t("job.backendTitle")}</h3>
-                  <p className="mt-1 max-w-3xl text-sm text-(--muted)">{t("job.backendSubtitle")}</p>
-                </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${health?.status === "ok" ? "bg-[rgba(22,163,74,0.12)] text-[#166534]" : "bg-[rgba(220,38,38,0.12)] text-[#991b1b]"}`}>
-                  {t("job.backendHealth")}: {health?.status ?? (healthError ? "error" : "-")}
-                </span>
-              </div>
-
-              <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                <div className="rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5 text-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.backendHealth")}</p>
-                  <div className="mt-2 space-y-1 text-(--fg)">
-                    <p>status: {health?.status ?? "-"}</p>
-                    <p>service: {health?.service ?? "-"}</p>
-                    <p>api: {apiBase || "-"}</p>
+              <InsightCard title={labels.whyMethod}>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-(--muted)">
+                      {labels.rationale}
+                    </h3>
+                    <p className="mt-2">
+                      {jobInsight.methodRationale || labels.methodExplanation}
+                    </p>
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5 text-sm lg:col-span-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.backendMeta")}</p>
-                  <div className="mt-2 grid gap-2 text-(--fg) sm:grid-cols-2 xl:grid-cols-3">
-                    <p>{t("job.backendPath")}: {job.stored_path}</p>
-                    <p>{t("job.backendSize")}: {formatBytes(job.size_bytes)}</p>
-                    <p>{t("job.backendUploadedAt")}: {formatDateTime(job.uploaded_at)}</p>
-                    <p>{t("job.backendUpdatedAt")}: {formatDateTime(job.status_updated_at)}</p>
-                    <p>{t("job.backendManifest")}: {job.manifest_stored_as ?? "-"}</p>
-                    <p>{t("job.backendExport")}: {job.export_stored_as ?? "-"}</p>
-                  </div>
-                  {job.error && (
-                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-                      <p>{t("job.backendErrorCode")}: {job.error.code}</p>
-                      <p>{t("job.backendErrorMessage")}: {job.error.message}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                <details className="rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">analysis_spec</summary>
-                  <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-(--fg)">{JSON.stringify(job.analysis_spec ?? {}, null, 2)}</pre>
-                </details>
-                <details className="rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">profiling</summary>
-                  <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-(--fg)">{JSON.stringify(job.profiling ?? {}, null, 2)}</pre>
-                </details>
-                <details className="rounded-2xl border border-(--border) bg-(--surface-muted) p-3.5">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.backendRaw")}</summary>
-                  <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-(--fg)">{JSON.stringify(job.result_summary ?? {}, null, 2)}</pre>
-                </details>
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* UX-10: Chart section hiển thị cho mọi job status — kèm empty state gợi ý nếu chưa analyze */}
-        {job && (
-          <div className="lg:col-start-2">
-            <section id="tool-charts" className="w-full border-t border-(--border) py-8 lg:py-10">
-            {job.status !== "succeeded" ? (
-              /* Empty state khi chưa analyze xong */
-              <div className="w-full overflow-hidden rounded-[28px] border border-dashed border-(--border) bg-(--surface-muted) p-8 text-center">
-                <p className="text-2xl">📊</p>
-                <p className="mt-3 text-sm font-semibold text-(--muted)">{t("workspace.chartUnlockHint")}</p>
-                <button
-                  type="button"
-                  onClick={onAnalyze}
-                  disabled={!canRunAnalyze}
-                  className="mt-4 rounded-full border border-(--fg) bg-(--fg) px-5 py-2 text-xs font-semibold uppercase tracking-wider text-(--surface) disabled:opacity-40"
-                >
-                  {busyAnalyze ? t("job.analyzing") : t("workspace.chartUnlockCta")}
-                </button>
-              </div>
-            ) : (
-            <div className="w-full overflow-hidden rounded-[28px] border border-(--border) bg-[linear-gradient(180deg,rgba(245,242,235,0.96),rgba(255,255,255,0.94))] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 4</p>
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-(--muted)">{t("job.chartSectionTitle")}</h3>
-                    <p className="max-w-2xl text-sm leading-relaxed text-(--muted)">{t("job.chartSectionSubtitle")}</p>
-                  </div>
-                  <div className="rounded-full border border-(--border) bg-(--surface) px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">
-                    {t("job.chartCreate")}
-                  </div>
-                </div>
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.12fr)_minmax(280px,0.88fr)]">
-                  <div className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                    <div className="mb-4 rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartPanelTitle")}</p>
-                      <p className="mt-1 text-sm text-(--muted)">{t("job.chartPanelHint")}</p>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartStepPickColumn")}</p>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartColumnLabel")}</p>
-                        <p className="mt-1 text-sm text-(--fg)">{selectedChartColumn || t("job.chartEmpty")}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[rgba(15,118,110,0.10)] px-3 py-1 text-xs font-semibold text-[#0f766e]">{quickChart?.kind ? chartKindLabel(t, quickChart.kind) : t("job.chartTypeBar")}</span>
-                        {quickChart && <span className="rounded-full bg-[rgba(37,99,235,0.10)] px-3 py-1 text-xs font-semibold text-[#2563eb]">{quickChart.total} {t("job.chartTotal")}</span>}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <select
-                        value={selectedChartColumn}
-                        onChange={(e) => setSelectedChartColumn(e.target.value)}
-                        className="min-w-55 rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3 text-sm outline-none transition focus:border-(--fg)"
-                      >
-                        <option value="">Chọn cột...</option>
-                        {job.columns.map((c) => (
-                          <option key={c} value={c}>{c}</option>
+                  {jobInsight.methodAssumptions.length ? (
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-(--muted)">
+                        {labels.assumptionsApplied}
+                      </h3>
+                      <ul className="mt-2 space-y-1">
+                        {jobInsight.methodAssumptions.map((assumption) => (
+                          <li key={assumption}>• {assumption}</li>
                         ))}
-                      </select>
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              </InsightCard>
+
+              <InsightCard title={labels.notable}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {jobInsight.metrics.map((metric) => (
+                    <div key={`${metric.label}-${metric.value}`} className="rounded-2xl bg-(--surface-muted) p-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">{metric.label}</p>
+                      <p className="mt-1 text-base font-semibold">{metric.value}</p>
+                    </div>
+                  ))}
+                  {jobInsight.findings.slice(0, 3).map((finding) => (
+                    <p key={finding} className="rounded-2xl bg-(--surface-muted) p-3">{finding}</p>
+                  ))}
+                </div>
+              </InsightCard>
+
+              <InsightCard title={labels.conclusion}>
+                <p>{labels.defaultConclusion}</p>
+              </InsightCard>
+
+              <InsightCard title={labels.charts}>
+                <p className="mb-4 text-(--muted)">{labels.chartHelp}</p>
+                {job.status === "succeeded" ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                      <label className="space-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">
+                        {labels.chartColumn}
+                        <select
+                          value={selectedChartColumn}
+                          onChange={(event) => setSelectedChartColumn(event.target.value)}
+                          className="block min-h-11 w-full rounded-2xl border border-(--border) bg-(--surface-muted) px-3 text-sm font-normal normal-case tracking-normal text-(--fg) outline-none"
+                        >
+                          <option value="">{labels.chartEmpty}</option>
+                          {job.columns.map((column) => (
+                            <option key={column} value={column}>
+                              {column}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">
+                        {labels.chartType}
+                        <select
+                          value={selectedChartKind}
+                          onChange={(event) => setSelectedChartKind(event.target.value as ChartKind)}
+                          className="block min-h-11 rounded-2xl border border-(--border) bg-(--surface-muted) px-3 text-sm font-normal normal-case tracking-normal text-(--fg) outline-none"
+                        >
+                          {chartKinds.map((kind) => (
+                            <option key={kind} value={kind}>
+                              {kind}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <button
                         type="button"
                         disabled={chartBusy || !selectedChartColumn}
-                        onClick={() => void onCreateChart("bar")}
-                        className="rounded-2xl border border-(--fg) bg-(--fg) px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-(--surface) transition hover:-translate-y-px hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() => void onCreateChart()}
+                        className="self-end rounded-full bg-(--fg) px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-40"
                       >
-                        {chartBusy ? t("job.chartLoading") : t("job.chartCreate")}
+                        {labels.chartCreate}
                       </button>
                     </div>
-                    <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartStepPickStyle")}</p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                      {chartOptions.map((option) => {
-                        const active = quickChart?.kind === option.kind;
-                        return (
-                          <button
-                            key={option.kind}
-                            type="button"
-                            disabled={chartBusy || !selectedChartColumn}
-                            onClick={() => void onCreateChart(option.kind)}
-                            className={`group rounded-3xl border p-4 text-left transition ${active ? "border-transparent shadow-[0_16px_36px_rgba(15,23,42,0.12)]" : "border-(--border) bg-(--surface-muted) hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(15,23,42,0.08)]"} disabled:cursor-not-allowed disabled:opacity-50`}
-                            style={{
-                              background: active
-                                ? `linear-gradient(180deg, ${option.accent} 0%, rgba(255,255,255,0.98) 72%)`
-                                : undefined,
-                            }}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${active ? "bg-white/90 text-(--fg)" : "bg-white text-(--muted)"}`}>{option.badge}</span>
-                              <span className={`h-2.5 w-2.5 rounded-full ${active ? "bg-white" : "bg-(--border)"}`} />
-                            </div>
-                            <p className={`mt-4 text-sm font-semibold ${active ? "text-white" : "text-(--fg)"}`}>{t(option.labelKey)}</p>
-                            <p className={`mt-1 text-xs leading-relaxed ${active ? "text-white/90" : "text-(--muted)"}`}>{t(option.descriptionKey)}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {quickChart ? <QuickChartView chart={quickChart} /> : null}
                   </div>
+                ) : (
+                  <p>{labels.chartEmpty}</p>
+                )}
+              </InsightCard>
 
-                  <div className="rounded-3xl border border-(--border) bg-(--surface) p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartStepPreview")}</p>
-                    <div className="flex items-center justify-between gap-3 border-b border-(--border) pb-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--muted)">{quickChart?.title ?? t("job.chartSectionTitle")}</p>
-                        <p className="mt-1 text-sm text-(--muted)">{quickChart ? quickChart.column : t("job.chartEmpty")}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        {quickChart && (
-                          <>
-                            <span className="rounded-full border border-(--border) px-3 py-1 font-semibold text-(--fg)">{quickChart.total} {t("job.chartTotal")}</span>
-                            <span className="rounded-full border border-(--border) px-3 py-1 font-semibold text-(--fg)">{Math.max(...quickChart.values, 0)} {t("job.chartPeak")}</span>
-                          </>
+              {job.result_summary ? (
+                <InsightCard title={labels.viewMore}>
+                  <details>
+                    <summary className="cursor-pointer font-semibold text-(--accent)">
+                      {labels.viewMore}
+                    </summary>
+                    <div className="mt-5">
+                      <ResultSummary
+                        jobId={job.job_id}
+                        summary={job.result_summary as Record<string, unknown> | null}
+                      />
+                    </div>
+                    <div className="mt-5 overflow-auto rounded-2xl border border-(--border) bg-(--surface-muted) p-4">
+                      <pre className="min-w-[720px] whitespace-pre-wrap text-xs">
+                        {JSON.stringify(
+                          {
+                            job_id: job.job_id,
+                            status: job.status,
+                            uploaded_at: job.uploaded_at,
+                            updated_at: job.status_updated_at,
+                            profiling: job.profiling,
+                            analysis_spec: job.analysis_spec,
+                          },
+                          null,
+                          2,
                         )}
-                      </div>
+                      </pre>
                     </div>
-                    <div className="mt-4 min-h-72">
-                      {chartBusy && !quickChart ? (
-                        <div className="flex min-h-72 items-center justify-center rounded-3xl border border-dashed border-(--border) bg-(--surface-muted) text-sm text-(--muted)">
-                          {t("job.chartLoading")}
-                        </div>
-                      ) : quickChart ? (
-                        <div className="space-y-4">
-                          <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-                            {renderChart(quickChart)}
-                          </div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-(--muted)">{t("job.chartStatsTitle")}</p>
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.2em] text-(--muted)">{t("job.chartTotal")}</p>
-                              <p className="mt-1 text-lg font-semibold text-(--fg)">{quickChart.total}</p>
-                            </div>
-                            <div className="rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.2em] text-(--muted)">{t("job.chartPeak")}</p>
-                              <p className="mt-1 text-lg font-semibold text-(--fg)">{Math.max(...quickChart.values, 0)}</p>
-                            </div>
-                            <div className="rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.2em] text-(--muted)">{t("job.chartPoints")}</p>
-                              <p className="mt-1 text-lg font-semibold text-(--fg)">{quickChart.values.length}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex min-h-72 items-center justify-center rounded-3xl border border-dashed border-(--border) bg-(--surface-muted) px-8 text-center text-sm text-(--muted)">
-                          {t("job.chartEmpty")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  </details>
+                </InsightCard>
+              ) : null}
             </div>
-            )}
-            </section>
-            <section id="tool-results" className="w-full bg-(--surface) p-6 lg:p-8">
-              <div className="mb-6 max-w-screen px-0 lg:px-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--muted)">Bước 5A</p>
-                <h2 className="text-label text-(--muted)">{t("result.title")}</h2>
-                <p className="mt-2 text-sm text-(--muted)">
-                  Lớp kết quả này phản ánh trực tiếp pipeline phân tích dữ liệu của Bitlysis, không thay thế bằng tường thuật AI.
-                </p>
-              </div>
-              <div className="px-0 lg:px-8">
-                <ResultSummary
-                  jobId={job.job_id}
-                  summary={
-                    job.result_summary as Record<string, unknown> | null
-                  }
-                />
-              </div>
-            </section>
-          </div>
-        )}
+          ) : null}
         </div>
       </main>
     </div>

@@ -22,6 +22,62 @@ body {
   background-color: var(--page-bg);
   color: var(--fg);
   font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+p,
+li,
+dd,
+blockquote {
+  line-height: 1.72;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.16;
+}
+
+textarea,
+input,
+select,
+button {
+  line-height: 1.45;
+}
+
+.leading-relaxed {
+  line-height: 1.78;
+}
+
+.text-label {
+  line-height: 1.4;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+summary {
+  outline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .text-label {

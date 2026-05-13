@@ -236,16 +236,22 @@ function ListOfRecordsPreview({
     new Set(rows.flatMap((r) => Object.keys(r).filter((k) => !shouldOmitKey(k)))),
   );
   const shownRows = rows;
+  const visibleRows = Math.min(rows.length, 6);
   return (
     <div className="space-y-2">
       <div className="text-xs text-[var(--muted)]">
         {locale === "vi"
-          ? `Bảng ${rows.length} dòng, hiển thị ${shownRows.length} dòng`
-          : `Table ${rows.length} rows, showing ${shownRows.length} rows`}
+          ? `Bảng ${rows.length} dòng, hiển thị tối đa ${visibleRows} dòng cùng lúc`
+          : `Table ${rows.length} rows, showing up to ${visibleRows} rows at once`}
+        {rows.length > visibleRows
+          ? locale === "vi"
+            ? " — kéo xuống để xem các dòng tiếp theo."
+            : " — scroll down to view the remaining rows."
+          : ""}
       </div>
-      <div className="overflow-auto border border-[var(--border)]">
+      <div className="max-h-[18.5rem] overflow-auto border border-[var(--border)]">
         <table className="min-w-[420px] border-collapse text-xs">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
               {keys.map((k) => (
                 <th key={k} className="px-2 py-1 text-left font-semibold text-[var(--muted)]">

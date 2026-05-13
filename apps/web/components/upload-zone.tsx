@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useI18n } from "@/lib/i18n";
 import { analyzeAcademicContent } from "@/lib/academic-api";
-import type { AcademicAnalyzeResponse, WebAnalysisResponse } from "@/lib/types";
+import { useI18n } from "@/lib/i18n";
+import type { AcademicAnalyzeResponse, WebAnalysisMode, WebAnalysisResponse } from "@/lib/types";
 
 type Props = {
   disabled?: boolean;
   analysis: WebAnalysisResponse | null;
+  analysisMode: WebAnalysisMode;
+  onAnalysisModeChange: (mode: WebAnalysisMode) => void;
   onAnalyzePrompt: (value: string) => Promise<void>;
   onAskAssistant: (value: string) => Promise<string>;
   onUploadDataFile: (file: File) => Promise<void>;
@@ -20,435 +22,535 @@ type ChatMessage = {
   content: string;
 };
 
-// Chỉ chấp nhận Excel + CSV (Excel là định dạng chính)
-const DATA_FILE_EXTS = new Set(["csv", "xlsx", "xlsm"]);
-const ACCEPT_ATTR = ".csv,.xlsx,.xlsm";
+type SourceKind = "data" | "website" | "content";
+
+const DATA_FILE_EXTS = new Set(["csv", "xlsx", "xlsm", "xls"]);
+const TEXT_FILE_EXTS = new Set(["txt", "md", "markdown"]);
+const WORD_FILE_EXTS = new Set(["docx", "doc", "docm"]);
+const DATA_ACCEPT_ATTR = ".csv,.xlsx,.xlsm,.xls";
+const CONTENT_ACCEPT_ATTR = ".docx,.doc,.docm,.txt,.md,.markdown";
+
+const sourceOptions = {
+  en: {
+    data: "Data analysis",
+    website: "Website analysis",
+    content: "Content analysis",
+  },
+  vi: {
+    data: "Phân tích dữ liệu",
+    website: "Phân tích website",
+    content: "Phân tích nội dung",
+  },
+} as const;
+
+const modeOptions: Array<{ value: WebAnalysisMode; en: string; vi: string }> = [
+  { value: "academic", en: "Academic report", vi: "Báo cáo học thuật" },
+  { value: "marketing_seo", en: "Marketing/SEO", vi: "Marketing/SEO" },
+  { value: "business", en: "Business analysis", vi: "Phân tích business" },
+];
+
+const quickPrompts = {
+  en: [
+    "Explain this simply",
+    "Find key findings",
+    "Show supporting evidence",
+    "What should I do next?",
+  ],
+  vi: [
+    "Giải thích thật dễ hiểu",
+    "Tìm các phát hiện chính",
+    "Cho tôi xem bằng chứng",
+    "Tôi nên làm gì tiếp?",
+  ],
+} as const;
+
+const composerCopy = {
+  en: {
+    labelAnalyze: "Ask Bitlysis",
+    labelChat: "Continue this analysis",
+    hint:
+      "Choose a source type, then upload data, enter a website, or paste content for grounded explanation.",
+    hintReady:
+      "Bitlysis is grounded in the current source. Ask for explanation, evidence, interpretation, or next steps.",
+    placeholders: {
+      data: "Choose Data analysis, then press + to upload Excel or CSV...",
+      website: "Paste a website URL, for example https://example.com",
+      content: "Paste content, notes, survey text, or document excerpts...",
+    },
+    placeholderChat: "Ask a follow-up about this analysis...",
+    search: "Search",
+    modes: "Modes",
+    addFile: "Add file",
+    send: "Send",
+    analyzing: "Understanding...",
+    acceptedData: "Excel or CSV",
+    acceptedContent: "DOC, TXT, Markdown",
+    fileSelected: "Selected file",
+    fileReady: "File ready. Press the arrow button to start analysis.",
+    fileUploaded: "Uploaded",
+    fileUploadedHint: "I will help interpret the results once the analysis is ready.",
+    dataFileTypeError: "Please upload CSV, XLS, XLSX, or XLSM.",
+    contentFileTypeError: "Please upload DOC, DOCX, DOCM, TXT, MD, or Markdown.",
+    wordNeedsText:
+      "Word files are selected, but this frontend cannot read Word content yet. Please paste the text or add a backend Word parser.",
+    invalidUrl: "Enter a valid http or https website URL.",
+    contentTooShort: "Paste at least 50 characters for content analysis.",
+    assistantHello:
+      "Choose a source type below. Data uses the + button, website uses the text field, and content supports pasted text or simple text files.",
+    ready: "I have context for",
+    readyHint: "Ask what it means, what supports it, or what to do next.",
+  },
+  vi: {
+    labelAnalyze: "Hỏi Bitlysis",
+    labelChat: "Tiếp tục phân tích này",
+    hint:
+      "Chọn loại nguồn, rồi tải dữ liệu, nhập website hoặc dán nội dung để nhận giải thích có căn cứ.",
+    hintReady:
+      "Bitlysis đang bám vào nguồn hiện tại. Hãy hỏi về giải thích, bằng chứng, diễn giải hoặc bước tiếp theo.",
+    placeholders: {
+      data: "Chọn Phân tích dữ liệu, rồi bấm + để tải Excel hoặc CSV...",
+      website: "Dán URL website, ví dụ https://example.com",
+      content: "Dán nội dung, ghi chú, khảo sát hoặc đoạn tài liệu...",
+    },
+    placeholderChat: "Hỏi tiếp về phân tích này...",
+    search: "Search",
+    modes: "Modes",
+    addFile: "Thêm file",
+    send: "Gửi",
+    analyzing: "Đang hiểu...",
+    acceptedData: "Excel hoặc CSV",
+    acceptedContent: "DOC, TXT, Markdown",
+    fileSelected: "Đã chọn file",
+    fileReady: "File đã sẵn sàng. Bấm nút mũi tên để bắt đầu phân tích.",
+    fileUploaded: "Đã tải lên",
+    fileUploadedHint: "Tôi sẽ giúp diễn giải kết quả khi phân tích sẵn sàng.",
+    dataFileTypeError: "Vui lòng tải CSV, XLS, XLSX hoặc XLSM.",
+    contentFileTypeError: "Vui lòng tải DOC, DOCX, DOCM, TXT, MD hoặc Markdown.",
+    wordNeedsText:
+      "File Word đã được chọn, nhưng frontend hiện chưa đọc được nội dung Word. Hãy dán nội dung hoặc bổ sung parser Word ở backend.",
+    invalidUrl: "Hãy nhập URL website hợp lệ bắt đầu bằng http hoặc https.",
+    contentTooShort: "Dán ít nhất 50 ký tự để phân tích nội dung.",
+    assistantHello:
+      "Chọn loại nguồn ở dưới. Dữ liệu dùng nút +, website dùng ô nhập, còn nội dung hỗ trợ dán text hoặc file text đơn giản.",
+    ready: "Tôi đã có ngữ cảnh về",
+    readyHint: "Hãy hỏi ý nghĩa, bằng chứng hỗ trợ hoặc bước tiếp theo.",
+  },
+} as const;
 
 function formatAssistantMessage(value: string): string {
-  const cleaned = value
+  return value
     .replace(/\r\n/g, "\n")
     .replace(/```(?:json|text)?\s*/gi, "")
     .replace(/```/g, "")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
-    .replace(/^\s*\|/gm, "")
-    .replace(/\|/g, " · ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-
-  return cleaned;
 }
 
-export function UploadZone({ disabled, analysis, onAnalyzePrompt, onAskAssistant, onUploadDataFile, onAcademicResult }: Props) {
-  const { t } = useI18n();
-  const [websiteValue, setWebsiteValue] = useState("");
+function fileExtension(file: File): string {
+  return file.name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function normalizeWebsiteUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (!parsed.hostname || !parsed.hostname.includes(".")) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function UploadZone({
+  disabled,
+  analysis,
+  analysisMode,
+  onAnalysisModeChange,
+  onAnalyzePrompt,
+  onAskAssistant,
+  onUploadDataFile,
+  onAcademicResult,
+}: Props) {
+  const { locale } = useI18n();
+  const c = composerCopy[locale];
+  const [sourceKind, setSourceKind] = useState<SourceKind>("website");
+  const [sourceValue, setSourceValue] = useState("");
   const [chatValue, setChatValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  // Academic panel state
-  const [academicText, setAcademicText] = useState("");
-  const [academicLang, setAcademicLang] = useState<"vi" | "en">("vi");
-  const [academicBusy, setAcademicBusy] = useState(false);
-  const [academicStep, setAcademicStep] = useState(0); // 0=idle 1=keywords 2=papers 3=factcheck
+  const [validationMessage, setValidationMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const academicAbortRef = useRef<AbortController | null>(null);
+  const textDisabled = !analysis && sourceKind === "data";
+  const addDisabled = disabled || busy || uploading || (!analysis && sourceKind === "website");
+  const acceptAttr = sourceKind === "content" ? CONTENT_ACCEPT_ATTR : DATA_ACCEPT_ATTR;
 
-  // Auto-scroll to bottom on new message (UX-5)
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
     if (!analysis) {
-      setMessages([
-        {
-          role: "assistant",
-          content: t("upload.hintMessage"),
-        },
-      ]);
+      setMessages([{ role: "assistant", content: c.assistantHello }]);
       return;
     }
 
     setMessages([
       {
         role: "assistant",
-        content: `${t("upload.analysisReady")} "${analysis.source_label}". ${t("upload.analysisReadyHint")}`,
+        content: `${c.ready} "${analysis.source_label}". ${c.readyHint}`,
       },
     ]);
-  }, [analysis, t]);
+  }, [analysis, c.assistantHello, c.ready, c.readyHint]);
 
-  const runAnalyzeFromInput = async (rawValue: string, userLabel: string) => {
-    const cleaned = rawValue.trim();
-    if (!cleaned || disabled || busy) return;
-    setMessages((current) => [...current, { role: "user", content: `${userLabel}: ${cleaned.slice(0, 180)}` }]);
+  const addMessage = (message: ChatMessage) => {
+    setMessages((current) => [...current, message]);
+  };
+
+  const runWebsiteAnalysis = async (rawValue: string) => {
+    const url = normalizeWebsiteUrl(rawValue);
+    if (!url) {
+      setValidationMessage(c.invalidUrl);
+      return;
+    }
+
+    setValidationMessage("");
+    setSourceValue("");
+    addMessage({ role: "user", content: url });
     setBusy(true);
     try {
-      await onAnalyzePrompt(cleaned);
+      await onAnalyzePrompt(url);
     } finally {
       setBusy(false);
     }
   };
 
-  const submitChat = async () => {
-    const cleaned = chatValue.trim();
+  const runContentAnalysis = async (rawValue: string) => {
+    const cleaned = rawValue.trim();
+    if (cleaned.length < 50) {
+      setValidationMessage(c.contentTooShort);
+      return;
+    }
+
+    setValidationMessage("");
+    setSourceValue("");
+    addMessage({ role: "user", content: cleaned.slice(0, 260) });
+    setBusy(true);
+    try {
+      const result = await analyzeAcademicContent(
+        { text: cleaned, language: locale },
+      );
+      onAcademicResult?.(result);
+      addMessage({ role: "assistant", content: c.fileUploadedHint });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitChat = async (value = chatValue) => {
+    const cleaned = value.trim();
     if (!cleaned || disabled || busy || !analysis) return;
     setChatValue("");
-    setMessages((current) => [...current, { role: "user", content: cleaned }]);
+    addMessage({ role: "user", content: cleaned });
     setBusy(true);
     try {
       const answer = await onAskAssistant(cleaned);
-      setMessages((current) => [...current, { role: "assistant", content: answer }]);
+      addMessage({ role: "assistant", content: answer });
     } finally {
       setBusy(false);
     }
   };
 
-  const submitWebsite = async () => {
-    const payload = websiteValue.trim();
-    if (!payload) return;
-    setWebsiteValue("");
-    await runAnalyzeFromInput(payload, t("upload.labelWebsite"));
+  const handleSubmit = async () => {
+    if (analysis) {
+      await submitChat();
+      return;
+    }
+
+    if (sourceKind === "website") {
+      await runWebsiteAnalysis(sourceValue);
+      return;
+    }
+
+    if (sourceKind === "data") {
+      if (!selectedFile) {
+        setValidationMessage(c.dataFileTypeError);
+        return;
+      }
+      setValidationMessage("");
+      setUploading(true);
+      setBusy(true);
+      try {
+        await onUploadDataFile(selectedFile);
+        addMessage({
+          role: "assistant",
+          content: `${c.fileUploaded}: ${selectedFile.name}. ${c.fileUploadedHint}`,
+        });
+        setSelectedFile(null);
+      } finally {
+        setUploading(false);
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (sourceKind === "content") {
+      if (!sourceValue.trim() && selectedFile && WORD_FILE_EXTS.has(fileExtension(selectedFile))) {
+        setValidationMessage(c.wordNeedsText);
+        return;
+      }
+      await runContentAnalysis(sourceValue);
+    }
   };
 
-  const submitQuickPrompt = async (prompt: string) => {
-    if (disabled || busy || !analysis) return;
-    setMessages((current) => [...current, { role: "user", content: prompt }]);
-    setChatValue("");
-    setBusy(true);
-    try {
-      const answer = await onAskAssistant(prompt);
-      setMessages((current) => [...current, { role: "assistant", content: answer }]);
-    } finally {
-      setBusy(false);
+  const handlePrompt = async (prompt: string) => {
+    if (analysis) {
+      await submitChat(prompt);
+      return;
     }
+    if (sourceKind !== "data") setSourceValue(prompt);
   };
 
   const onPickFile = () => {
-    if (disabled || busy || uploading) return;
+    if (addDisabled) return;
     fileInputRef.current?.click();
   };
 
   const processDataFile = async (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const ext = fileExtension(file);
     if (!DATA_FILE_EXTS.has(ext)) {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: t("upload.fileTypeError"),
-        },
-      ]);
+      addMessage({ role: "assistant", content: c.dataFileTypeError });
       return;
     }
 
-    setMessages((current) => [
-      ...current,
-      { role: "user", content: `${t("upload.fileSelected")}: ${file.name}` },
-    ]);
+    setSelectedFile(file);
+    setSourceValue("");
+    setValidationMessage("");
+    addMessage({ role: "user", content: `${c.fileSelected}: ${file.name}` });
+    addMessage({ role: "assistant", content: c.fileReady });
+  };
 
-    setUploading(true);
-    setBusy(true);
-    try {
-      await onUploadDataFile(file);
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: `${t("upload.fileUploaded")} ${file.name}. ${t("upload.fileUploadedHint")}`,
-        },
-      ]);
-    } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: t("upload.fileUploadError"),
-        },
-      ]);
-    } finally {
-      setUploading(false);
-      setBusy(false);
+  const processContentFile = async (file: File) => {
+    const ext = fileExtension(file);
+    if (!TEXT_FILE_EXTS.has(ext) && !WORD_FILE_EXTS.has(ext)) {
+      addMessage({ role: "assistant", content: c.contentFileTypeError });
+      return;
     }
+
+    addMessage({ role: "user", content: `${c.fileSelected}: ${file.name}` });
+    setSelectedFile(file);
+    if (WORD_FILE_EXTS.has(ext)) {
+      addMessage({ role: "assistant", content: c.wordNeedsText });
+      return;
+    }
+
+    const text = await file.text();
+    setSourceValue(text);
+    addMessage({ role: "assistant", content: c.fileReady });
+  };
+
+  const processSelectedFile = async (file: File) => {
+    setValidationMessage("");
+    if (sourceKind === "content") {
+      await processContentFile(file);
+      return;
+    }
+    await processDataFile(file);
   };
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || disabled) return;
-    await processDataFile(file);
+    await processSelectedFile(file);
   };
 
-  // Drag & Drop handlers (UX-4)
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!disabled && !busy) setDragOver(true);
-  };
-
-  const onDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const onDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (disabled || busy || uploading) return;
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    await processDataFile(file);
-  };
+  const composerValue = analysis ? chatValue : sourceValue;
+  const setComposerValue = analysis ? setChatValue : setSourceValue;
+  const canSubmit =
+    !disabled &&
+    !busy &&
+    (analysis
+      ? chatValue.trim().length > 0
+      : sourceKind === "data"
+        ? selectedFile !== null
+        : sourceKind === "website" || sourceKind === "content"
+          ? sourceValue.trim().length > 0 || selectedFile !== null
+          : false);
 
   return (
-    <div className={["relative overflow-hidden rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_16px_38px_rgba(15,23,42,0.06)] sm:p-6", disabled ? "opacity-60" : ""].join(" ")}>
+    <section
+      className={[
+        "relative rounded-[30px] border border-(--border) bg-(--surface) p-4 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-5",
+        disabled ? "opacity-60" : "",
+      ].join(" ")}
+      aria-label={analysis ? c.labelChat : c.labelAnalyze}
+    >
       <div className="space-y-4">
         <div>
-          <p className="text-label text-(--muted)">{analysis ? t("upload.labelChat") : t("upload.labelAnalyze")}</p>
-          <p className="mt-2 text-sm text-(--muted)">{analysis ? t("upload.scopeNote") : t("upload.hint")}</p>
+          <p className="text-label text-(--accent)">{analysis ? c.labelChat : c.labelAnalyze}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-(--muted)">
+            {analysis ? c.hintReady : c.hint}
+          </p>
         </div>
 
-        {!analysis && (
-          <div className="grid gap-3 lg:grid-cols-3">
-            {/* Panel 1: Website Analysis */}
-            <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">1. {t("upload.panelWebTitle")}</p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("upload.panelWebHint")}</p>
-              <input
-                value={websiteValue}
-                disabled={disabled || busy}
-                onChange={(event) => setWebsiteValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void submitWebsite();
-                  }
+        <div
+          className={[
+            "rounded-[24px] border-2 bg-[#f3f2ee] p-4 text-[#161615] shadow-[0_18px_40px_rgba(15,23,42,0.06)] transition",
+            dragOver ? "border-[#161615] ring-4 ring-[rgba(22,22,21,0.08)]" : "border-[#e4e2dc]",
+          ].join(" ")}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!addDisabled) setDragOver(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setDragOver(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragOver(false);
+            const file = event.dataTransfer.files?.[0];
+            if (file && !addDisabled) void processSelectedFile(file);
+          }}
+        >
+          <textarea
+            value={composerValue}
+            disabled={disabled || busy || textDisabled}
+            onChange={(event) => {
+              setValidationMessage("");
+              setComposerValue(event.target.value);
+            }}
+            placeholder={analysis ? c.placeholderChat : c.placeholders[sourceKind]}
+            rows={3}
+            className="min-h-24 w-full resize-none bg-transparent text-[15px] leading-relaxed text-[#161615] outline-none placeholder:text-[#5a5a58] disabled:cursor-not-allowed disabled:opacity-45"
+          />
+
+          {validationMessage ? (
+            <p className="mb-3 text-xs font-medium text-[#92400e]">{validationMessage}</p>
+          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onPickFile}
+                disabled={addDisabled}
+                aria-label={c.addFile}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#161615] bg-white text-2xl leading-none text-[#161615] transition hover:bg-[#161615] hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+              >
+                +
+              </button>
+
+              <select
+                value={sourceKind}
+                disabled={disabled || busy || !!analysis}
+                onChange={(event) => {
+                  setSourceKind(event.target.value as SourceKind);
+                  setSourceValue("");
+                  setSelectedFile(null);
+                  setValidationMessage("");
                 }}
-                placeholder="https://example.com"
-                className="mt-3 w-full rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--fg) outline-none"
-              />
-              <button
-                type="button"
-                disabled={disabled || busy || !websiteValue.trim()}
-                onClick={() => void submitWebsite()}
-                className="mt-3 rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
+                className="h-9 rounded-full border border-[#161615] bg-white px-3 text-sm text-[#161615] outline-none disabled:opacity-50"
+                aria-label={c.search}
               >
-                {busy ? t("upload.analyzing") : t("upload.panelWebCta")}
-              </button>
-            </div>
-
-            {/* Panel 2: Excel/CSV Upload with Drag & Drop (UX-4) */}
-            <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">2. {t("upload.panelFileTitle")}</p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("upload.panelFileHint")}</p>
-
-              {/* Drop zone */}
-              <div
-                className={[
-                  "mt-3 rounded-xl border-2 border-dashed p-4 text-center text-xs transition-colors",
-                  dragOver
-                    ? "border-(--accent) bg-[rgba(15,118,110,0.06)]"
-                    : "border-(--border) bg-(--surface)",
-                  disabled || busy ? "cursor-not-allowed" : "cursor-pointer",
-                ].join(" ")}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onDrop={(e) => void onDrop(e)}
-                onClick={onPickFile}
-                role="button"
-                tabIndex={0}
-                aria-label={t("upload.dropZoneLabel")}
-                onKeyDown={(e) => e.key === "Enter" && onPickFile()}
-              >
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--border) border-t-(--accent)" />
-                    <span className="text-(--muted)">{t("upload.uploading")}</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-(--muted)">
-                      {dragOver ? t("upload.dropNow") : t("upload.dropZoneText")}
-                    </p>
-                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-(--muted)">
-                      {t("upload.acceptedFormats")}
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <button
-                type="button"
-                disabled={disabled || busy || uploading}
-                onClick={onPickFile}
-                className="mt-3 rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--fg) disabled:opacity-50"
-              >
-                {uploading ? t("upload.uploading") : t("upload.panelFileCta")}
-              </button>
-            </div>
-
-            {/* Panel 3: Academic Content Analysis */}
-            <div className="rounded-3xl border border-(--border) bg-(--surface-muted) p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--muted)">
-                {t("academic.panelTitle")}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-(--muted)">{t("academic.panelDesc")}</p>
-
-              {/* Language selector */}
-              <div className="mt-3 flex gap-1.5">
-                {(["vi", "en"] as const).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setAcademicLang(lang)}
-                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
-                      academicLang === lang
-                        ? "bg-(--fg) text-(--surface)"
-                        : "border border-(--border) bg-(--surface) text-(--muted)"
-                    }`}
-                  >
-                    {lang === "vi" ? t("academic.langVi") : t("academic.langEn")}
-                  </button>
+                {(Object.keys(sourceOptions[locale]) as SourceKind[]).map((kind) => (
+                  <option key={kind} value={kind}>
+                    {kind === sourceKind ? `${c.search} · ` : ""}
+                    {sourceOptions[locale][kind]}
+                  </option>
                 ))}
-              </div>
+              </select>
 
-              <textarea
-                value={academicText}
-                disabled={disabled || academicBusy}
-                onChange={(e) => setAcademicText(e.target.value)}
-                placeholder={t("academic.placeholder")}
-                rows={4}
-                className="mt-3 w-full resize-none rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--fg) outline-none placeholder:text-(--muted) disabled:opacity-60"
-              />
+              <span className="hidden max-w-48 truncate text-xs text-[#5a5a58] sm:inline">
+                {selectedFile?.name ?? (sourceKind === "content" ? c.acceptedContent : sourceKind === "data" ? c.acceptedData : "URL")}
+              </span>
+            </div>
 
-              {/* Progress steps */}
-              {academicBusy && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--border) border-t-(--accent)" />
-                  <span className="text-xs text-(--muted)">
-                    {academicStep === 1 && t("academic.step1")}
-                    {academicStep === 2 && t("academic.step2")}
-                    {academicStep === 3 && t("academic.step3")}
-                  </span>
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <select
+                value={analysisMode}
+                disabled={disabled || busy}
+                onChange={(event) => onAnalysisModeChange(event.target.value as WebAnalysisMode)}
+                className="h-9 rounded-full border border-[#161615] bg-white px-3 text-sm text-[#161615] outline-none disabled:opacity-50"
+                aria-label={c.modes}
+              >
+                {modeOptions.map((mode) => (
+                  <option key={mode.value} value={mode.value}>
+                    {`${c.modes} · ${mode[locale]}`}
+                  </option>
+                ))}
+              </select>
 
               <button
                 type="button"
-                disabled={disabled || academicBusy || academicText.trim().length < 50}
-                onClick={async () => {
-                  academicAbortRef.current?.abort();
-                  const ac = new AbortController();
-                  academicAbortRef.current = ac;
-                  setAcademicBusy(true);
-                  setAcademicStep(1);
-                  try {
-                    setAcademicStep(2);
-                    const result = await analyzeAcademicContent(
-                      { text: academicText.trim(), language: academicLang },
-                      ac.signal,
-                    );
-                    setAcademicStep(3);
-                    onAcademicResult?.(result);
-                  } catch {
-                    // error handled upstream
-                  } finally {
-                    setAcademicBusy(false);
-                    setAcademicStep(0);
-                  }
-                }}
-                className="mt-3 rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
+                disabled={!canSubmit}
+                onClick={() => void handleSubmit()}
+                aria-label={c.send}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#161615] text-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {academicBusy ? t("academic.analyzing") : t("academic.analyzeBtn")}
+                <span className="text-lg font-black leading-none">↑</span>
               </button>
-
-              {academicText.trim().length > 0 && academicText.trim().length < 50 && (
-                <p className="mt-1.5 text-[11px] text-amber-600">{t("academic.errorTooShort")}</p>
-              )}
             </div>
           </div>
-        )}
+        </div>
 
         <input
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept={ACCEPT_ATTR}
+          accept={acceptAttr}
           onChange={(event) => {
             void onFileChange(event);
           }}
         />
 
-        {/* Chat window with auto-scroll (UX-5) */}
-        <div className="min-h-55 max-h-80 space-y-2 overflow-auto rounded-3xl border border-(--border) bg-(--surface-muted) p-3">
+        <div className="flex flex-wrap gap-2">
+          {quickPrompts[locale].map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              disabled={disabled || busy || (!analysis && sourceKind === "data")}
+              onClick={() => void handlePrompt(prompt)}
+              className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs font-semibold text-(--fg) transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+
+        <div className="max-h-80 min-h-48 space-y-2 overflow-auto rounded-[24px] border border-(--border) bg-(--surface-muted) p-3">
           {messages.map((message, idx) => (
             <div
               key={`${message.role}-${idx}`}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                   message.role === "user"
                     ? "bg-(--fg) text-(--surface)"
                     : "border border-(--border) bg-(--surface) text-(--fg)"
                 }`}
               >
-                <span className="whitespace-pre-wrap wrap-break-word">
-                  {message.role === "assistant" ? formatAssistantMessage(message.content) : message.content}
+                <span className="whitespace-pre-wrap break-words">
+                  {message.role === "assistant"
+                    ? formatAssistantMessage(message.content)
+                    : message.content}
                 </span>
               </div>
             </div>
           ))}
-          {/* Sentinel div for auto-scroll */}
           <div ref={chatBottomRef} />
         </div>
-
-        {analysis && (
-          <>
-            <div className="rounded-[999px] border border-(--border) bg-(--surface) px-3 py-2 shadow-[0_12px_26px_rgba(15,23,42,0.08)]">
-              <div className="flex items-center gap-3">
-                <input
-                  value={chatValue}
-                  disabled={disabled || busy}
-                  onChange={(event) => setChatValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void submitChat();
-                    }
-                  }}
-                  placeholder={t("upload.placeholderChat")}
-                  className="min-w-0 flex-1 bg-transparent px-1 text-sm text-(--fg) outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={disabled || busy}
-                  onClick={() => void submitChat()}
-                  className="rounded-full border border-(--fg) bg-(--fg) px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--surface) disabled:opacity-50"
-                >
-                  {busy ? t("upload.asking") : t("upload.ctaChat")}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 text-xs text-(--muted)">
-              {[t("upload.quickRisk"), t("upload.quickCta"), t("upload.quickNext")].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  disabled={disabled || busy}
-                  onClick={() => void submitQuickPrompt(label)}
-                  className="rounded-full border border-(--border) bg-(--surface-muted) px-3 py-1 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
-    </div>
+    </section>
   );
 }
