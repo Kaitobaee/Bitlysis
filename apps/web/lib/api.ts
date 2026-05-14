@@ -1,4 +1,12 @@
-import type { HealthInfo, JobDetail, QuickChartPayload, UploadResponse, WebAnalysisChatResponse, WebAnalysisResponse } from "@/lib/types";
+import type {
+  FileAnalysisChatResponse,
+  HealthInfo,
+  JobDetail,
+  QuickChartPayload,
+  UploadResponse,
+  WebAnalysisChatResponse,
+  WebAnalysisResponse,
+} from "@/lib/types";
 
 const base = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -152,4 +160,16 @@ export async function chatWebAnalysis(
     body: JSON.stringify({ analysis, question }),
   });
   return parseJson<WebAnalysisChatResponse>(res);
+}
+
+export async function chatFileAnalysis(
+  jobId: string,
+  question: string,
+): Promise<FileAnalysisChatResponse> {
+  const res = await fetch(`${base()}/v1/jobs/${encodeURIComponent(jobId)}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+  return parseJson<FileAnalysisChatResponse>(res);
 }

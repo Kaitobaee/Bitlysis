@@ -93,6 +93,20 @@ export type RelatedWebsite = {
 
 export type WebAnalysisMode = "academic" | "marketing_seo" | "business";
 
+export type DangerBreakdownItem = {
+  label: string;
+  score: number;
+  level: "safe" | "medium" | "high";
+  note: string;
+};
+
+export type DangerBreakdown = {
+  sensitive_content: DangerBreakdownItem;
+  cta_manipulation: DangerBreakdownItem;
+  evidence_lack: DangerBreakdownItem;
+  ai_assessment: DangerBreakdownItem;
+};
+
 export type WebAnalysisResponse = {
   analysis_mode: WebAnalysisMode;
   source_type: string;
@@ -122,11 +136,19 @@ export type WebAnalysisResponse = {
   raw_text_preview: string;
   fraud_score: number;
   website_screenshot: string | null;
+  danger_breakdown: DangerBreakdown | null;
 };
 export type WebAnalysisChatResponse = {
   question: string;
   answer: string;
   source_label: string;
+  focus: string;
+};
+
+export type FileAnalysisChatResponse = {
+  question: string;
+  answer: string;
+  job_id: string;
   focus: string;
 };
 

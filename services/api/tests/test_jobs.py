@@ -53,6 +53,26 @@ def test_analyze_lifecycle(client):
     assert data["result_summary"]["decision_trace"]["selected_method"]
 
 
+def test_file_chat_uses_uploaded_file_context(client):
+    body = "department,score\nSales,10\nSupport,15\nSales,20\n"
+    files = {"file": ("chat.csv", BytesIO(body.encode("utf-8")), "text/csv")}
+    r = client.post("/v1/upload", files=files)
+    assert r.status_code == 200
+    job_id = r.json()["job_id"]
+
+    chat = client.post(
+        f"/v1/jobs/{job_id}/chat",
+        json={"question": "File này có những cột nào?"},
+    )
+
+    assert chat.status_code == 200, chat.text
+    payload = chat.json()
+    assert payload["job_id"] == job_id
+    assert payload["focus"] == "chat.csv"
+    assert "department" in payload["answer"]
+    assert "score" in payload["answer"]
+
+
 def test_analyze_conflict_when_not_uploaded(client, tmp_path):
     custom = Settings(upload_dir=tmp_path, max_upload_bytes=2_000_000, api_cors_origins="http://test")
     app.dependency_overrides[get_settings] = lambda: custom

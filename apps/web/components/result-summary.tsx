@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 
@@ -224,6 +225,233 @@ function isPrimitiveArray(v: unknown): v is Array<string | number | boolean | nu
   return Array.isArray(v) && v.every((x) => isPrimitiveValue(x));
 }
 
+function formatFullPrimitive(v: unknown): string {
+  if (v === null || v === undefined) return "-";
+  if (typeof v === "number" && Number.isFinite(v)) {
+    return Number.isInteger(v)
+      ? v.toLocaleString("vi-VN")
+      : v.toLocaleString("vi-VN", { maximumFractionDigits: 12 });
+  }
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (typeof v === "string") return v;
+  return JSON.stringify(v);
+}
+
+function formatTableValue(
+  key: string,
+  value: unknown,
+  locale: Locale,
+  expanded: boolean,
+): string {
+  if (isPrimitiveValue(value)) {
+    if (expanded && typeof value === "string") return value;
+    return expanded ? formatFullPrimitive(value) : formatByKey(key, value, locale);
+  }
+  if (isPrimitiveArray(value)) {
+    return value.map((item) => formatFullPrimitive(item)).join(", ");
+  }
+  if (!expanded) return locale === "vi" ? "(du lieu phuc tap)" : "(complex value)";
+  return JSON.stringify(value, null, 2);
+}
+
+function htmlEscape(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function toTsvCell(value: string): string {
+  return value.replace(/\r?\n/g, " ").replace(/\t/g, " ");
+}
+
+function buildTableClipboardPayload(
+  rows: Record<string, unknown>[],
+  keys: string[],
+  locale: Locale,
+): { html: string; text: string } {
+  const headers = keys.map((key) => keyLabel(key, locale));
+  const plainRows = [
+    headers.join("\t"),
+    ...rows.map((row) =>
+      keys.map((key) => toTsvCell(formatTableValue(key, row[key], locale, true))).join("\t"),
+    ),
+  ];
+  const htmlRows = [
+    `<tr>${headers.map((header) => `<th>${htmlEscape(header)}</th>`).join("")}</tr>`,
+    ...rows.map((row) =>
+      `<tr>${keys
+        .map((key) => `<td>${htmlEscape(formatTableValue(key, row[key], locale, true))}</td>`)
+        .join("")}</tr>`,
+    ),
+  ];
+
+  return {
+    text: plainRows.join("\n"),
+    html: `<table>${htmlRows.join("")}</table>`,
+  };
+}
+
+async function copyRichTable(
+  rows: Record<string, unknown>[],
+  keys: string[],
+  locale: Locale,
+) {
+  const payload = buildTableClipboardPayload(rows, keys, locale);
+  if ("ClipboardItem" in window && navigator.clipboard.write) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": new Blob([payload.html], { type: "text/html" }),
+        "text/plain": new Blob([payload.text], { type: "text/plain" }),
+      }),
+    ]);
+    return;
+  }
+  await navigator.clipboard.writeText(payload.text);
+}
+
+function ZoomIcon({ mode }: { mode: "in" | "out" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-4 w-4 rounded-full border-2 border-current before:absolute before:left-[3px] before:right-[3px] before:top-1/2 before:h-0.5 before:-translate-y-1/2 before:bg-current after:absolute after:-bottom-1 after:-right-1 after:h-2 after:w-0.5 after:rotate-[-45deg] after:bg-current"
+    >
+      {mode === "in" ? (
+        <span className="absolute bottom-[3px] left-1/2 top-[3px] w-0.5 -translate-x-1/2 bg-current" />
+      ) : null}
+    </span>
+  );
+}
+
+function DataTableView({
+  rows,
+  locale,
+  title,
+  density = "compact",
+}: {
+  rows: Record<string, unknown>[];
+  locale: Locale;
+  title?: string;
+  density?: "compact" | "standard";
+}) {
+  const [isFullView, setIsFullView] = useState(false);
+  if (!rows.length) return <span>â€”</span>;
+  const keys = Array.from(
+    new Set(rows.flatMap((r) => Object.keys(r).filter((k) => !shouldOmitKey(k)))),
+  );
+  if (!keys.length) return <span>â€”</span>;
+  const visibleRows = Math.min(rows.length, 6);
+  const tableMinWidth = density === "standard" ? "min-w-[960px]" : "min-w-[420px]";
+  const cellClass =
+    density === "standard"
+      ? "px-3 py-2 align-top text-xs whitespace-normal break-words"
+      : "px-2 py-1 align-top";
+
+  const handleCopyTable = async () => {
+    try {
+      await copyRichTable(rows, keys, locale);
+      toast.success(locale === "vi" ? "Da sao chep bang" : "Table copied");
+    } catch {
+      toast.error(locale === "vi" ? "Khong the sao chep bang" : "Could not copy table");
+    }
+  };
+
+  const table = (expanded: boolean) => (
+    <table className={`${tableMinWidth} w-full border-collapse text-left text-xs`}>
+      <thead className="sticky top-0 z-10">
+        <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]">
+          {keys.map((k) => (
+            <th key={k} className="px-2 py-2 text-left font-semibold text-[var(--muted)]">
+              {keyLabel(k, locale)}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, idx) => (
+          <tr key={idx} className="border-b border-[var(--border)]">
+            {keys.map((k) => (
+              <td key={k} className={`${cellClass} ${expanded ? "whitespace-pre-wrap" : ""}`}>
+                {formatTableValue(k, row[k], locale, expanded)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs text-[var(--muted)]">
+          {locale === "vi"
+            ? `Bang ${rows.length} dong, hien thi toi da ${visibleRows} dong cung luc`
+            : `Table ${rows.length} rows, showing up to ${visibleRows} rows at once`}
+          {rows.length > visibleRows
+            ? locale === "vi"
+              ? " - keo xuong de xem cac dong tiep theo."
+              : " - scroll down to view the remaining rows."
+            : ""}
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFullView(true)}
+          aria-label={locale === "vi" ? "Phong to bang" : "Zoom table"}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#161615] bg-[#f6f0e6] text-[#161615] transition hover:bg-[#dff2e8]"
+        >
+          <ZoomIcon mode="in" />
+        </button>
+      </div>
+      <div className="max-h-[18.5rem] overflow-auto border border-[var(--border)]">
+        {table(false)}
+      </div>
+
+      {isFullView ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.5)] p-4 backdrop-blur-sm animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title ?? (locale === "vi" ? "Bang du lieu" : "Data table")}
+        >
+          <div className="flex max-h-[92vh] w-full max-w-7xl scale-100 flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.28)] animate-in zoom-in-95 duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4">
+              <div>
+                <p className="text-label text-[var(--accent)]">
+                  {title ?? (locale === "vi" ? "Bang du lieu" : "Data table")}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {locale === "vi" ? `${rows.length} dong` : `${rows.length} rows`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyTable()}
+                  className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615] transition hover:bg-[#dff2e8]"
+                >
+                  {locale === "vi" ? "Sao chep bang" : "Copy table"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFullView(false)}
+                  aria-label={locale === "vi" ? "Thu nho bang" : "Exit full table view"}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#161615] bg-[#0f766e] text-white transition hover:bg-[#0f766e]/90"
+                >
+                  <ZoomIcon mode="out" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-auto p-4">{table(true)}</div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ListOfRecordsPreview({
   rows,
   locale,
@@ -298,7 +526,7 @@ function ValueCell({
     }
     const rowObjects = value.filter((v) => !!asRecord(v)) as Record<string, unknown>[];
     if (rowObjects.length) {
-      return <ListOfRecordsPreview rows={rowObjects} locale={locale} />;
+      return <DataTableView rows={rowObjects} locale={locale} />;
     }
     return (
       <span>{locale === "vi" ? `Danh sách (${value.length})` : `List (${value.length})`}</span>
@@ -423,6 +651,7 @@ function moduleTitle(moduleKey: ModuleKey, locale: Locale): string {
   return locale === "vi" ? vi[moduleKey] : en[moduleKey];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function HypothesisTable({
   rows,
 }: {
@@ -1080,6 +1309,14 @@ export function ResultSummary({ jobId, summary }: Props) {
     : [];
 
   const summaryRecord = asRecord(summary);
+  const handleCopyFullJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(summaryRecord ?? summary, null, 2));
+      toast.success(locale === "vi" ? "Da sao chep JSON" : "JSON copied");
+    } catch {
+      toast.error(locale === "vi" ? "Khong the sao chep JSON" : "Could not copy JSON");
+    }
+  };
   const analysisSections = asRecord(summaryRecord?.analysis_sections);
   const overview = asRecord(analysisSections?.overview);
   const rBlock = asRecord(analysisSections?.r_block);
@@ -1556,7 +1793,12 @@ export function ResultSummary({ jobId, summary }: Props) {
 
       {showTables && (
         <SectionCard title={t("result.tableHypothesis")}>
-          <HypothesisTable rows={mergedHypothesisRows} />
+          <DataTableView
+            rows={mergedHypothesisRows}
+            locale={locale}
+            title={t("result.tableHypothesis")}
+            density="standard"
+          />
         </SectionCard>
       )}
 
@@ -1568,18 +1810,13 @@ export function ResultSummary({ jobId, summary }: Props) {
               : "Extended technical payload"
           }
         >
-          <details>
-            <summary className="cursor-pointer text-sm font-semibold text-[var(--accent)]">
-              {locale === "vi"
-                ? "Mở dữ liệu JSON đầy đủ"
-                : "Open full JSON payload"}
-            </summary>
-            <div className="mt-4 overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-              <pre className="min-w-[720px] whitespace-pre-wrap text-xs leading-relaxed text-[var(--fg)]">
-                {JSON.stringify(summaryRecord ?? summary, null, 2)}
-              </pre>
-            </div>
-          </details>
+          <button
+            type="button"
+            onClick={() => void handleCopyFullJson()}
+            className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+          >
+            <span>{locale === "vi" ? "Sao chep du lieu JSON day du" : "Copy full JSON payload"}</span>
+          </button>
         </SectionCard>
       )}
     </div>

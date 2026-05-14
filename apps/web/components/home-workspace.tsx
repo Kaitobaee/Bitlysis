@@ -14,6 +14,7 @@ import { UploadZone } from "@/components/upload-zone";
 import {
   analyzeWebInput,
   ApiClientError,
+  chatFileAnalysis,
   chatWebAnalysis,
   getJob,
   getQuickChart,
@@ -22,6 +23,7 @@ import {
   startExportPhase,
   uploadFile,
 } from "@/lib/api";
+import { analyzeAcademicContent } from "@/lib/academic-api";
 import { comprehensiveAnalysisSpec } from "@/lib/analyze-default";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -33,6 +35,7 @@ import {
 import { toastApiError } from "@/lib/toast-error";
 import type {
   AcademicAnalyzeResponse,
+  DangerBreakdown,
   JobDetail,
   JobStatus,
   QuickChartPayload,
@@ -113,6 +116,13 @@ const copy = {
     chartType: "View",
     chartCreate: "Create chart",
     chartEmpty: "Choose a column to generate a supporting visual.",
+    fileChatTitle: "Ask about this file",
+    fileChatSubtitle: "Grounded in the uploaded file, profiling, and current result.",
+    fileChatPlaceholder: "Ask what a column means, why a result matters, or what to chart next...",
+    fileChatOpen: "Open file chat",
+    fileChatClose: "Close",
+    fileChatWelcome: "I can answer questions about this file and the current analysis result.",
+    fileChatError: "Could not answer from this file yet.",
     advancedSummary: "Open analysis payload and processing metadata",
     jobProcessing:
       "The analysis engine is working. You can leave this page open while Bitlysis prepares the explanation.",
@@ -120,6 +130,21 @@ const copy = {
       "Bitlysis chooses the analysis path from the file structure, available column types, missing values, and the methods supported by the current pipeline. This keeps the first reading focused on what the data can support.",
     defaultConclusion:
       "Use this as a first draft for understanding. Review the supporting evidence before adding the result to a report.",
+    dangerScore: "Danger Score",
+    safe: "Safe",
+    dangerous: "Dangerous",
+    pageMetrics: "Page Metrics",
+    contentSections: "Content Sections",
+    dataFacts: "Key Data Points",
+    relatedWebsites: "Related Websites",
+    recommendations: "Recommendations",
+    ctaDetected: "Call-to-Action Detected",
+    dangerAnalysis: "Danger Analysis",
+    webChatTitle: "Ask about this website",
+    webChatSubtitle: "Grounded in the full analysis result.",
+    webChatPlaceholder: "Ask about the danger score, CTA, suspicious content, or what to check next...",
+    webChatWelcome: "I can answer questions about this website and the analysis result.",
+    webChatError: "Could not answer from this analysis yet.",
   },
   vi: {
     home: "Trang chủ",
@@ -189,6 +214,13 @@ const copy = {
     chartType: "Kiểu xem",
     chartCreate: "Tạo biểu đồ",
     chartEmpty: "Chọn một cột để tạo trực quan hỗ trợ.",
+    fileChatTitle: "Hỏi về file này",
+    fileChatSubtitle: "Bám theo file đã tải, profiling và kết quả hiện tại.",
+    fileChatPlaceholder: "Hỏi ý nghĩa cột, vì sao kết quả quan trọng, hoặc nên vẽ gì tiếp...",
+    fileChatOpen: "Mở chat file",
+    fileChatClose: "Đóng",
+    fileChatWelcome: "Tôi có thể trả lời câu hỏi về file và kết quả phân tích hiện tại.",
+    fileChatError: "Chưa thể trả lời từ file này.",
     advancedSummary: "Mở payload phân tích và metadata xử lý",
     jobProcessing:
       "Bộ máy phân tích đang xử lý. Bạn có thể giữ trang này mở trong lúc Bitlysis chuẩn bị phần giải thích.",
@@ -196,6 +228,21 @@ const copy = {
       "Bitlysis chọn hướng phân tích dựa trên cấu trúc file, loại cột, dữ liệu thiếu và các phương pháp mà pipeline hiện hỗ trợ. Cách này giúp phần đọc đầu tiên tập trung vào điều dữ liệu thật sự có thể nói.",
     defaultConclusion:
       "Hãy xem đây là bản nháp đầu tiên để hiểu kết quả. Trước khi đưa vào báo cáo, nên kiểm tra thêm bằng chứng hỗ trợ.",
+    dangerScore: "Điểm nguy hiểm",
+    safe: "An toàn",
+    dangerous: "Nguy hiểm",
+    pageMetrics: "Chỉ số trang",
+    contentSections: "Phần nội dung",
+    dataFacts: "Dữ liệu con số",
+    relatedWebsites: "Website liên quan",
+    recommendations: "Khuyến nghị",
+    ctaDetected: "Kêu gọi hành động",
+    dangerAnalysis: "Phân tích nguy hiểm",
+    webChatTitle: "Hỏi về website này",
+    webChatSubtitle: "Bám theo toàn bộ kết quả phân tích website.",
+    webChatPlaceholder: "Hỏi về điểm nguy hiểm, CTA, nội dung nhạy cảm hoặc nên kiểm tra gì tiếp...",
+    webChatWelcome: "Tôi có thể trả lời câu hỏi về website này và kết quả phân tích hiện tại.",
+    webChatError: "Chưa thể trả lời từ phân tích này.",
   },
 } as const;
 
@@ -381,6 +428,63 @@ function InsightCard({
   );
 }
 
+function DangerLevelBadge({ level }: { level: "safe" | "medium" | "high" | string }) {
+  const cls =
+    level === "high"
+      ? "bg-red-100 text-red-700"
+      : level === "medium"
+      ? "bg-amber-100 text-amber-700"
+      : "bg-green-100 text-green-700";
+  return (
+    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
+      {level}
+    </span>
+  );
+}
+
+function DangerBreakdownSection({
+  breakdown,
+  title,
+}: {
+  breakdown: DangerBreakdown;
+  title: string;
+}) {
+  const items = [
+    breakdown.sensitive_content,
+    breakdown.cta_manipulation,
+    breakdown.evidence_lack,
+    breakdown.ai_assessment,
+  ];
+  return (
+    <InsightCard title={title}>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-2xl border border-(--border) p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold">{item.label}</p>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${
+                  item.level === "high" ? "text-red-600" : item.level === "medium" ? "text-amber-600" : "text-green-600"
+                }`}>{item.score.toFixed(1)}%</span>
+                <DangerLevelBadge level={item.level} />
+              </div>
+            </div>
+            <p className="mt-1 text-sm text-(--muted)">{item.note}</p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--surface-muted)">
+              <div
+                className={`h-1.5 rounded-full transition-all ${
+                  item.level === "high" ? "bg-red-500" : item.level === "medium" ? "bg-amber-500" : "bg-green-500"
+                }`}
+                style={{ width: `${Math.min(item.score, 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </InsightCard>
+  );
+}
+
 function WebInsightReport({
   analysis,
   labels,
@@ -388,34 +492,58 @@ function WebInsightReport({
   analysis: WebAnalysisResponse;
   labels: WorkspaceLabels;
 }) {
+  const fraudPct = Math.min(100, Math.max(0, analysis.fraud_score > 1 ? analysis.fraud_score : analysis.fraud_score * 100));
+  const fraudBarColor = fraudPct < 30 ? "bg-green-500" : fraudPct < 70 ? "bg-amber-500" : "bg-red-500";
+  const fraudBadgeClass = fraudPct < 30
+    ? "bg-green-100 text-green-700"
+    : fraudPct < 70
+    ? "bg-amber-100 text-amber-700"
+    : "bg-red-100 text-red-700";
+  const fraudLabel = fraudPct < 30 ? labels.safe : labels.dangerous;
+  const fraudNumColor = fraudPct < 30 ? "text-green-600" : fraudPct < 70 ? "text-amber-600" : "text-red-600";
+
   const metrics = metricRows(analysis.metrics);
-  const notable = [...analysis.highlights, ...analysis.findings].slice(0, 4);
+  const allFindings = [...analysis.highlights, ...analysis.findings];
 
   return (
     <div className="space-y-4">
+      {/* 1. Overview — always visible */}
       <InsightCard title={labels.overview}>
         <p>{analysis.summary}</p>
       </InsightCard>
 
-      <InsightCard title={labels.notable}>
-        <div className="grid gap-3 md:grid-cols-2">
-          {metrics.map((metric) => (
-            <div key={`${metric.label}-${metric.value}`} className="rounded-2xl bg-(--surface-muted) p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--muted)">{metric.label}</p>
-              <p className="mt-1 text-base font-semibold">{metric.value}</p>
+      {/* 2. Danger Score + Page Metrics — always visible */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <InsightCard title={labels.dangerScore}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className={`text-2xl font-bold ${fraudNumColor}`}>{fraudPct.toFixed(1)}%</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${fraudBadgeClass}`}>{fraudLabel}</span>
             </div>
-          ))}
-          {notable.map((item) => (
-            <p key={item} className="rounded-2xl bg-(--surface-muted) p-3">{item}</p>
-          ))}
-          {!metrics.length && !notable.length ? <p>{labels.noFindings}</p> : null}
-        </div>
-      </InsightCard>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-(--surface-muted)">
+              <div
+                className={`h-2 rounded-full transition-all ${fraudBarColor}`}
+                style={{ width: `${fraudPct}%` }}
+              />
+            </div>
+          </div>
+        </InsightCard>
 
-      <InsightCard title={labels.conclusion}>
-        <p>{labels.defaultConclusion}</p>
-      </InsightCard>
+        {metrics.length > 0 && (
+          <InsightCard title={labels.pageMetrics}>
+            <div className="grid grid-cols-2 gap-2">
+              {metrics.map((m) => (
+                <div key={m.label} className="rounded-xl bg-(--surface-muted) p-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-(--muted)">{m.label}</p>
+                  <p className="mt-0.5 text-sm font-semibold">{m.value}</p>
+                </div>
+              ))}
+            </div>
+          </InsightCard>
+        )}
+      </div>
 
+      {/* 3. Website Screenshot — always visible */}
       {analysis.website_screenshot ? (
         <InsightCard title={labels.screenshot}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -427,22 +555,67 @@ function WebInsightReport({
         </InsightCard>
       ) : null}
 
+      {/* 4. Key Findings — always visible */}
+      <InsightCard title={labels.findings}>
+        {allFindings.length ? (
+          <ul className="space-y-2">
+            {allFindings.slice(0, 5).map((item) => (
+              <li key={item} className="rounded-2xl bg-(--surface-muted) px-3 py-2">{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>{labels.noFindings}</p>
+        )}
+      </InsightCard>
+
+      {/* 5–10. Expandable sections */}
       <details className="rounded-[24px] border border-(--border) bg-(--surface) p-5">
         <summary className="cursor-pointer font-semibold text-(--accent)">{labels.viewMore}</summary>
         <div className="mt-5 space-y-4">
-          <InsightCard title={labels.findings}>
-            {analysis.findings.length || analysis.highlights.length ? (
-              <ul className="space-y-2">
-                {[...analysis.highlights, ...analysis.findings].slice(0, 8).map((item) => (
-                  <li key={item} className="rounded-2xl bg-(--surface-muted) px-3 py-2">
-                    {item}
-                  </li>
+
+          {/* 5. Phần nội dung */}
+          {analysis.sections.length > 0 && (
+            <InsightCard title={labels.contentSections}>
+              <div className="space-y-3">
+                {analysis.sections.slice(0, 6).map((sec) => (
+                  <div key={sec.heading} className="rounded-2xl bg-(--surface-muted) p-3">
+                    <p className="font-semibold">{sec.heading}</p>
+                    {sec.snippet ? <p className="mt-1 text-(--muted)">{sec.snippet}</p> : null}
+                  </div>
                 ))}
-              </ul>
-            ) : (
-              <p>{labels.noFindings}</p>
-            )}
-          </InsightCard>
+              </div>
+            </InsightCard>
+          )}
+
+          {/* 6. Dữ liệu con số — 4 sub-parts from danger breakdown */}
+          {analysis.danger_breakdown ? (
+            <DangerBreakdownSection
+              breakdown={analysis.danger_breakdown}
+              title={labels.dataFacts}
+            />
+          ) : null}
+
+          {/* 7. Website liên quan */}
+          {analysis.related_websites.length > 0 && (
+            <InsightCard title={labels.relatedWebsites}>
+              <div className="space-y-2">
+                {analysis.related_websites.slice(0, 6).map((site) => (
+                  <div key={site.url} className="rounded-2xl bg-(--surface-muted) p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{site.title}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        site.relation === "internal" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                      }`}>{site.relation}</span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-(--muted)">{site.url}</p>
+                    {site.summary ? <p className="mt-1 text-sm text-(--muted)">{site.summary}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </InsightCard>
+          )}
+
+          {/* 8. Bằng chứng hỗ trợ */}
           <InsightCard title={labels.evidence}>
             {analysis.evidence.length ? (
               <ul className="space-y-2">
@@ -457,18 +630,160 @@ function WebInsightReport({
               <p>{labels.noEvidence}</p>
             )}
           </InsightCard>
+
+          {/* 9. Khuyến nghị */}
+          {analysis.recommendations.length > 0 && (
+            <InsightCard title={labels.recommendations}>
+              <ul className="space-y-2">
+                {analysis.recommendations.slice(0, 6).map((rec) => (
+                  <li key={rec} className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 text-(--accent)">→</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </InsightCard>
+          )}
+
+          {/* 10. Độ tin cậy & giới hạn */}
           <InsightCard title={labels.confidence}>
             <p>{labels.confidenceText}</p>
           </InsightCard>
-          <InsightCard title={labels.nextSteps}>
-            <ul className="space-y-2">
-              {labels.nextStepItems.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </InsightCard>
+
         </div>
       </details>
+    </div>
+  );
+}
+
+type WebChatMessage = {
+  role: "assistant" | "user";
+  content: string;
+};
+
+function WebAnalysisChatBox({
+  analysis,
+  labels,
+}: {
+  analysis: WebAnalysisResponse;
+  labels: WorkspaceLabels;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [messages, setMessages] = useState<WebChatMessage[]>([
+    { role: "assistant", content: labels.webChatWelcome },
+  ]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [isOpen, messages]);
+
+  const handleSubmit = async () => {
+    const question = value.trim();
+    if (!question || busy) return;
+    setValue("");
+    setMessages((current) => [...current, { role: "user", content: question }]);
+    setBusy(true);
+    try {
+      const result = await chatWebAnalysis(analysis, question);
+      setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
+    } catch (error) {
+      toastApiError(error, (key) => key, labels.webChatError);
+      setMessages((current) => [...current, { role: "assistant", content: labels.webChatError }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-5 right-5 z-30 w-[calc(100vw-2.5rem)] max-w-sm">
+      {isOpen ? (
+        <section className="overflow-hidden rounded-[24px] border border-(--border) bg-(--surface) shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+          <div className="flex items-start justify-between gap-3 border-b border-(--border) bg-(--surface-muted) p-4">
+            <div className="min-w-0">
+              <p className="text-label text-(--accent)">{labels.webChatTitle}</p>
+              <p className="mt-1 truncate text-xs text-(--muted)">{analysis.source_label}</p>
+              <p className="mt-1 text-xs text-(--muted)">{labels.webChatSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-full border border-[#161615] bg-[#f6f0e6] px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-[#161615]"
+            >
+              {labels.fileChatClose}
+            </button>
+          </div>
+
+          <div className="max-h-80 min-h-56 space-y-2 overflow-auto p-3">
+            {messages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    message.role === "user"
+                      ? "bg-(--fg) text-(--surface)"
+                      : "border border-(--border) bg-(--surface-muted) text-(--fg)"
+                  }`}
+                >
+                  <span className="whitespace-pre-wrap break-words">{message.content}</span>
+                </div>
+              </div>
+            ))}
+            {busy ? (
+              <div className="flex justify-start">
+                <div className="rounded-2xl border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--muted)">
+                  ...
+                </div>
+              </div>
+            ) : null}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="border-t border-(--border) p-3">
+            <div className="flex items-end gap-2 rounded-2xl border border-(--border) bg-(--surface-muted) p-2">
+              <textarea
+                value={value}
+                disabled={busy}
+                onChange={(event) => setValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void handleSubmit();
+                  }
+                }}
+                placeholder={labels.webChatPlaceholder}
+                rows={2}
+                className="min-h-12 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-(--muted)"
+              />
+              <button
+                type="button"
+                disabled={busy || !value.trim()}
+                onClick={() => void handleSubmit()}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#161615] bg-[#0f766e] text-white disabled:opacity-35"
+                aria-label={labels.fileChatOpen}
+              >
+                ↑
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="ml-auto flex items-center gap-2 rounded-full border border-[#161615] bg-[#0f766e] px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_18px_48px_rgba(15,23,42,0.22)]"
+          aria-label={labels.webChatTitle}
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs text-[#0f766e]">
+            AI
+          </span>
+          {labels.webChatTitle}
+        </button>
+      )}
     </div>
   );
 }
@@ -533,27 +848,249 @@ function AcademicBriefReport({
 
 function QuickChartView({ chart }: { chart: QuickChartPayload }) {
   const max = Math.max(1, ...chart.values);
+  const total = Math.max(1, chart.total || chart.values.reduce((sum, value) => sum + value, 0));
+  const colors = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#0891b2", "#be123c"];
+  let pieCursor = 0;
+  const pieStops = chart.values.map((value, index) => {
+    const start = (pieCursor / total) * 100;
+    pieCursor += value;
+    const end = (pieCursor / total) * 100;
+    return `${colors[index % colors.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+  });
+  const points = chart.values.map((value, index) => {
+    const x = chart.values.length <= 1 ? 50 : (index / (chart.values.length - 1)) * 100;
+    const y = 100 - (value / max) * 90;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
   return (
     <div className="space-y-3">
       <div>
         <h3 className="font-semibold">{chart.title}</h3>
-        <p className="text-sm text-(--muted)">{chart.column}</p>
+        <p className="text-sm text-(--muted)">
+          {chart.column} · {chart.kind}
+        </p>
       </div>
-      {chart.labels.map((label, index) => {
-        const value = chart.values[index] ?? 0;
-        const width = `${Math.max(4, (value / max) * 100).toFixed(1)}%`;
-        return (
-          <div key={`${label}-${index}`} className="space-y-1">
-            <div className="flex justify-between gap-3 text-xs">
-              <span className="truncate">{label}</span>
-              <span className="font-semibold">{value}</span>
+
+      {chart.kind === "pie" || chart.kind === "donut" ? (
+        <div className="grid gap-4 sm:grid-cols-[180px_1fr] sm:items-center">
+          <div
+            className="mx-auto h-40 w-40 rounded-full border border-(--border)"
+            style={{ background: `conic-gradient(${pieStops.join(", ")})` }}
+            aria-label={chart.title}
+          >
+            {chart.kind === "donut" ? (
+              <div className="m-10 h-20 w-20 rounded-full border border-(--border) bg-(--surface)" />
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            {chart.labels.map((label, index) => {
+              const value = chart.values[index] ?? 0;
+              return (
+                <div key={`${label}-${index}`} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: colors[index % colors.length] }}
+                    />
+                    <span className="truncate">{label}</span>
+                  </span>
+                  <span className="font-semibold">{value}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : chart.kind === "line" || chart.kind === "area" ? (
+        <div className="rounded-2xl border border-(--border) bg-(--surface-muted) p-4">
+          <svg viewBox="0 0 100 100" className="h-56 w-full overflow-visible" preserveAspectRatio="none">
+            {chart.kind === "area" ? (
+              <polygon
+                points={`0,100 ${points.join(" ")} 100,100`}
+                fill="#0f766e"
+                opacity="0.16"
+              />
+            ) : null}
+            <polyline
+              points={points.join(" ")}
+              fill="none"
+              stroke="#0f766e"
+              strokeWidth="2.5"
+              vectorEffect="non-scaling-stroke"
+            />
+            {chart.values.map((value, index) => {
+              const x = chart.values.length <= 1 ? 50 : (index / (chart.values.length - 1)) * 100;
+              const y = 100 - (value / max) * 90;
+              return (
+                <circle
+                  key={`${chart.labels[index]}-${index}`}
+                  cx={x}
+                  cy={y}
+                  r="1.8"
+                  fill="#0f766e"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            })}
+          </svg>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {chart.labels.map((label, index) => (
+              <div key={`${label}-${index}`} className="flex justify-between gap-3 text-xs">
+                <span className="truncate">{label}</span>
+                <span className="font-semibold">{chart.values[index] ?? 0}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        chart.labels.map((label, index) => {
+          const value = chart.values[index] ?? 0;
+          const width = `${Math.max(4, (value / max) * 100).toFixed(1)}%`;
+          return (
+            <div key={`${label}-${index}`} className="space-y-1">
+              <div className="flex justify-between gap-3 text-xs">
+                <span className="truncate">{label}</span>
+                <span className="font-semibold">{value}</span>
+              </div>
+              <div className="h-2 rounded-full bg-(--surface-muted)">
+                <div className="h-full rounded-full bg-(--accent)" style={{ width }} />
+              </div>
             </div>
-            <div className="h-2 rounded-full bg-(--surface-muted)">
-              <div className="h-full rounded-full bg-(--accent)" style={{ width }} />
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+type FileChatMessage = {
+  role: "assistant" | "user";
+  content: string;
+};
+
+function FileAnalysisChatBox({
+  job,
+  labels,
+}: {
+  job: JobDetail;
+  labels: WorkspaceLabels;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [messages, setMessages] = useState<FileChatMessage[]>([
+    { role: "assistant", content: labels.fileChatWelcome },
+  ]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [isOpen, messages]);
+
+  const handleSubmit = async () => {
+    const question = value.trim();
+    if (!question || busy) return;
+    setValue("");
+    setMessages((current) => [...current, { role: "user", content: question }]);
+    setBusy(true);
+    try {
+      const result = await chatFileAnalysis(job.job_id, question);
+      setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
+    } catch (error) {
+      toastApiError(error, (key) => key, labels.fileChatError);
+      setMessages((current) => [...current, { role: "assistant", content: labels.fileChatError }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-5 right-5 z-30 w-[calc(100vw-2.5rem)] max-w-sm">
+      {isOpen ? (
+        <section className="overflow-hidden rounded-[24px] border border-(--border) bg-(--surface) shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+          <div className="flex items-start justify-between gap-3 border-b border-(--border) bg-(--surface-muted) p-4">
+            <div className="min-w-0">
+              <p className="text-label text-(--accent)">{labels.fileChatTitle}</p>
+              <p className="mt-1 truncate text-xs text-(--muted)">{job.filename}</p>
+              <p className="mt-1 text-xs text-(--muted)">{labels.fileChatSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-full border border-[#161615] bg-[#f6f0e6] px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-[#161615]"
+            >
+              {labels.fileChatClose}
+            </button>
+          </div>
+
+          <div className="max-h-80 min-h-56 space-y-2 overflow-auto p-3">
+            {messages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    message.role === "user"
+                      ? "bg-(--fg) text-(--surface)"
+                      : "border border-(--border) bg-(--surface-muted) text-(--fg)"
+                  }`}
+                >
+                  <span className="whitespace-pre-wrap break-words">{message.content}</span>
+                </div>
+              </div>
+            ))}
+            {busy ? (
+              <div className="flex justify-start">
+                <div className="rounded-2xl border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--muted)">
+                  ...
+                </div>
+              </div>
+            ) : null}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="border-t border-(--border) p-3">
+            <div className="flex items-end gap-2 rounded-2xl border border-(--border) bg-(--surface-muted) p-2">
+              <textarea
+                value={value}
+                disabled={busy}
+                onChange={(event) => setValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void handleSubmit();
+                  }
+                }}
+                placeholder={labels.fileChatPlaceholder}
+                rows={2}
+                className="min-h-12 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-(--muted)"
+              />
+              <button
+                type="button"
+                disabled={busy || !value.trim()}
+                onClick={() => void handleSubmit()}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#161615] bg-[#0f766e] text-white disabled:opacity-35"
+                aria-label={labels.fileChatOpen}
+              >
+                ↑
+              </button>
             </div>
           </div>
-        );
-      })}
+        </section>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="ml-auto flex items-center gap-2 rounded-full border border-[#161615] bg-[#0f766e] px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_18px_48px_rgba(15,23,42,0.22)]"
+          aria-label={labels.fileChatOpen}
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs text-[#0f766e]">
+            AI
+          </span>
+          {labels.fileChatTitle}
+        </button>
+      )}
     </div>
   );
 }
@@ -788,6 +1325,34 @@ export function HomeWorkspace() {
     [syncUrlJob],
   );
 
+  const onContentAnalysis = useCallback(
+    async (text: string, language: string) => {
+      if (!apiBase.trim()) {
+        toast.error(labels.apiTitle, { description: labels.apiText, duration: 12_000 });
+        return;
+      }
+      setBusyPrompt(true);
+      try {
+        const result = await analyzeAcademicContent({
+          text,
+          language: language as "vi" | "en",
+        });
+        setAcademicResult(result);
+        setJob(null);
+        setWebAnalysis(null);
+        setQuickChart(null);
+        setSelectedChartColumn("");
+        syncUrlJob(null);
+      } catch (error) {
+        toastApiError(error, (key) => key, "Could not analyze content.");
+        throw error;
+      } finally {
+        setBusyPrompt(false);
+      }
+    },
+    [labels.apiText, labels.apiTitle, syncUrlJob],
+  );
+
   const onReset = useCallback(() => {
     pollAbortRef.current?.abort();
     pollAbortRef.current = null;
@@ -840,7 +1405,8 @@ export function HomeWorkspace() {
 
       <main
         className={[
-          "mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8",
+          "mx-auto grid w-full gap-6 px-4 py-6 sm:px-6 lg:px-8",
+          hasCompletedOutput ? "max-w-none" : "max-w-7xl",
           hasCompletedOutput ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]",
         ].join(" ")}
       >
@@ -880,6 +1446,7 @@ export function HomeWorkspace() {
               onAskAssistant={onAskAssistant}
               onUploadDataFile={onUploadDataFile}
               onAcademicResult={onAcademicAnalysisResult}
+              onAnalyzeContent={onContentAnalysis}
             />
           </aside>
         ) : null}
@@ -923,6 +1490,7 @@ export function HomeWorkspace() {
           ) : null}
 
           {webAnalysis ? <WebInsightReport analysis={webAnalysis} labels={labels} /> : null}
+          {webAnalysis ? <WebAnalysisChatBox key={webAnalysis.source_label} analysis={webAnalysis} labels={labels} /> : null}
 
           {academicResult ? <AcademicBriefReport result={academicResult} labels={labels} /> : null}
 
@@ -1115,24 +1683,12 @@ export function HomeWorkspace() {
                         summary={job.result_summary as Record<string, unknown> | null}
                       />
                     </div>
-                    <div className="mt-5 overflow-auto rounded-2xl border border-(--border) bg-(--surface-muted) p-4">
-                      <pre className="min-w-[720px] whitespace-pre-wrap text-xs">
-                        {JSON.stringify(
-                          {
-                            job_id: job.job_id,
-                            status: job.status,
-                            uploaded_at: job.uploaded_at,
-                            updated_at: job.status_updated_at,
-                            profiling: job.profiling,
-                            analysis_spec: job.analysis_spec,
-                          },
-                          null,
-                          2,
-                        )}
-                      </pre>
-                    </div>
                   </details>
                 </InsightCard>
+              ) : null}
+
+              {job.status === "succeeded" ? (
+                <FileAnalysisChatBox key={job.job_id} job={job} labels={labels} />
               ) : null}
             </div>
           ) : null}

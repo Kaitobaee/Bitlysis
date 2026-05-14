@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -9,8 +10,16 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 from app.config import Settings, get_settings
 from app.jobs import get_queue
 from app.repositories import get_job_repository
-from app.schemas.job import AnalyzeAccepted, JobDetail, JobStatus, RQueuedAccepted
+from app.schemas.job import (
+    AnalyzeAccepted,
+    FileAnalysisChatRequest,
+    FileAnalysisChatResponse,
+    JobDetail,
+    JobStatus,
+    RQueuedAccepted,
+)
 from app.schemas.stats import AnalyzeRequest
+from app.services.file_chat import answer_file_job_question
 from app.services.job_data import load_job_dataframe
 
 router = APIRouter(tags=["jobs"])
@@ -88,6 +97,33 @@ async def get_quick_chart(
 
     try:
         return _column_chart_payload(df, column, chart_type, max_items)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/jobs/{job_id}/chat", response_model=FileAnalysisChatResponse)
+async def chat_file_analysis(
+    job_id: str,
+    payload: FileAnalysisChatRequest,
+    settings: Settings = Depends(get_settings),
+) -> FileAnalysisChatResponse:
+    raw = await get_job_repository(settings).get_job(job_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="Job khong ton tai")
+
+    try:
+        df = await load_job_dataframe(settings, raw)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Khong doc duoc du lieu job: {e}") from e
+
+    try:
+        return await asyncio.to_thread(
+            answer_file_job_question,
+            settings,
+            raw_job=raw,
+            dataframe=df,
+            question=payload.question,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

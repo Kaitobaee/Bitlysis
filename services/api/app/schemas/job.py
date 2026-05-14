@@ -88,3 +88,14 @@ class RQueuedAccepted(BaseModel):
             "GitHub Actions cron will pick up within 15 minutes."
         ),
     )
+
+
+class FileAnalysisChatRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=2000)
+
+
+class FileAnalysisChatResponse(BaseModel):
+    question: str
+    answer: str
+    job_id: str
+    focus: str

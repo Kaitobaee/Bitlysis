@@ -13,7 +13,9 @@ WORKDIR /app
 
 # Copy và install Python deps trước để cache layer
 COPY services/api/pyproject.toml ./
-RUN pip install --no-cache-dir     fastapi uvicorn[standard] python-multipart     pydantic pydantic-settings pandas numpy scipy     statsmodels matplotlib openpyxl httpx     beautifulsoup4 reportlab python-docx plotly
+RUN pip install --no-cache-dir     fastapi uvicorn[standard] python-multipart     pydantic pydantic-settings pandas numpy scipy     statsmodels matplotlib openpyxl httpx     beautifulsoup4 reportlab python-docx plotly playwright
+
+RUN python -m playwright install chromium     && python -m playwright install-deps chromium
 
 # Copy source code
 COPY services/api /app

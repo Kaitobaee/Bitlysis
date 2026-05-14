@@ -25,6 +25,9 @@ COPY services/api /app
 
 RUN pip install --no-cache-dir .
 
+RUN python -m playwright install chromium \
+    && python -m playwright install-deps chromium
+
 ENV STORAGE_BACKEND=local \
     UPLOAD_DIR=/data/uploads \
     QUEUE_BACKEND=local \

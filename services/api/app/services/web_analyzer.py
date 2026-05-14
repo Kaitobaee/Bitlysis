@@ -15,6 +15,8 @@ from app.config import Settings, get_settings
 from app.schemas.web_analysis import (
     CTAInfo,
     DataFact,
+    DangerBreakdown,
+    DangerBreakdownItem,
     HeadingNode,
     WebAnalysisChatResponse,
     WebAnalyzeResponse,
@@ -830,8 +832,10 @@ def _apply_mode_lens(
 def _capture_real_website_screenshot(source_url: str) -> bytes | None:
     """Chụp ảnh trang web bằng Playwright Chromium (headless).
 
-    Playwright được bundle sẵn với Chromium nên hoạt động trên mọi môi trường
-    (local Windows, Docker Linux trên Render.com) mà không cần cài Chrome riêng.
+    Thứ tự thử:
+    1. Playwright-managed Chromium headless shell (ưu tiên, dùng trong Docker/Render)
+    2. Hệ thống Chrome đã cài sẵn qua channel="chrome" (fallback cho Windows local dev)
+    3. Trả None → SVG placeholder nếu cả hai đều thất bại
     """
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
@@ -839,46 +843,76 @@ def _capture_real_website_screenshot(source_url: str) -> bytes | None:
         logger.warning("playwright_not_installed: pip install playwright && playwright install chromium")
         return None
 
+    args = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-gpu-sandbox",
+        "--disable-software-rasterizer",
+        "--no-zygote",
+        "--hide-scrollbars",
+        "--disable-extensions",
+        "--disable-popup-blocking",
+        "--ignore-certificate-errors",
+        "--lang=vi-VN",
+        "--disable-features=VizDisplayCompositor",
+        "--disable-background-networking",
+        "--disable-default-apps",
+        "--disable-sync",
+        "--disable-translate",
+        "--metrics-recording-only",
+        "--safebrowsing-disable-auto-update",
+        "--disable-component-update",
+    ]
+
+    def _do_screenshot(p: object, **launch_kwargs: object) -> bytes | None:
+        browser = p.chromium.launch(headless=True, args=args, **launch_kwargs)  # type: ignore[union-attr]
+        try:
+            context = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
+            )
+            page = context.new_page()
+            page.goto(source_url, wait_until="domcontentloaded", timeout=25_000)
+            page.wait_for_timeout(1500)
+            return page.screenshot(full_page=False, type="jpeg", quality=80)
+        finally:
+            browser.close()
+
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                    "--hide-scrollbars",
-                    "--disable-extensions",
-                    "--disable-popup-blocking",
-                    "--ignore-certificate-errors",
-                    "--lang=vi-VN",
-                ],
-            )
+            raw: bytes | None = None
+
+            # 1) Playwright-managed Chromium
             try:
-                page = browser.new_page(
-                    viewport={"width": 1440, "height": 900},
-                    user_agent=(
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/124.0.0.0 Safari/537.36"
-                    ),
-                )
-                page.goto(source_url, wait_until="networkidle", timeout=30_000)
-                # Đợi thêm 1.5s cho lazy-load images
-                page.wait_for_timeout(1500)
-                screenshot_bytes: bytes = page.screenshot(
-                    full_page=False,
-                    type="png",
-                )
-            finally:
-                browser.close()
+                raw = _do_screenshot(p)
+            except Exception as exc_pw:  # noqa: BLE001
+                exc_msg = str(exc_pw)
+                if "Executable doesn't exist" in exc_msg or "executable" in exc_msg.lower():
+                    logger.warning(
+                        "playwright_chromium_not_found, trying system chrome: %s",
+                        exc_msg[:160],
+                    )
+                    # 2) Fallback: system Chrome / Edge installed on the machine
+                    try:
+                        raw = _do_screenshot(p, channel="chrome")
+                    except Exception:  # noqa: BLE001
+                        try:
+                            raw = _do_screenshot(p, channel="msedge")
+                        except Exception:  # noqa: BLE001
+                            pass
+                else:
+                    raise
 
-        if not screenshot_bytes or len(screenshot_bytes) < 1024:
-            logger.warning("playwright_screenshot_too_small: size=%d", len(screenshot_bytes or b""))
-            return None
-
-        return screenshot_bytes
+            if not raw or len(raw) < 512:
+                logger.warning("playwright_screenshot_too_small: size=%d", len(raw or b""))
+                return None
+            return raw
 
     except Exception as exc:  # noqa: BLE001
         logger.warning("playwright_screenshot_failed: %s: %s", type(exc).__name__, str(exc)[:240])
@@ -892,7 +926,7 @@ def _build_website_screenshot_url(source_url: str) -> str | None:
 
     screenshot_bytes = _capture_real_website_screenshot(source_url)
     if screenshot_bytes:
-        return f"data:image/png;base64,{base64.b64encode(screenshot_bytes).decode('ascii')}"
+        return f"data:image/jpeg;base64,{base64.b64encode(screenshot_bytes).decode('ascii')}"
 
     source_text = _clean_text(source_url)
     host_text = _clean_text(parsed.netloc)
@@ -1004,6 +1038,8 @@ def _build_web_llm_prompt(
         "}\n"
         "Nguyên tắc:\n"
         "- Bắt buộc viết tiếng Việt có dấu, rõ ràng, không chung chung, ưu tiên câu văn học thuật.\n"
+        "- Khóa chủ thể phân tích theo source_label, URL/host và text_excerpt. Không thay thế bằng trường/đơn vị có tên gần giống.\n"
+        "- Nếu không thấy tên chủ thể rõ ràng trong text_excerpt, hãy nói 'nguồn website này' thay vì suy đoán tên trường/tổ chức.\n"
         "- Summary chỉ tóm tắt nội dung/chủ đề/luận điểm; không nêu số từ, số câu, số đoạn hoặc thống kê kỹ thuật.\n"
         "- Mỗi ý phát hiện cần có luận điểm và ý nghĩa phân tích, không viết dạng keyword rời rạc.\n"
         "- Nếu có dấu hiệu rủi ro, phải nêu rõ mức độ tin cậy/không tin cậy và lý do chính.\n"
@@ -1278,70 +1314,146 @@ def _get_ai_danger_score(
         return 0.0
 
 
-def _calculate_fraud_score(
+_GAMBLING_KEYWORDS = [
+    "casino", "betting", "bet", "poker", "blackjack", "roulette", "slots",
+    "cá cược", "cờ bạc", "nhà cái", "xổ số", "bingo", "trò chơi tiền tệ",
+    "win88", "bet888", "m88", "fun88", "188bet",
+]
+_ADULT_KEYWORDS = [
+    "18+", "adult", "sex", "porn", "xxx", "webcam", "cam girl",
+    "khiêu dâm", "tình dục", "nội dung người lớn",
+]
+_SUSPICIOUS_KEYWORDS = [
+    "urgent", "act now", "limited time", "exclusive offer", "click here",
+    "claim your", "verify account", "confirm identity", "update payment",
+    "congratulations", "you won", "free money", "guaranteed",
+    "khẩn cấp", "đừng bỏ lỡ", "thời gian hạn chế", "chỉ hôm nay",
+    "xác nhận", "cập nhật", "bạn đã thắng", "tiền miễn phí",
+]
+
+
+def _compute_danger_analysis(
     text: str,
     cta: CTAInfo | None,
     data_facts: list[DataFact],
-) -> float:
+    ai_score: float,
+) -> tuple[float, DangerBreakdown]:
     """
-    Tính độ nguy hiểm website (0-100%, 0=an toàn, 100=nguy hiểm/lừa đảo).
+    Tính điểm nguy hiểm và trả về DangerBreakdown 4 hạng mục.
+    Returns (total_score, breakdown).
     """
-    score = 0.0
     text_lower = text.lower()
-    
-    # === CẤP 1: Nội dung nhạy cảm HIGH RISK (cá độ, 18+) ===
-    gambling_keywords = [
-        "casino", "betting", "bet", "poker", "blackjack", "roulette", "slots",
-        "cá cược", "cờ bạc", "nhà cái", "xổ số", "bingo", "trò chơi tiền tệ",
-        "win88", "bet888", "m88", "fun88", "188bet",
-    ]
-    adult_keywords = [
-        "18+", "adult", "sex", "porn", "xxx", "webcam", "cam girl",
-        "khiêu dâm", "tình dục", "nội dung người lớn",
-    ]
-    
-    gambling_count = sum(1 for kw in gambling_keywords if kw in text_lower)
-    adult_count = sum(1 for kw in adult_keywords if kw in text_lower)
-    
-    # Nếu có từ khóa cá độ hoặc 18+, auto-flag 70%+
+
+    # --- 1. Nội dung nhạy cảm ---
+    gambling_count = sum(1 for kw in _GAMBLING_KEYWORDS if kw in text_lower)
+    adult_count = sum(1 for kw in _ADULT_KEYWORDS if kw in text_lower)
+
     if gambling_count > 0:
-        score += min(50 + gambling_count * 5, 80)  # 50-80 điểm từ gambling
+        sensitive_score = min(50.0 + gambling_count * 5, 80.0)
+        sensitive_note = f"Phát hiện {gambling_count} từ liên quan đến cờ bạc/cá cược trong nội dung."
     elif adult_count > 0:
-        score += min(50 + adult_count * 5, 80)  # 50-80 điểm từ adult content
+        sensitive_score = min(50.0 + adult_count * 5, 80.0)
+        sensitive_note = f"Phát hiện {adult_count} từ liên quan đến nội dung 18+."
     else:
-        # === CẤP 2: Từ khóa nghi ngờ thông thường ===
-        suspicious_keywords = [
-            "urgent", "act now", "limited time", "exclusive offer", "click here",
-            "claim your", "verify account", "confirm identity", "update payment",
-            "congratulations", "you won", "free money", "guaranteed",
-            "khẩn cấp", "đừng bỏ lỡ", "thời gian hạn chế", "chỉ hôm nay",
-            "xác nhận", "cập nhật", "bạn đã thắng", "tiền miễn phí",
-        ]
-        suspicious_count = sum(1 for kw in suspicious_keywords if kw in text_lower)
-        score += min(suspicious_count * 10, 30)  # Max 30 điểm từ từ khóa
-        
-        # Kiểm tra quá nhiều signs (!!! hoặc ???)
-        exclamation_count = text.count("!") + text.count("?")
+        sensitive_score = 0.0
+        sensitive_note = "Không phát hiện từ khóa nhạy cảm (cờ bạc, cá cược, nội dung 18+)."
+
+    sensitive_level = "high" if sensitive_score >= 50 else ("medium" if sensitive_score > 0 else "safe")
+
+    # --- 2. CTA và hành vi dẫn dụ ---
+    suspicious_count = sum(1 for kw in _SUSPICIOUS_KEYWORDS if kw in text_lower)
+    exclamation_count = text.count("!") + text.count("?")
+    aggressive_cta = bool(cta and cta.action_keyword in ["Buy", "Subscribe", "Order", "Sign Up", "Register"])
+
+    if sensitive_score == 0:
+        cta_score = min(suspicious_count * 10, 30)
         if exclamation_count > 20:
-            score += min((exclamation_count - 20) * 2, 15)
-        
-        # Kiểm tra CTA mạnh (aggressive CTA)
-        if cta and cta.action_keyword in ["Buy", "Subscribe", "Order", "Sign Up", "Register"]:
-            score += 10
-        
-        # Kiểm tra số lượng dữ liệu thực tế (thiếu dữ liệu = nghi ngờ hơn)
+            cta_score += min((exclamation_count - 20) * 2, 15)
+        if aggressive_cta:
+            cta_score += 10
+    else:
+        cta_score = 10.0 if aggressive_cta else 0.0
+
+    cta_score = min(cta_score, 40.0)
+
+    if cta_score >= 20:
+        cta_level = "high"
+        cta_note = f"Phát hiện {suspicious_count} từ kích động và CTA dẫn dụ mạnh."
+    elif cta_score > 0:
+        cta_level = "medium"
+        cta_note = (
+            f"Có dấu hiệu CTA dẫn dụ ({suspicious_count} từ khóa"
+            + (f", CTA: {cta.text[:40]}" if cta else "")
+            + ")."
+        )
+    else:
+        cta_level = "safe"
+        cta_note = "Không phát hiện hành vi CTA dẫn dụ hoặc từ khóa kích động."
+
+    # --- 3. Thiếu bằng chứng ---
+    evidence_score = 0.0
+    if sensitive_score == 0:
         if not data_facts or len(data_facts) < 2:
-            score += 15
-        
-        # Kiểm tra độ dài nội dung (quá ngắn = nghi ngờ hơn, quá dài = có thể là spam)
+            evidence_score += 15.0
         text_length = len(text.strip())
         if text_length < 200:
-            score += 10
+            evidence_score += 10.0
         elif text_length > 10000:
-            score += 5
-    
-    # Bảo đảm score nằm trong khoảng 0-100
-    return min(max(score, 0.0), 100.0)
+            evidence_score += 5.0
+    evidence_score = min(evidence_score, 30.0)
+
+    if evidence_score >= 20:
+        ev_level = "high"
+        ev_note = f"Nội dung rất thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu, nội dung ngắn)."
+    elif evidence_score > 0:
+        ev_level = "medium"
+        ev_note = f"Thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu được trích xuất)."
+    else:
+        ev_level = "safe"
+        ev_note = f"Có đủ bằng chứng số ({len(data_facts)} mốc dữ liệu trong nội dung)."
+
+    # --- 4. Đánh giá tổng hợp AI ---
+    if ai_score >= 50:
+        ai_level = "high"
+        ai_note = f"AI đánh giá mức nguy hiểm cao ({ai_score:.1f}%). Cần xem xét kỹ nội dung trước khi tin tưởng."
+    elif ai_score >= 20:
+        ai_level = "medium"
+        ai_note = f"AI đánh giá mức nguy hiểm trung bình ({ai_score:.1f}%). Có một số điểm cần lưu ý."
+    else:
+        ai_level = "safe"
+        ai_note = f"AI đánh giá nội dung tương đối an toàn ({ai_score:.1f}%)."
+
+    # --- Tổng điểm ---
+    heuristic = sensitive_score + (cta_score if sensitive_score == 0 else 0.0) + (evidence_score if sensitive_score == 0 else 0.0)
+    total = min(max(heuristic, ai_score) if ai_score > 0 else heuristic, 100.0)
+
+    breakdown = DangerBreakdown(
+        sensitive_content=DangerBreakdownItem(
+            label="Nội dung nhạy cảm",
+            score=round(sensitive_score, 1),
+            level=sensitive_level,
+            note=sensitive_note,
+        ),
+        cta_manipulation=DangerBreakdownItem(
+            label="CTA và hành vi dẫn dụ",
+            score=round(cta_score, 1),
+            level=cta_level,
+            note=cta_note,
+        ),
+        evidence_lack=DangerBreakdownItem(
+            label="Thiếu bằng chứng",
+            score=round(evidence_score, 1),
+            level=ev_level,
+            note=ev_note,
+        ),
+        ai_assessment=DangerBreakdownItem(
+            label="Đánh giá tổng hợp AI",
+            score=round(ai_score, 1),
+            level=ai_level,
+            note=ai_note,
+        ),
+    )
+    return round(min(max(total, 0.0), 100.0), 1), breakdown
 
 
 def _analyze_text(
@@ -1506,12 +1618,9 @@ def _analyze_text(
         sections=sections,
         evidence=evidence,
     )
-    # Tính danger score: kết hợp heuristic + AI
-    heuristic_score = _calculate_fraud_score(text, cta, data_facts)
+    # Tính danger score: kết hợp heuristic + AI, kèm breakdown 4 hạng mục
     ai_score = _get_ai_danger_score(cfg, text=text, source_label=source_label) if cfg.llm_enabled else 0.0
-    
-    # Dùng điểm cao hơn giữa 2 phương pháp (trust both AI và heuristic)
-    fraud_score = max(heuristic_score, ai_score) if ai_score > 0 else heuristic_score
+    fraud_score, danger_breakdown = _compute_danger_analysis(text, cta, data_facts, ai_score)
 
     # Only include chart if there's valid data
     chart_obj = None
@@ -1544,6 +1653,7 @@ def _analyze_text(
         raw_text_preview=cleaned[:1200],
         fraud_score=fraud_score,
         website_screenshot=None,
+        danger_breakdown=danger_breakdown,
     )
 
 
@@ -1692,21 +1802,26 @@ def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> Web
 
     if _is_url(value):
         response = _fetch_url_html(value)
+        resolved_url = str(response.url)
+        resolved_host = urlparse(resolved_url).netloc
 
         soup = BeautifulSoup(response.text, "html.parser")
         for noise in soup(["script", "style", "noscript", "template"]):
             noise.decompose()
 
         page_title = _clean_text(soup.title.get_text(" ") if soup.title else "") or value
+        source_identity = f"{page_title} ({resolved_host})" if resolved_host else page_title
         article_text = _extract_article_text(soup)
 
-        analysis = _analyze_text(article_text, "url", page_title, soup, analysis_mode=normalized_mode)
+        analysis = _analyze_text(article_text, "url", source_identity, soup, analysis_mode=normalized_mode)
+        analysis.page_title = page_title
         analysis.metrics.append({"metric": "http_status", "value": int(response.status_code)})
+        analysis.metrics.append({"metric": "source_host", "value": resolved_host})
         analysis.metrics.append({"metric": "links", "value": len(soup.select("a[href]"))})
         analysis.metrics.append({"metric": "headings", "value": len(soup.select("h1, h2, h3"))})
         analysis.metrics.append({"metric": "content_chars", "value": len(article_text)})
-        analysis.website_screenshot = _build_website_screenshot_url(str(response.url))
-        analysis.related_websites = _extract_related_websites(soup, str(response.url))
+        analysis.website_screenshot = _build_website_screenshot_url(resolved_url)
+        analysis.related_websites = _extract_related_websites(soup, resolved_url)
         return analysis
 
     analysis = _analyze_text(value, "text", "Noi dung nguoi dung", None, analysis_mode=normalized_mode)
@@ -1715,29 +1830,58 @@ def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> Web
 
 
 def _build_web_chat_prompt(analysis: WebAnalyzeResponse, question: str) -> list[dict[str, str]]:
+    danger_bd = None
+    if analysis.danger_breakdown:
+        bd = analysis.danger_breakdown
+        danger_bd = {
+            bd.sensitive_content.label: {"score": bd.sensitive_content.score, "level": bd.sensitive_content.level, "note": bd.sensitive_content.note},
+            bd.cta_manipulation.label: {"score": bd.cta_manipulation.score, "level": bd.cta_manipulation.level, "note": bd.cta_manipulation.note},
+            bd.evidence_lack.label: {"score": bd.evidence_lack.score, "level": bd.evidence_lack.level, "note": bd.evidence_lack.note},
+            bd.ai_assessment.label: {"score": bd.ai_assessment.score, "level": bd.ai_assessment.level, "note": bd.ai_assessment.note},
+        }
+
     focus = {
         "source_type": analysis.source_type,
         "source_label": analysis.source_label,
         "page_title": analysis.page_title,
         "analysis_mode": analysis.analysis_mode,
         "danger_score": analysis.fraud_score,
+        "danger_breakdown": danger_bd,
         "summary": analysis.summary,
         "findings": analysis.findings[:5],
+        "highlights": analysis.highlights[:5],
+        "recommendations": analysis.recommendations[:5],
+        "evidence": analysis.evidence[:6],
+        "sections": [
+            {"heading": s.get("heading", ""), "snippet": s.get("snippet", "")[:150]}
+            for s in analysis.sections[:5]
+        ],
+        "related_websites": [
+            {
+                "title": w.get("title", ""),
+                "url": w.get("url", ""),
+                "relation": w.get("relation", ""),
+                "summary": w.get("summary", "")[:120],
+            }
+            for w in analysis.related_websites[:4]
+        ],
         "cta_detected": analysis.cta_detected.model_dump() if analysis.cta_detected else None,
         "data_facts": [fact.model_dump() for fact in analysis.data_facts[:6]],
-        "metrics": analysis.metrics[:6],
+        "metrics": analysis.metrics[:8],
     }
     system_prompt = (
-        "Ban la AI ho tro phan tich website. Chi tra loi dua tren website vua duoc phan tich ben duoi. "
-        "Khong lan sang chu de khac, khong tu bau ra thong tin moi. "
-        "Neu nguoi dung hoi ngoai pham vi website nay, hay keo lai pham vi vao chinh website dang phan tich. "
-        "Tra loi bang tieng Viet, ro rang, ngan gon, tap trung vao rui ro, nguy co, CTA, noi dung nhay cam va hanh dong tiep theo. "
-        "KHONG dung markdown table, KHONG dung code block, KHONG dung chuoi | **. Neu can liet ke, chi dung dau gach dau dong va cau ngan."
+        "Ban la AI chatbot chuyen phan tich website Bitlysis. Du lieu nen tang (grounding) la ket qua phan tich website "
+        "da thuc hien duoc cung cap day du ben duoi — bao gom diem nguy hiem, phan tich 4 hang muc, "
+        "cau truc noi dung, bang chung, website lien quan, khuyen nghi va CTA. "
+        "Chi tra loi dua tren grounding context nay; KHONG tu them so lieu, canh bao hoac ket luan ngoai context. "
+        "Neu nguoi dung hoi ngoai pham vi website dang phan tich, keo lai chu de. "
+        "Tra loi bang tieng Viet ro rang, ngan gon. "
+        "KHONG dung markdown table, code block hoac chuoi | **. Neu can liet ke, dung dau gach dau dong."
     )
     user_prompt = (
-        "Du lieu website da phan tich (JSON):\n"
+        "Du lieu phan tich website (JSON grounding context):\n"
         f"{json.dumps(focus, ensure_ascii=False)}\n\n"
-        "Cau hoi cua nguoi dung:\n"
+        "Cau hoi:\n"
         f"{question.strip()}"
     )
     return [

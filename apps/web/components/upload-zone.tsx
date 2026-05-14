@@ -15,6 +15,7 @@ type Props = {
   onAskAssistant: (value: string) => Promise<string>;
   onUploadDataFile: (file: File) => Promise<void>;
   onAcademicResult?: (result: AcademicAnalyzeResponse) => void;
+  onAnalyzeContent?: (text: string, language: string) => Promise<void>;
 };
 
 type ChatMessage = {
@@ -175,6 +176,7 @@ export function UploadZone({
   onAskAssistant,
   onUploadDataFile,
   onAcademicResult,
+  onAnalyzeContent,
 }: Props) {
   const { locale } = useI18n();
   const c = composerCopy[locale];
@@ -245,11 +247,16 @@ export function UploadZone({
     addMessage({ role: "user", content: cleaned.slice(0, 260) });
     setBusy(true);
     try {
-      const result = await analyzeAcademicContent(
-        { text: cleaned, language: locale },
-      );
-      onAcademicResult?.(result);
+      if (onAnalyzeContent) {
+        await onAnalyzeContent(cleaned, locale);
+      } else {
+        const result = await analyzeAcademicContent({ text: cleaned, language: locale });
+        onAcademicResult?.(result);
+      }
       addMessage({ role: "assistant", content: c.fileUploadedHint });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      addMessage({ role: "assistant", content: msg || c.fileUploadedHint });
     } finally {
       setBusy(false);
     }

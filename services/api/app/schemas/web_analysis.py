@@ -41,6 +41,20 @@ class DataFact(BaseModel):
     type: str  # "number", "date", "percentage", "currency"
 
 
+class DangerBreakdownItem(BaseModel):
+    label: str
+    score: float
+    level: str  # "safe", "medium", "high"
+    note: str
+
+
+class DangerBreakdown(BaseModel):
+    sensitive_content: DangerBreakdownItem
+    cta_manipulation: DangerBreakdownItem
+    evidence_lack: DangerBreakdownItem
+    ai_assessment: DangerBreakdownItem
+
+
 class WebAnalyzeResponse(BaseModel):
     analysis_mode: Literal["academic", "marketing_seo", "business"] = "business"
     source_type: str
@@ -61,6 +75,7 @@ class WebAnalyzeResponse(BaseModel):
     raw_text_preview: str
     fraud_score: float = 0.0
     website_screenshot: str | None = None
+    danger_breakdown: "DangerBreakdown | None" = None
 
 
 class WebAnalysisChatResponse(BaseModel):
