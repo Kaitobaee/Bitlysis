@@ -103,6 +103,66 @@ MODE_LENS = {
     },
 }
 
+MODE_LENS_EN = {
+    "academic": {
+        "summary_lead": "Academic perspective",
+        "findings": [
+            "The central argument should be clearly presented in a problem–analysis–conclusion structure.",
+            "Academic credibility depends on conceptual consistency and the quality of supporting evidence.",
+        ],
+        "highlights": [
+            "Prioritize evaluation of research context, argumentative logic, and knowledge value.",
+            "Focus on the relationship between claims, evidence, and academic implications.",
+        ],
+        "recommendations": [
+            "Add citations, define scope, and describe methodology to strengthen conclusions.",
+            "Standardize academic terminology and restructure paragraphs along a clear argument flow.",
+        ],
+        "sections": [
+            {"heading": "Context & objectives", "snippet": "This section clarifies the context, audience, and knowledge goals that frame the research problem."},
+            {"heading": "Evidence & reasoning", "snippet": "This section evaluates evidence quality and checks the coherence of the argument chain."},
+        ],
+    },
+    "marketing_seo": {
+        "summary_lead": "Marketing / SEO perspective",
+        "findings": [
+            "Marketing focus: messaging, search intent, keywords, and CTA flow.",
+            "Conversion potential and clarity of value proposition need to be prioritised.",
+        ],
+        "highlights": [
+            "Evaluate through the search-intent funnel and keyword coverage depth.",
+            "Check alignment between headlines, body content, and the desired user action.",
+        ],
+        "recommendations": [
+            "Optimise the value proposition above the fold and consolidate CTAs around a single goal.",
+            "Cluster keywords by topic and map each cluster to a specific landing intent.",
+        ],
+        "sections": [
+            {"heading": "Messaging & positioning", "snippet": "Assesses message clarity and differentiated value proposition."},
+            {"heading": "Keywords, intent & CTA", "snippet": "Summarises keyword optimisation opportunities, search intent alignment, and conversion journey."},
+        ],
+    },
+    "business": {
+        "summary_lead": "Business perspective",
+        "findings": [
+            "Business focus: opportunities, risks, impact, and action priorities.",
+            "Decisions should be prioritised by value created and opportunity cost.",
+        ],
+        "highlights": [
+            "Evaluate by impact on business outcomes and operational efficiency.",
+            "Quickly identify bottlenecks affecting execution effectiveness.",
+        ],
+        "recommendations": [
+            "Prioritise 1–2 high-impact, low-effort actions.",
+            "Set clear KPIs to measure progress for each improvement step.",
+        ],
+        "sections": [
+            {"heading": "Opportunities & risks", "snippet": "Summarises opportunity and risk points, prioritised by impact level."},
+            {"heading": "Action plan", "snippet": "Proposes short-term implementation steps and KPIs to track outcomes."},
+        ],
+    },
+}
+
 
 def _compose_argumentative_summary(
     *,
@@ -793,8 +853,10 @@ def _apply_mode_lens(
     recommendations: list[str],
     sections: list[dict[str, str]],
     evidence: list[dict[str, str]],
+    language: str = "vi",
 ) -> tuple[str, list[str], list[str], list[str], list[dict[str, str]], list[dict[str, str]]]:
-    profile = MODE_LENS.get(analysis_mode, MODE_LENS["business"])
+    lens = MODE_LENS_EN if language == "en" else MODE_LENS
+    profile = lens.get(analysis_mode, lens["business"])
     lead = str(profile["summary_lead"])
     base_summary = _strip_redundant_summary_prefix(summary)
     summary = f"{lead}: {base_summary}" if base_summary else lead
@@ -822,7 +884,10 @@ def _apply_mode_lens(
     if not evidence_out:
         mode_evidence = {
             "label": "Mode lens",
-            "detail": f"Đầu ra được điều chỉnh theo chế độ {analysis_mode}.",
+            "detail": (
+                f"Output adjusted for {analysis_mode} mode." if language == "en"
+                else f"Đầu ra được điều chỉnh theo chế độ {analysis_mode}."
+            ),
         }
         evidence_out.append(mode_evidence)
 
@@ -1008,6 +1073,7 @@ def _build_web_llm_prompt(
     cta: CTAInfo | None,
     data_facts: list[DataFact],
     analysis_mode: str,
+    language: str = "vi",
 ) -> str:
     style = MODE_LABELS.get(analysis_mode, MODE_LABELS["business"])
     payload = {
@@ -1021,6 +1087,37 @@ def _build_web_llm_prompt(
         "data_facts": [fact.model_dump() for fact in data_facts[:8]],
         "text_excerpt": text[:7000],
     }
+    if language == "en":
+        return (
+            f"You are a web content analysis expert in {style} style. "
+            "Return valid JSON only, no markdown, no explanations outside JSON. "
+            "Focus on valuable conclusions with clear arguments and reasoning.\n"
+            "Required schema:\n"
+            "{\n"
+            "  \"summary\": \"3-5 sentence paragraph summarizing the main content, central argument and key message\",\n"
+            "  \"findings\": [\"3-5 analytical points with full cause-effect chains\"],\n"
+            "  \"highlights\": [\"3-5 sentences emphasizing key points in prose\"],\n"
+            "  \"recommendations\": [\"3-5 action recommendations with reasoned basis\"],\n"
+            "  \"evidence\": [{\"label\": \"evidence\", \"detail\": \"brief description\"}],\n"
+            "  \"sections\": [\n"
+            "    {\"heading\": \"...\", \"snippet\": \"...\"}\n"
+            "  ]\n"
+            "}\n"
+            "Rules:\n"
+            "- MUST write in clear English, no vague generalities, prefer analytical prose.\n"
+            "- Lock the analysis subject to source_label, URL/host and text_excerpt. Do not substitute with similarly named entities.\n"
+            "- If no clear subject name is found in text_excerpt, say 'this website source' instead of guessing organization names.\n"
+            "- Summary only summarizes content/topic/argument; do not mention word counts, sentence counts, paragraphs or technical statistics.\n"
+            "- Each finding must have a clear argument and analytical significance, not isolated keywords.\n"
+            "- If there are risk signals, clearly state the trust/distrust level and main reason.\n"
+            "- Academic: emphasize structure, goals, context, academic value.\n"
+            "- Marketing/SEO: emphasize user intent, keywords, CTAs, conversion opportunities.\n"
+            "- Business: emphasize insights, problems, opportunities, actions and impact.\n"
+            "- Do not fabricate data not present in input, do not repeat raw text.\n"
+            "- Max 5 sections, 5 findings, 5 highlights, 5 recommendations, 5 evidence items.\n"
+            "Input data:\n"
+            f"{json.dumps(payload, ensure_ascii=False)}"
+        )
     return (
         f"Bạn là chuyên gia phân tích nội dung web theo phong cách {style}. "
         "Trả về JSON hợp lệ, không markdown, không giải thích ngoài JSON. "
@@ -1057,8 +1154,31 @@ def _build_danger_score_prompt(
     *,
     text: str,
     source_label: str,
+    language: str = "vi",
 ) -> str:
     """Prompt to ask LLM to analyze danger/risk level 0-100%."""
+    if language == "en":
+        return (
+            "You are a cybersecurity and fraud detection expert. "
+            "Analyze the website content and assess the danger level from 0-100%.\n"
+            "0% = Completely safe, no signs of fraud\n"
+            "50% = Moderate, some things to watch\n"
+            "100% = Extremely dangerous, clearly fraud or adult content\n\n"
+            "Return ONLY this JSON, no explanations outside:\n"
+            "{\n"
+            "  \"danger_score\": <number 0-100>,\n"
+            "  \"reasons\": [\"reason 1\", \"reason 2\", ...],\n"
+            "  \"risk_level\": \"safe\"|\"medium\"|\"high\"|\"critical\"\n"
+            "}\n\n"
+            "Key assessment factors:\n"
+            "- Keywords related to gambling (casino, betting, porn, 18+, etc.) -> 70-100%\n"
+            "- Explicit CTAs (unclear credibility promises) -> add 20-30%\n"
+            "- Missing data/evidence -> add 15-20%\n"
+            "- Credible content with sufficient evidence -> reduce 20-40%\n"
+            "- Detailed description, academic references -> 10-30%\n\n"
+            f"Website: {source_label}\n"
+            f"Content:\n{text[:3000]}"
+        )
     return (
         "Ban la chuyen gia an ninh mang va phat hien gian lan. "
         "Phan tich noi dung website va danh gia muc do nguy hiểm tu 0-100%.\n"
@@ -1226,6 +1346,7 @@ def _enhance_with_llm(
     source_type: str,
     source_label: str,
     text: str,
+    language: str = "vi",
     metrics: list[dict[str, str | int]],
     labels: list[str],
     values: list[int],
@@ -1253,6 +1374,7 @@ def _enhance_with_llm(
         cta=cta,
         data_facts=data_facts,
         analysis_mode=analysis_mode,
+        language=language,
     )
 
     result: dict[str, object] | None = None
@@ -1285,12 +1407,13 @@ def _get_ai_danger_score(
     *,
     text: str,
     source_label: str,
+    language: str = "vi",
 ) -> float:
     """Get danger score from LLM AI analysis (0-100%)."""
     if not settings.llm_enabled:
         return 0.0
 
-    prompt = _build_danger_score_prompt(text=text, source_label=source_label)
+    prompt = _build_danger_score_prompt(text=text, source_label=source_label, language=language)
     
     result: dict[str, object] | None = None
     try:
@@ -1337,30 +1460,41 @@ def _compute_danger_analysis(
     cta: CTAInfo | None,
     data_facts: list[DataFact],
     ai_score: float,
+    language: str = "vi",
 ) -> tuple[float, DangerBreakdown]:
-    """
-    Tính điểm nguy hiểm và trả về DangerBreakdown 4 hạng mục.
-    Returns (total_score, breakdown).
-    """
+    """Compute danger score and return DangerBreakdown with 4 categories."""
     text_lower = text.lower()
+    en = language == "en"
 
-    # --- 1. Nội dung nhạy cảm ---
+    # --- 1. Sensitive content ---
     gambling_count = sum(1 for kw in _GAMBLING_KEYWORDS if kw in text_lower)
     adult_count = sum(1 for kw in _ADULT_KEYWORDS if kw in text_lower)
 
     if gambling_count > 0:
         sensitive_score = min(50.0 + gambling_count * 5, 80.0)
-        sensitive_note = f"Phát hiện {gambling_count} từ liên quan đến cờ bạc/cá cược trong nội dung."
+        sensitive_note = (
+            f"Detected {gambling_count} gambling/betting related keywords."
+            if en else
+            f"Phát hiện {gambling_count} từ liên quan đến cờ bạc/cá cược trong nội dung."
+        )
     elif adult_count > 0:
         sensitive_score = min(50.0 + adult_count * 5, 80.0)
-        sensitive_note = f"Phát hiện {adult_count} từ liên quan đến nội dung 18+."
+        sensitive_note = (
+            f"Detected {adult_count} adult content (18+) related keywords."
+            if en else
+            f"Phát hiện {adult_count} từ liên quan đến nội dung 18+."
+        )
     else:
         sensitive_score = 0.0
-        sensitive_note = "Không phát hiện từ khóa nhạy cảm (cờ bạc, cá cược, nội dung 18+)."
+        sensitive_note = (
+            "No sensitive keywords detected (gambling, betting, adult content)."
+            if en else
+            "Không phát hiện từ khóa nhạy cảm (cờ bạc, cá cược, nội dung 18+)."
+        )
 
     sensitive_level = "high" if sensitive_score >= 50 else ("medium" if sensitive_score > 0 else "safe")
 
-    # --- 2. CTA và hành vi dẫn dụ ---
+    # --- 2. CTA and manipulative behavior ---
     suspicious_count = sum(1 for kw in _SUSPICIOUS_KEYWORDS if kw in text_lower)
     exclamation_count = text.count("!") + text.count("?")
     aggressive_cta = bool(cta and cta.action_keyword in ["Buy", "Subscribe", "Order", "Sign Up", "Register"])
@@ -1378,19 +1512,31 @@ def _compute_danger_analysis(
 
     if cta_score >= 20:
         cta_level = "high"
-        cta_note = f"Phát hiện {suspicious_count} từ kích động và CTA dẫn dụ mạnh."
+        cta_note = (
+            f"Detected {suspicious_count} trigger words and strong manipulative CTAs."
+            if en else
+            f"Phát hiện {suspicious_count} từ kích động và CTA dẫn dụ mạnh."
+        )
     elif cta_score > 0:
         cta_level = "medium"
         cta_note = (
+            f"Signs of manipulative CTA ({suspicious_count} keywords"
+            + (f", CTA: {cta.text[:40]}" if cta else "")
+            + ")."
+            if en else
             f"Có dấu hiệu CTA dẫn dụ ({suspicious_count} từ khóa"
             + (f", CTA: {cta.text[:40]}" if cta else "")
             + ")."
         )
     else:
         cta_level = "safe"
-        cta_note = "Không phát hiện hành vi CTA dẫn dụ hoặc từ khóa kích động."
+        cta_note = (
+            "No manipulative CTA behavior or trigger keywords detected."
+            if en else
+            "Không phát hiện hành vi CTA dẫn dụ hoặc từ khóa kích động."
+        )
 
-    # --- 3. Thiếu bằng chứng ---
+    # --- 3. Lack of evidence ---
     evidence_score = 0.0
     if sensitive_score == 0:
         if not data_facts or len(data_facts) < 2:
@@ -1404,50 +1550,74 @@ def _compute_danger_analysis(
 
     if evidence_score >= 20:
         ev_level = "high"
-        ev_note = f"Nội dung rất thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu, nội dung ngắn)."
+        ev_note = (
+            f"Content severely lacks numerical evidence ({len(data_facts)} data points, short content)."
+            if en else
+            f"Nội dung rất thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu, nội dung ngắn)."
+        )
     elif evidence_score > 0:
         ev_level = "medium"
-        ev_note = f"Thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu được trích xuất)."
+        ev_note = (
+            f"Insufficient numerical evidence ({len(data_facts)} data points extracted)."
+            if en else
+            f"Thiếu bằng chứng số ({len(data_facts)} mốc dữ liệu được trích xuất)."
+        )
     else:
         ev_level = "safe"
-        ev_note = f"Có đủ bằng chứng số ({len(data_facts)} mốc dữ liệu trong nội dung)."
+        ev_note = (
+            f"Sufficient numerical evidence ({len(data_facts)} data points in content)."
+            if en else
+            f"Có đủ bằng chứng số ({len(data_facts)} mốc dữ liệu trong nội dung)."
+        )
 
-    # --- 4. Đánh giá tổng hợp AI ---
+    # --- 4. AI composite assessment ---
     if ai_score >= 50:
         ai_level = "high"
-        ai_note = f"AI đánh giá mức nguy hiểm cao ({ai_score:.1f}%). Cần xem xét kỹ nội dung trước khi tin tưởng."
+        ai_note = (
+            f"AI assessed high danger level ({ai_score:.1f}%). Review content carefully before trusting."
+            if en else
+            f"AI đánh giá mức nguy hiểm cao ({ai_score:.1f}%). Cần xem xét kỹ nội dung trước khi tin tưởng."
+        )
     elif ai_score >= 20:
         ai_level = "medium"
-        ai_note = f"AI đánh giá mức nguy hiểm trung bình ({ai_score:.1f}%). Có một số điểm cần lưu ý."
+        ai_note = (
+            f"AI assessed medium danger level ({ai_score:.1f}%). Some points to note."
+            if en else
+            f"AI đánh giá mức nguy hiểm trung bình ({ai_score:.1f}%). Có một số điểm cần lưu ý."
+        )
     else:
         ai_level = "safe"
-        ai_note = f"AI đánh giá nội dung tương đối an toàn ({ai_score:.1f}%)."
+        ai_note = (
+            f"AI assessed content as relatively safe ({ai_score:.1f}%)."
+            if en else
+            f"AI đánh giá nội dung tương đối an toàn ({ai_score:.1f}%)."
+        )
 
-    # --- Tổng điểm ---
+    # --- Total score ---
     heuristic = sensitive_score + (cta_score if sensitive_score == 0 else 0.0) + (evidence_score if sensitive_score == 0 else 0.0)
     total = min(max(heuristic, ai_score) if ai_score > 0 else heuristic, 100.0)
 
     breakdown = DangerBreakdown(
         sensitive_content=DangerBreakdownItem(
-            label="Nội dung nhạy cảm",
+            label="Sensitive Content" if en else "Nội dung nhạy cảm",
             score=round(sensitive_score, 1),
             level=sensitive_level,
             note=sensitive_note,
         ),
         cta_manipulation=DangerBreakdownItem(
-            label="CTA và hành vi dẫn dụ",
+            label="CTA & Manipulation" if en else "CTA và hành vi dẫn dụ",
             score=round(cta_score, 1),
             level=cta_level,
             note=cta_note,
         ),
         evidence_lack=DangerBreakdownItem(
-            label="Thiếu bằng chứng",
+            label="Evidence Lack" if en else "Thiếu bằng chứng",
             score=round(evidence_score, 1),
             level=ev_level,
             note=ev_note,
         ),
         ai_assessment=DangerBreakdownItem(
-            label="Đánh giá tổng hợp AI",
+            label="AI Assessment" if en else "Đánh giá tổng hợp AI",
             score=round(ai_score, 1),
             level=ai_level,
             note=ai_note,
@@ -1463,6 +1633,7 @@ def _analyze_text(
     soup: BeautifulSoup | None = None,
     *,
     analysis_mode: str = "business",
+    language: str = "vi",
 ) -> WebAnalyzeResponse:
     cleaned = _clean_text(text)
     paragraphs = [seg.strip() for seg in re.split(r"\n+", text) if seg.strip()]
@@ -1472,63 +1643,150 @@ def _analyze_text(
     data_facts = _extract_data_facts(text)
     outline = _extract_outline_from_soup(soup) if soup else []
     cta = _detect_cta(soup) if soup else None
+    en = language == "en"
 
     findings = []
     if analysis_mode == "academic":
-        findings.append("Mục tiêu học thuật: tập trung vào nguồn, cấu trúc, và luận điểm chính.")
+        findings.append(
+            "Academic goal: focus on source, structure, and main claims."
+            if en else
+            "Mục tiêu học thuật: tập trung vào nguồn, cấu trúc, và luận điểm chính."
+        )
     elif analysis_mode == "marketing_seo":
-        findings.append("Mục tiêu marketing/SEO: đồng bộ thông điệp, keyword, và CTA để tăng chuyển đổi.")
+        findings.append(
+            "Marketing/SEO goal: align messaging, keywords, and CTAs to increase conversions."
+            if en else
+            "Mục tiêu marketing/SEO: đồng bộ thông điệp, keyword, và CTA để tăng chuyển đổi."
+        )
     else:
-        findings.append("Mục tiêu kinh doanh: tìm insight, cơ hội và hành động ưu tiên.")
+        findings.append(
+            "Business goal: find insights, opportunities and priority actions."
+            if en else
+            "Mục tiêu kinh doanh: tìm insight, cơ hội và hành động ưu tiên."
+        )
     if labels:
-        findings.append(f"Chủ đề chính: {', '.join(labels[:5])}.")
-    findings.append(f"Độ dài nội dung: {len(sentences)} câu, {len(paragraphs)} đoạn.")
+        findings.append(
+            f"Main topics: {', '.join(labels[:5])}."
+            if en else
+            f"Chủ đề chính: {', '.join(labels[:5])}."
+        )
+    findings.append(
+        f"Content length: {len(sentences)} sentences, {len(paragraphs)} paragraphs."
+        if en else
+        f"Độ dài nội dung: {len(sentences)} câu, {len(paragraphs)} đoạn."
+    )
     if data_facts:
-        findings.append(f"Bằng chứng định lượng: {len(data_facts)} mốc dữ liệu (số, ngày, %, tiền tệ).")
+        findings.append(
+            f"Quantitative evidence: {len(data_facts)} data points (numbers, dates, %, currency)."
+            if en else
+            f"Bằng chứng định lượng: {len(data_facts)} mốc dữ liệu (số, ngày, %, tiền tệ)."
+        )
     if cta:
-        findings.append(f"CTA phát hiện: '{cta.text}' ({cta.type}, từ khóa: {cta.action_keyword}).")
-    findings.append("Gợi ý hành động: đưa một thông điệp chính lên đầu trang, giữ CTA ngắn gọn và cụ thể.")
+        findings.append(
+            f"CTA detected: '{cta.text}' ({cta.type}, keyword: {cta.action_keyword})."
+            if en else
+            f"CTA phát hiện: '{cta.text}' ({cta.type}, từ khóa: {cta.action_keyword})."
+        )
+    findings.append(
+        "Action suggestion: put one main message at the top of the page, keep CTA concise and specific."
+        if en else
+        "Gợi ý hành động: đưa một thông điệp chính lên đầu trang, giữ CTA ngắn gọn và cụ thể."
+    )
 
     highlights: list[str] = []
     recommendations: list[str] = []
     evidence: list[dict[str, str]] = []
 
     if labels:
-        highlights.append(f"Từ khóa nổi bật: {', '.join(labels[:4])}.")
-    highlights.append(f"Có {len(sentences)} câu và {len(paragraphs)} đoạn nội dung để đọc nhanh.")
+        highlights.append(
+            f"Top keywords: {', '.join(labels[:4])}."
+            if en else
+            f"Từ khóa nổi bật: {', '.join(labels[:4])}."
+        )
+    highlights.append(
+        f"Contains {len(sentences)} sentences and {len(paragraphs)} paragraphs for quick reading."
+        if en else
+        f"Có {len(sentences)} câu và {len(paragraphs)} đoạn nội dung để đọc nhanh."
+    )
     if data_facts:
-        highlights.append(f"Phát hiện {len(data_facts)} mốc dữ liệu/dấu hiệu định lượng trong nội dung.")
+        highlights.append(
+            f"Found {len(data_facts)} data points/quantitative indicators in content."
+            if en else
+            f"Phát hiện {len(data_facts)} mốc dữ liệu/dấu hiệu định lượng trong nội dung."
+        )
     if cta:
-        highlights.append(f"CTA chính: {cta.text}.")
+        highlights.append(
+            f"Primary CTA: {cta.text}."
+            if en else
+            f"CTA chính: {cta.text}."
+        )
 
     if analysis_mode == "academic":
-        recommendations.extend([
-            "Làm rõ luận điểm chính ở đầu trang và tách rành mạch các phần nội dung.",
-            "Ghép thêm nguồn trích dẫn, phương pháp hoặc dữ liệu tham chiếu nếu mục tiêu là học thuật.",
-        ])
+        if en:
+            recommendations.extend([
+                "Clarify the main argument at the top and clearly separate content sections.",
+                "Add citations, methodology, or reference data if the goal is academic.",
+            ])
+        else:
+            recommendations.extend([
+                "Làm rõ luận điểm chính ở đầu trang và tách rành mạch các phần nội dung.",
+                "Ghép thêm nguồn trích dẫn, phương pháp hoặc dữ liệu tham chiếu nếu mục tiêu là học thuật.",
+            ])
     elif analysis_mode == "marketing_seo":
-        recommendations.extend([
-            "Tách rõ intent người dùng, thêm heading dẫn đường và CTA cụ thể hơn.",
-            "Tăng độ phủ keyword theo nhóm chủ đề và đưa thông điệp lợi ích lên trước.",
-        ])
+        if en:
+            recommendations.extend([
+                "Clarify user intent, add guiding headings and more specific CTAs.",
+                "Expand keyword coverage by topic cluster and lead with benefit messaging.",
+            ])
+        else:
+            recommendations.extend([
+                "Tách rõ intent người dùng, thêm heading dẫn đường và CTA cụ thể hơn.",
+                "Tăng độ phủ keyword theo nhóm chủ đề và đưa thông điệp lợi ích lên trước.",
+            ])
     else:
-        recommendations.extend([
-            "Rút ngắn thông điệp đầu trang và nhấn mạnh lợi ích chính trong một dòng đầu tiên.",
-            "Chuyển các chi tiết hỗ trợ vào section riêng để dễ so sánh hành động.",
-        ])
+        if en:
+            recommendations.extend([
+                "Shorten the above-the-fold message and emphasize the main benefit in the first line.",
+                "Move supporting details into dedicated sections for easier action comparison.",
+            ])
+        else:
+            recommendations.extend([
+                "Rút ngắn thông điệp đầu trang và nhấn mạnh lợi ích chính trong một dòng đầu tiên.",
+                "Chuyển các chi tiết hỗ trợ vào section riêng để dễ so sánh hành động.",
+            ])
 
     if cta:
-        recommendations.append("Nếu CTA là mục chuyển đổi chính, cần kiểm tra lại độ rõ ràng, độ tin cậy và độ nổi bật.")
+        recommendations.append(
+            "If the CTA is the main conversion goal, check its clarity, credibility and visibility."
+            if en else
+            "Nếu CTA là mục chuyển đổi chính, cần kiểm tra lại độ rõ ràng, độ tin cậy và độ nổi bật."
+        )
     if not data_facts:
-        recommendations.append("Bổ sung bằng chứng số, mốc thời gian, tỷ lệ hoặc thống kê để tăng độ tin cậy.")
+        recommendations.append(
+            "Add numerical evidence, dates, percentages or statistics to increase credibility."
+            if en else
+            "Bổ sung bằng chứng số, mốc thời gian, tỷ lệ hoặc thống kê để tăng độ tin cậy."
+        )
 
-    evidence.append({"label": "Độ dài nội dung", "detail": f"{len(sentences)} câu, {len(paragraphs)} đoạn được trích xuất."})
+    evidence.append({
+        "label": "Content length" if en else "Độ dài nội dung",
+        "detail": f"{len(sentences)} {'sentences' if en else 'câu'}, {len(paragraphs)} {'paragraphs' if en else 'đoạn'} {'extracted' if en else 'được trích xuất'}.",
+    })
     if labels:
-        evidence.append({"label": "Từ khóa chính", "detail": ", ".join(labels[:5])})
+        evidence.append({
+            "label": "Main keywords" if en else "Từ khóa chính",
+            "detail": ", ".join(labels[:5]),
+        })
     if data_facts:
-        evidence.append({"label": "Mốc dữ liệu", "detail": "; ".join(f"{fact.label}: {fact.value}" for fact in data_facts[:4])})
+        evidence.append({
+            "label": "Data points" if en else "Mốc dữ liệu",
+            "detail": "; ".join(f"{fact.label}: {fact.value}" for fact in data_facts[:4]),
+        })
     if cta:
-        evidence.append({"label": "CTA", "detail": f"{cta.text} ({cta.type}, {cta.action_keyword})"})
+        evidence.append({
+            "label": "CTA",
+            "detail": f"{cta.text} ({cta.type}, {cta.action_keyword})",
+        })
 
     sections: list[dict[str, str]] = []
 
@@ -1549,17 +1807,18 @@ def _analyze_text(
                 snippet = sentences[idx - 1] if idx - 1 < len(sentences) else ""
             sections.append({"heading": heading[:120], "snippet": _clean_text(snippet)[:280]})
 
+    heading_prefix = "Key point" if en else "Ý chính"
     if not sections:
         source_chunks = sentences[:6] if len(sentences) >= 3 else paragraphs[:6]
         for idx, chunk in enumerate(source_chunks, start=1):
-            sections.append({"heading": f"Ý chính {idx}", "snippet": _clean_text(chunk)[:280]})
+            sections.append({"heading": f"{heading_prefix} {idx}", "snippet": _clean_text(chunk)[:280]})
 
     if not sections and cleaned:
         words = cleaned.split()
         for idx in range(0, min(len(words), 180), 30):
             snippet = " ".join(words[idx:idx + 30]).strip()
             if snippet:
-                sections.append({"heading": f"Ý chính {len(sections) + 1}", "snippet": snippet})
+                sections.append({"heading": f"{heading_prefix} {len(sections) + 1}", "snippet": snippet})
             if len(sections) >= 6:
                 break
 
@@ -1571,17 +1830,20 @@ def _analyze_text(
         {"metric": "analysis_mode", "value": analysis_mode},
     ]
 
-    top_kw = ", ".join(labels[:4]) if labels else "chủ đề chính"
+    top_kw = ", ".join(labels[:4]) if labels else ("main topics" if en else "chủ đề chính")
     main_claim = sentences[0][:220] if sentences else ""
     support_claim = sentences[1][:220] if len(sentences) > 1 else ""
     summary_fragments = [
-        f"Nội dung tập trung vào {top_kw}.",
+        f"Content focuses on {top_kw}." if en else f"Nội dung tập trung vào {top_kw}.",
         main_claim,
         support_claim,
     ]
     summary = " ".join([_clean_text(item) for item in summary_fragments if _clean_text(item)])
     if not summary:
-        summary = f"Nội dung từ nguồn {source_type} '{source_label}' đã được trích xuất và đủ căn cứ để phân tích luận điểm trọng tâm."
+        if en:
+            summary = f"Content from {source_type} source '{source_label}' has been extracted and provides sufficient basis for analysis."
+        else:
+            summary = f"Nội dung từ nguồn {source_type} '{source_label}' đã được trích xuất và đủ căn cứ để phân tích luận điểm trọng tâm."
 
     cfg = get_settings()
     llm_summary, llm_findings, llm_sections, llm_highlights, llm_recommendations, llm_evidence = _enhance_with_llm(
@@ -1589,6 +1851,7 @@ def _analyze_text(
         source_type=source_type,
         source_label=source_label,
         text=text,
+        language=language,
         metrics=metrics,
         labels=labels,
         values=values,
@@ -1617,17 +1880,17 @@ def _analyze_text(
         recommendations=recommendations,
         sections=sections,
         evidence=evidence,
+        language=language,
     )
-    # Tính danger score: kết hợp heuristic + AI, kèm breakdown 4 hạng mục
-    ai_score = _get_ai_danger_score(cfg, text=text, source_label=source_label) if cfg.llm_enabled else 0.0
-    fraud_score, danger_breakdown = _compute_danger_analysis(text, cta, data_facts, ai_score)
+    ai_score = _get_ai_danger_score(cfg, text=text, source_label=source_label, language=language) if cfg.llm_enabled else 0.0
+    fraud_score, danger_breakdown = _compute_danger_analysis(text, cta, data_facts, ai_score, language)
 
     # Only include chart if there's valid data
     chart_obj = None
     if labels and values and len(labels) >= 2 and len(values) >= 2 and any(v > 0 for v in values):
         chart_obj = WebChart(
             kind="bar",
-            title="Top tu khoa",
+            title="Top keywords" if en else "Top tu khoa",
             labels=labels,
             values=values,
             total=sum(values),
@@ -1794,7 +2057,7 @@ def _extract_article_text(soup: BeautifulSoup, *, max_chunks: int = 80) -> str:
     return _sanitize_extracted_text(body.get_text(" "))
 
 
-def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> WebAnalyzeResponse:
+def analyze_url_or_text(user_input: str, analysis_mode: str = "business", language: str = "vi") -> WebAnalyzeResponse:
     value = user_input.strip()
     normalized_mode = _normalize_analysis_mode(analysis_mode)
     if not value:
@@ -1813,7 +2076,7 @@ def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> Web
         source_identity = f"{page_title} ({resolved_host})" if resolved_host else page_title
         article_text = _extract_article_text(soup)
 
-        analysis = _analyze_text(article_text, "url", source_identity, soup, analysis_mode=normalized_mode)
+        analysis = _analyze_text(article_text, "url", source_identity, soup, analysis_mode=normalized_mode, language=language)
         analysis.page_title = page_title
         analysis.metrics.append({"metric": "http_status", "value": int(response.status_code)})
         analysis.metrics.append({"metric": "source_host", "value": resolved_host})
@@ -1824,12 +2087,13 @@ def analyze_url_or_text(user_input: str, analysis_mode: str = "business") -> Web
         analysis.related_websites = _extract_related_websites(soup, resolved_url)
         return analysis
 
-    analysis = _analyze_text(value, "text", "Noi dung nguoi dung", None, analysis_mode=normalized_mode)
+    source_label = "User content" if language == "en" else "Noi dung nguoi dung"
+    analysis = _analyze_text(value, "text", source_label, None, analysis_mode=normalized_mode, language=language)
     analysis.related_websites = _discover_related_websites_from_text(value)
     return analysis
 
 
-def _build_web_chat_prompt(analysis: WebAnalyzeResponse, question: str) -> list[dict[str, str]]:
+def _build_web_chat_prompt(analysis: WebAnalyzeResponse, question: str, language: str = "vi") -> list[dict[str, str]]:
     danger_bd = None
     if analysis.danger_breakdown:
         bd = analysis.danger_breakdown
@@ -1869,21 +2133,38 @@ def _build_web_chat_prompt(analysis: WebAnalyzeResponse, question: str) -> list[
         "data_facts": [fact.model_dump() for fact in analysis.data_facts[:6]],
         "metrics": analysis.metrics[:8],
     }
-    system_prompt = (
-        "Ban la AI chatbot chuyen phan tich website Bitlysis. Du lieu nen tang (grounding) la ket qua phan tich website "
-        "da thuc hien duoc cung cap day du ben duoi — bao gom diem nguy hiem, phan tich 4 hang muc, "
-        "cau truc noi dung, bang chung, website lien quan, khuyen nghi va CTA. "
-        "Chi tra loi dua tren grounding context nay; KHONG tu them so lieu, canh bao hoac ket luan ngoai context. "
-        "Neu nguoi dung hoi ngoai pham vi website dang phan tich, keo lai chu de. "
-        "Tra loi bang tieng Viet ro rang, ngan gon. "
-        "KHONG dung markdown table, code block hoac chuoi | **. Neu can liet ke, dung dau gach dau dong."
-    )
-    user_prompt = (
-        "Du lieu phan tich website (JSON grounding context):\n"
-        f"{json.dumps(focus, ensure_ascii=False)}\n\n"
-        "Cau hoi:\n"
-        f"{question.strip()}"
-    )
+    if language == "en":
+        system_prompt = (
+            "You are the Bitlysis website analysis AI chatbot. The grounding data is the full website "
+            "analysis result provided below — including danger score, 4-category analysis, "
+            "content structure, evidence, related websites, recommendations, and CTA. "
+            "Only answer based on this grounding context; do NOT add numbers, warnings or conclusions outside context. "
+            "If the user asks beyond the scope of the website being analyzed, redirect the conversation. "
+            "Reply in English clearly and concisely. "
+            "Do NOT use markdown tables, code blocks, or | ** strings. If listing items, use bullet dashes."
+        )
+        user_prompt = (
+            "Website analysis data (JSON grounding context):\n"
+            f"{json.dumps(focus, ensure_ascii=False)}\n\n"
+            "Question:\n"
+            f"{question.strip()}"
+        )
+    else:
+        system_prompt = (
+            "Ban la AI chatbot chuyen phan tich website Bitlysis. Du lieu nen tang (grounding) la ket qua phan tich website "
+            "da thuc hien duoc cung cap day du ben duoi — bao gom diem nguy hiem, phan tich 4 hang muc, "
+            "cau truc noi dung, bang chung, website lien quan, khuyen nghi va CTA. "
+            "Chi tra loi dua tren grounding context nay; KHONG tu them so lieu, canh bao hoac ket luan ngoai context. "
+            "Neu nguoi dung hoi ngoai pham vi website dang phan tich, keo lai chu de. "
+            "Tra loi bang tieng Viet ro rang, ngan gon. "
+            "KHONG dung markdown table, code block hoac chuoi | **. Neu can liet ke, dung dau gach dau dong."
+        )
+        user_prompt = (
+            "Du lieu phan tich website (JSON grounding context):\n"
+            f"{json.dumps(focus, ensure_ascii=False)}\n\n"
+            "Cau hoi:\n"
+            f"{question.strip()}"
+        )
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -1907,10 +2188,17 @@ def _strip_chat_markdown(text: str) -> str:
     return cleaned.strip()
 
 
-def _fallback_web_chat_answer(analysis: WebAnalyzeResponse, question: str) -> str:
+def _fallback_web_chat_answer(analysis: WebAnalyzeResponse, question: str, language: str = "vi") -> str:
     q = question.lower()
     danger = f"{analysis.fraud_score:.1f}%"
+    en = language == "en"
     if any(token in q for token in ["cá độ", "ca do", "casino", "bet", "nhà cái", "nha cai", "18+", "porn", "sex"]):
+        if en:
+            return (
+                f"This website is assessed at a {danger} danger level. "
+                f"Main reasons: {', '.join(analysis.findings[:3]) or analysis.summary}. "
+                "If your goal is to check risk, this is a source with notable signals and should be avoided without independent verification."
+            )
         return (
             f"Website này đang được đánh giá ở mức {danger} nguy hiểm. "
             f"Lý do chính là: {', '.join(analysis.findings[:3]) or analysis.summary}. "
@@ -1918,13 +2206,28 @@ def _fallback_web_chat_answer(analysis: WebAnalyzeResponse, question: str) -> st
         )
     if any(token in q for token in ["cta", "kêu gọi", "hành động", "nút", "call to action"]):
         if analysis.cta_detected:
+            if en:
+                return (
+                    f"I detected a CTA: '{analysis.cta_detected.text}' ({analysis.cta_detected.type}). "
+                    "This CTA is directing users to a specific action — check if it's clear and trustworthy."
+                )
             return (
                 f"Tôi phát hiện CTA là '{analysis.cta_detected.text}' ({analysis.cta_detected.type}). "
                 "CTA này đang hướng người dùng đến hành động cụ thể, nên cần xem nó có rõ ràng và đáng tin không."
             )
+        if en:
+            return "No clear CTA found on this website, so the action-guiding section is currently weak or not prominent."
         return "Không thấy CTA rõ ràng trong website này, nên phần dẫn dắt hành động hiện khá yếu hoặc chưa nổi bật."
     if any(token in q for token in ["tóm tắt", "tom tat", "summary", "ngắn gọn"]):
+        if en:
+            return f"Quick summary: {analysis.summary} Current danger level is {danger}."
         return f"Tóm tắt nhanh: {analysis.summary} Mức độ nguy hiểm hiện tại là {danger}."
+    if en:
+        return (
+            f"I am analyzing website '{analysis.source_label}'. Current danger level is {danger}. "
+            f"Key points: {', '.join(analysis.findings[:3]) or analysis.summary}. "
+            "You can ask about risks, CTAs, sensitive content, or how to reduce risks."
+        )
     return (
         f"Tôi đang bám theo website '{analysis.source_label}'. Mức độ nguy hiểm hiện tại là {danger}. "
         f"Các điểm chính: {', '.join(analysis.findings[:3]) or analysis.summary}. "
@@ -1937,12 +2240,13 @@ def answer_web_analysis_question(
     *,
     analysis: WebAnalyzeResponse,
     question: str,
+    language: str = "vi",
 ) -> WebAnalysisChatResponse:
     cleaned_question = _clean_text(question)
     if not cleaned_question:
         raise ValueError("Cau hoi khong duoc rong")
 
-    messages = _build_web_chat_prompt(analysis, cleaned_question)
+    messages = _build_web_chat_prompt(analysis, cleaned_question, language)
     answer: str | None = None
 
     if settings.llm_enabled:
@@ -1958,7 +2262,7 @@ def answer_web_analysis_question(
                 logger.warning("web_chat_openrouter_fallback: %s", type(exc).__name__)
 
     if not answer:
-        answer = _fallback_web_chat_answer(analysis, cleaned_question)
+        answer = _fallback_web_chat_answer(analysis, cleaned_question, language)
     else:
         answer = _strip_chat_markdown(answer)
 

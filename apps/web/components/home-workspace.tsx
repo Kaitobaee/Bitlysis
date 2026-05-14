@@ -664,9 +664,11 @@ type WebChatMessage = {
 function WebAnalysisChatBox({
   analysis,
   labels,
+  locale,
 }: {
   analysis: WebAnalysisResponse;
   labels: WorkspaceLabels;
+  locale: "vi" | "en";
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
@@ -687,7 +689,7 @@ function WebAnalysisChatBox({
     setMessages((current) => [...current, { role: "user", content: question }]);
     setBusy(true);
     try {
-      const result = await chatWebAnalysis(analysis, question);
+      const result = await chatWebAnalysis(analysis, question, locale);
       setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
     } catch (error) {
       toastApiError(error, (key) => key, labels.webChatError);
@@ -971,9 +973,11 @@ type FileChatMessage = {
 function FileAnalysisChatBox({
   job,
   labels,
+  locale,
 }: {
   job: JobDetail;
   labels: WorkspaceLabels;
+  locale: "vi" | "en";
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
@@ -994,7 +998,7 @@ function FileAnalysisChatBox({
     setMessages((current) => [...current, { role: "user", content: question }]);
     setBusy(true);
     try {
-      const result = await chatFileAnalysis(job.job_id, question);
+      const result = await chatFileAnalysis(job.job_id, question, locale);
       setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
     } catch (error) {
       toastApiError(error, (key) => key, labels.fileChatError);
@@ -1155,7 +1159,7 @@ export function HomeWorkspace() {
 
       setBusyPrompt(true);
       try {
-        const result = await analyzeWebInput(value, webAnalysisMode);
+        const result = await analyzeWebInput(value, webAnalysisMode, locale);
         setWebAnalysis(result);
         setJob(null);
         setAcademicResult(null);
@@ -1168,7 +1172,7 @@ export function HomeWorkspace() {
         setBusyPrompt(false);
       }
     },
-    [labels.apiText, labels.apiTitle, syncUrlJob, webAnalysisMode],
+    [labels.apiText, labels.apiTitle, locale, syncUrlJob, webAnalysisMode],
   );
 
   const onAskAssistant = useCallback(
@@ -1177,13 +1181,13 @@ export function HomeWorkspace() {
       if (!apiBase.trim()) throw new Error(labels.apiText);
       setBusyPrompt(true);
       try {
-        const result = await chatWebAnalysis(webAnalysis, question);
+        const result = await chatWebAnalysis(webAnalysis, question, locale);
         return result.answer;
       } finally {
         setBusyPrompt(false);
       }
     },
-    [labels.apiText, webAnalysis],
+    [labels.apiText, locale, webAnalysis],
   );
 
   const onUploadDataFile = useCallback(
@@ -1208,7 +1212,7 @@ export function HomeWorkspace() {
         setBusyAnalyze(true);
         await startAnalyze(
           uploaded.job_id,
-          comprehensiveAnalysisSpec() as unknown as Record<string, unknown>,
+          comprehensiveAnalysisSpec(locale) as unknown as Record<string, unknown>,
         );
         const final = await pollJobUntil(
           uploaded.job_id,
@@ -1233,7 +1237,7 @@ export function HomeWorkspace() {
         setBusyAnalyze(false);
       }
     },
-    [labels.apiText, labels.apiTitle, syncUrlJob],
+    [labels.apiText, labels.apiTitle, locale, syncUrlJob],
   );
 
   const onAnalyze = useCallback(async () => {
@@ -1245,7 +1249,7 @@ export function HomeWorkspace() {
     try {
       await startAnalyze(
         job.job_id,
-        comprehensiveAnalysisSpec() as unknown as Record<string, unknown>,
+        comprehensiveAnalysisSpec(locale) as unknown as Record<string, unknown>,
       );
       const final = await pollJobUntil(job.job_id, (latest) => isTerminalStatus(latest.status), {
         signal: ac.signal,
@@ -1265,7 +1269,7 @@ export function HomeWorkspace() {
     } finally {
       setBusyAnalyze(false);
     }
-  }, [job]);
+  }, [job, locale]);
 
   const onExport = useCallback(async () => {
     if (!job) return;
@@ -1490,7 +1494,7 @@ export function HomeWorkspace() {
           ) : null}
 
           {webAnalysis ? <WebInsightReport analysis={webAnalysis} labels={labels} /> : null}
-          {webAnalysis ? <WebAnalysisChatBox key={webAnalysis.source_label} analysis={webAnalysis} labels={labels} /> : null}
+          {webAnalysis ? <WebAnalysisChatBox key={webAnalysis.source_label} analysis={webAnalysis} labels={labels} locale={locale} /> : null}
 
           {academicResult ? <AcademicBriefReport result={academicResult} labels={labels} /> : null}
 
@@ -1688,7 +1692,7 @@ export function HomeWorkspace() {
               ) : null}
 
               {job.status === "succeeded" ? (
-                <FileAnalysisChatBox key={job.job_id} job={job} labels={labels} />
+                <FileAnalysisChatBox key={job.job_id} job={job} labels={labels} locale={locale} />
               ) : null}
             </div>
           ) : null}

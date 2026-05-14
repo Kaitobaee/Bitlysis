@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
@@ -703,6 +703,133 @@ function HypothesisTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+async function svgContainerToPngBlob(container: HTMLElement): Promise<Blob | null> {
+  const svgEl = container.querySelector("svg");
+  if (!svgEl) return null;
+  const svgString = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const dpr = window.devicePixelRatio || 1;
+      const w = svgEl.clientWidth || svgEl.getBoundingClientRect().width || 640;
+      const h = svgEl.clientHeight || svgEl.getBoundingClientRect().height || 320;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { URL.revokeObjectURL(url); resolve(null); return; }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+function PrimaryChartCard({
+  chart,
+  title,
+  locale,
+}: {
+  chart: unknown;
+  title: string;
+  locale: Locale;
+}) {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleCopyChart = async (ref: React.RefObject<HTMLDivElement | null>) => {
+    const el = ref.current;
+    if (!el) return;
+    try {
+      const blob = await svgContainerToPngBlob(el);
+      if (!blob) throw new Error("no_svg");
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success(locale === "vi" ? "Đã sao chép biểu đồ" : "Chart copied");
+    } catch {
+      toast.error(locale === "vi" ? "Không thể sao chép biểu đồ" : "Could not copy chart");
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <p className="text-xs text-[var(--muted)]">
+          {locale === "vi"
+            ? "Kéo xuống để xem thêm — nhấn phóng to để xem toàn màn hình"
+            : "Scroll to see more — click zoom for full view"}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCopyChart(containerRef)}
+            className="rounded-full border border-[#161615] bg-[#f6f0e6] px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] text-[#161615] transition hover:bg-[#dff2e8]"
+          >
+            {locale === "vi" ? "Sao chép" : "Copy"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsZoomed(true)}
+            aria-label={locale === "vi" ? "Phóng to biểu đồ" : "Zoom chart"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#161615] bg-[#f6f0e6] text-[#161615] transition hover:bg-[#dff2e8]"
+          >
+            <ZoomIcon mode="in" />
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={containerRef}
+        className="max-h-[22rem] overflow-y-auto overflow-x-hidden"
+      >
+        <ChartView chart={chart} />
+      </div>
+
+      {isZoomed ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.5)] p-4 backdrop-blur-sm animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+        >
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.28)] animate-in zoom-in-95 duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4">
+              <p className="text-label text-[var(--accent)]">{title}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyChart(zoomContainerRef)}
+                  className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615] transition hover:bg-[#dff2e8]"
+                >
+                  {locale === "vi" ? "Sao chép ảnh" : "Copy image"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed(false)}
+                  aria-label={locale === "vi" ? "Đóng" : "Close"}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#161615] bg-[#0f766e] text-white transition hover:bg-[#0f766e]/90"
+                >
+                  <ZoomIcon mode="out" />
+                </button>
+              </div>
+            </div>
+            <div ref={zoomContainerRef} className="overflow-auto p-6">
+              <ChartView chart={chart} />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -1743,7 +1870,11 @@ export function ResultSummary({ jobId, summary }: Props) {
         <div className="grid gap-6 xl:grid-cols-2">
           {showCharts && hasChart ? (
             <SectionCard title={locale === "vi" ? "Biểu đồ chính" : "Primary chart"}>
-              <ChartView chart={mergedChart} />
+              <PrimaryChartCard
+                chart={mergedChart}
+                title={locale === "vi" ? "Biểu đồ chính" : "Primary chart"}
+                locale={locale}
+              />
             </SectionCard>
           ) : null}
 

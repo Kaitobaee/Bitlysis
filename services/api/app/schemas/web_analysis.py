@@ -8,11 +8,13 @@ from pydantic import BaseModel, Field
 class WebAnalyzeRequest(BaseModel):
     input: str = Field(min_length=2, max_length=20000)
     analysis_mode: Literal["academic", "marketing_seo", "business"] = "business"
+    language: Literal["vi", "en"] = "vi"
 
 
 class WebAnalysisChatRequest(BaseModel):
     analysis: "WebAnalyzeResponse"
     question: str = Field(min_length=2, max_length=2000)
+    language: Literal["vi", "en"] = "vi"
 
 
 class WebChart(BaseModel):

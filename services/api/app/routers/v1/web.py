@@ -12,7 +12,7 @@ router = APIRouter(tags=["web-analyze"])
 @router.post("/web/analyze", response_model=WebAnalyzeResponse)
 def analyze_web_content(payload: WebAnalyzeRequest) -> WebAnalyzeResponse:
     try:
-        return analyze_url_or_text(payload.input, payload.analysis_mode)
+        return analyze_url_or_text(payload.input, payload.analysis_mode, payload.language)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -24,6 +24,7 @@ def chat_web_content(payload: WebAnalysisChatRequest) -> WebAnalysisChatResponse
             get_settings(),
             analysis=payload.analysis,
             question=payload.question,
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

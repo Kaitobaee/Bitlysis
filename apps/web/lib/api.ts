@@ -141,11 +141,12 @@ export async function getHealth(): Promise<HealthInfo> {
 export async function analyzeWebInput(
   input: string,
   analysisMode: "academic" | "marketing_seo" | "business" = "business",
+  language: "vi" | "en" = "vi",
 ): Promise<WebAnalysisResponse> {
   const res = await fetch(`${base()}/v1/web/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input, analysis_mode: analysisMode }),
+    body: JSON.stringify({ input, analysis_mode: analysisMode, language }),
   });
   return parseJson<WebAnalysisResponse>(res);
 }
@@ -153,23 +154,41 @@ export async function analyzeWebInput(
 export async function chatWebAnalysis(
   analysis: WebAnalysisResponse,
   question: string,
+  language: "vi" | "en" = "vi",
 ): Promise<WebAnalysisChatResponse> {
   const res = await fetch(`${base()}/v1/web/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ analysis, question }),
+    body: JSON.stringify({ analysis, question, language }),
   });
   return parseJson<WebAnalysisChatResponse>(res);
+}
+
+export type ContentExtractResponse = {
+  text: string;
+  filename: string;
+  char_count: number;
+};
+
+export async function extractContentFile(file: File): Promise<ContentExtractResponse> {
+  const fd = new FormData();
+  fd.set("file", file);
+  const res = await fetch(`${base()}/v1/content/extract`, {
+    method: "POST",
+    body: fd,
+  });
+  return parseJson<ContentExtractResponse>(res);
 }
 
 export async function chatFileAnalysis(
   jobId: string,
   question: string,
+  language: "vi" | "en" = "vi",
 ): Promise<FileAnalysisChatResponse> {
   const res = await fetch(`${base()}/v1/jobs/${encodeURIComponent(jobId)}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, language }),
   });
   return parseJson<FileAnalysisChatResponse>(res);
 }

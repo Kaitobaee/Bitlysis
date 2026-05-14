@@ -277,52 +277,87 @@ def _academic_summary(
     cleaning_summary: dict[str, Any],
     hypothesis_rows: list[dict[str, Any]],
     warnings_in: list[str],
+    language: str = "vi",
 ) -> dict[str, Any]:
+    en = language == "en"
     n_numeric = len(roles["numeric"])
     n_cat = len(roles["categorical"])
     n_likert = len(roles["likert"])
     n_dt = len(roles["datetime"])
     pieces: list[str] = []
     if n_numeric:
-        pieces.append(f"{n_numeric} biến định lượng")
+        pieces.append(f"{n_numeric} {'numeric variables' if en else 'biến định lượng'}")
     if n_cat:
-        pieces.append(f"{n_cat} biến định tính")
+        pieces.append(f"{n_cat} {'categorical variables' if en else 'biến định tính'}")
     if n_likert:
-        pieces.append(f"{n_likert} biến Likert")
+        pieces.append(f"{n_likert} {'Likert variables' if en else 'biến Likert'}")
     if n_dt:
-        pieces.append(f"{n_dt} biến thời gian")
-    data_type = ", ".join(pieces) if pieces else "Dữ liệu chưa phân loại được"
+        pieces.append(f"{n_dt} {'datetime variables' if en else 'biến thời gian'}")
+    data_type = ", ".join(pieces) if pieces else ("Data could not be classified" if en else "Dữ liệu chưa phân loại được")
 
     rationale_parts: list[str] = []
     if n_likert >= 2 and "cronbach_alpha" in methods_used:
-        rationale_parts.append("Likert đủ điều kiện → Cronbach α + EFA để đánh giá thang đo.")
+        rationale_parts.append(
+            "Likert items qualified → Cronbach α + EFA to evaluate the measurement scale." if en
+            else "Likert đủ điều kiện → Cronbach α + EFA để đánh giá thang đo."
+        )
     if n_likert >= 6 and "pls_sem" in methods_used:
-        rationale_parts.append("Có ≥6 chỉ số Likert → đề xuất PLS-SEM heuristic 2 construct.")
+        rationale_parts.append(
+            "≥6 Likert indicators → PLS-SEM heuristic with 2 constructs proposed." if en
+            else "Có ≥6 chỉ số Likert → đề xuất PLS-SEM heuristic 2 construct."
+        )
     if n_numeric and n_cat and "compare_groups_numeric" in methods_used:
-        rationale_parts.append("So sánh biến số theo nhóm khi có cột phân loại 2–5 cấp.")
+        rationale_parts.append(
+            "Numeric variables compared across groups defined by categorical columns (2–5 levels)." if en
+            else "So sánh biến số theo nhóm khi có cột phân loại 2–5 cấp."
+        )
     if n_cat >= 2 and "chi_square" in methods_used:
-        rationale_parts.append("Hai cột phân loại → Chi-square / Cramér V.")
+        rationale_parts.append(
+            "Two categorical columns → Chi-square / Cramér V association test." if en
+            else "Hai cột phân loại → Chi-square / Cramér V."
+        )
     if n_numeric >= 2 and "ols" in methods_used:
-        rationale_parts.append("≥2 biến số → OLS heuristic xác định liên hệ tuyến tính.")
+        rationale_parts.append(
+            "≥2 numeric variables → OLS heuristic to identify linear relationships." if en
+            else "≥2 biến số → OLS heuristic xác định liên hệ tuyến tính."
+        )
     if n_dt and n_numeric and "timeseries" in methods_used:
-        rationale_parts.append("Có cột thời gian → forecasting ngắn hạn (ETS/ARIMA).")
-    rationale = " ".join(rationale_parts) or "Chưa đủ dữ liệu để chọn phương pháp tự động."
+        rationale_parts.append(
+            "Datetime column present → short-term forecasting (ETS/ARIMA)." if en
+            else "Có cột thời gian → forecasting ngắn hạn (ETS/ARIMA)."
+        )
+    rationale = " ".join(rationale_parts) or (
+        "Insufficient data to auto-select a method." if en
+        else "Chưa đủ dữ liệu để chọn phương pháp tự động."
+    )
 
+    missing_policy = cleaning_summary.get("missing_policy", "report_only")
+    outlier_policy = cleaning_summary.get("outlier_policy", "report_only")
     assumptions: list[str] = [
-        "Quan sát độc lập (independent observations)",
-        "Cleaning đã áp dụng theo policy: "
-        + f"missing={cleaning_summary.get('missing_policy', 'report_only')}, "
-        + f"outlier={cleaning_summary.get('outlier_policy', 'report_only')}",
+        "Independent observations" if en else "Quan sát độc lập (independent observations)",
+        (
+            f"Cleaning applied — missing={missing_policy}, outlier={outlier_policy}" if en
+            else f"Cleaning đã áp dụng theo policy: missing={missing_policy}, outlier={outlier_policy}"
+        ),
     ]
     if "cronbach_alpha" in methods_used:
-        assumptions.append("Thang đo đơn hướng cho Cronbach α (gộp item thực sự đo cùng concept).")
+        assumptions.append(
+            "Unidimensional scale for Cronbach α (items must measure the same construct)." if en
+            else "Thang đo đơn hướng cho Cronbach α (gộp item thực sự đo cùng concept)."
+        )
     if "ols" in methods_used:
-        assumptions.append("OLS giả định tuyến tính + sai số đồng nhất; xem VIF/QQ.")
+        assumptions.append(
+            "OLS assumes linearity and homoscedasticity; check VIF/QQ." if en
+            else "OLS giả định tuyến tính + sai số đồng nhất; xem VIF/QQ."
+        )
 
     reject = sum(1 for r in hypothesis_rows if r.get("decision") == "reject_h0")
     keep = sum(1 for r in hypothesis_rows if r.get("decision") == "fail_to_reject_h0")
     na = sum(1 for r in hypothesis_rows if r.get("decision") == "not_applicable")
     conclusion = (
+        f"Ran {len(hypothesis_rows)} tests ({reject} rejected H0, "
+        f"{keep} failed to reject, {na} not applicable)." if en
+        else
         f"Đã chạy {len(hypothesis_rows)} kiểm định ({reject} bác bỏ H0, "
         f"{keep} không đủ bằng chứng bác bỏ, {na} không áp dụng được)."
     )
@@ -565,6 +600,7 @@ async def run_comprehensive_analysis(
         cleaning_summary=cleaning_summary,
         hypothesis_rows=hypothesis_rows,
         warnings_in=warnings,
+        language=getattr(spec, "language", "vi"),
     )
 
     finished_at = datetime.now(UTC).isoformat()

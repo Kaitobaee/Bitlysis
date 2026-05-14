@@ -23,6 +23,7 @@ from app.routers.v1.run import router as v1_run_router
 from app.routers.v1.upload import router as v1_upload_router
 from app.routers.v1.web import router as v1_web_router
 from app.routers.v1.academic import router as v1_academic_router
+from app.routers.v1.content import router as v1_content_router
 from app.services.retention import sweep_expired_jobs
 
 
@@ -80,6 +81,7 @@ v1.include_router(v1_web_router)
 v1.include_router(v1_run_router)
 v1.include_router(v1_r_result_router)
 v1.include_router(v1_academic_router)
+v1.include_router(v1_content_router)
 app.include_router(v1)
 
 

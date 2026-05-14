@@ -117,6 +117,7 @@ class ComprehensiveAnalysisSpec(BaseModel):
     max_categorical_pairs: int = Field(default=8, ge=1, le=50)
     max_group_comparisons: int = Field(default=12, ge=1, le=100)
     random_seed: int | None = Field(default=42, description="Cố định kết quả bootstrap/permutation")
+    language: Literal["vi", "en"] = Field(default="vi", description="Output language for generated text")
 
 
 class TimeSeriesSpec(BaseModel):

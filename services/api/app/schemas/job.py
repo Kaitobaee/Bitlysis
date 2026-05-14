@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -92,6 +92,7 @@ class RQueuedAccepted(BaseModel):
 
 class FileAnalysisChatRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
+    language: Literal["vi", "en"] = "vi"
 
 
 class FileAnalysisChatResponse(BaseModel):

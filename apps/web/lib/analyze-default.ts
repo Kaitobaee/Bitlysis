@@ -3,7 +3,7 @@
  * Backend xử lý: profile → cleaning → hypothesis suggestion → engine dispatch
  * (stats / psychometrics Python / timeseries) → schema thống nhất.
  */
-export function comprehensiveAnalysisSpec(): {
+export function comprehensiveAnalysisSpec(language: "vi" | "en" = "vi"): {
   kind: "comprehensive_analysis";
   enable_psychometrics: boolean;
   enable_pls: boolean;
@@ -12,6 +12,7 @@ export function comprehensiveAnalysisSpec(): {
   max_categorical_pairs: number;
   max_group_comparisons: number;
   random_seed: number | null;
+  language: "vi" | "en";
 } {
   return {
     kind: "comprehensive_analysis",
@@ -22,6 +23,7 @@ export function comprehensiveAnalysisSpec(): {
     max_categorical_pairs: 8,
     max_group_comparisons: 12,
     random_seed: 42,
+    language,
   };
 }
 

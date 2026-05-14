@@ -123,6 +123,7 @@ async def chat_file_analysis(
             raw_job=raw,
             dataframe=df,
             question=payload.question,
+            language=payload.language,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

@@ -172,30 +172,53 @@ def _build_file_chat_messages(
     raw_job: dict[str, Any],
     dataframe: pd.DataFrame,
     question: str,
+    language: str = "vi",
 ) -> list[dict[str, str]]:
     context = _extract_grounding_context(raw_job, dataframe)
-    system_prompt = (
-        "Ban la AI chatbot phan tich du lieu Bitlysis. Du lieu nen tang (grounding) la ket qua "
-        "phan tich da thuc hien duoc cung cap ben duoi. Chi tra loi dua tren ket qua kiem dinh gia "
-        "thuyet, chi so thong ke, tom tat AI, profiling cot, va sample rows duoc cung cap — "
-        "KHONG tu them so lieu hoac ket qua moi. Neu cau hoi can thong tin chinh xac hon context "
-        "co, hay noi ro va goi y nguoi dung mo chi tiet. Tra loi bang tieng Viet ro rang, "
-        "uu tien giai thich y nghia thong ke, trich dan bang chung cu the tu context. "
-        "Khong dung markdown table hoac code block."
-    )
-    user_prompt = (
-        "Grounding context (JSON):\n"
-        f"{json.dumps(context, ensure_ascii=False)}\n\n"
-        "Cau hoi:\n"
-        f"{question}"
-    )
+    if language == "en":
+        system_prompt = (
+            "You are the Bitlysis data analysis AI chatbot. The grounding data (context) is the "
+            "analysis result provided below. Only answer based on hypothesis test results, "
+            "statistical metrics, AI summary, column profiling, and sample rows provided — "
+            "do NOT add new numbers or results. If the question requires more precise information "
+            "than the context provides, say so clearly and suggest the user open the details. "
+            "Reply in English clearly, prioritize explaining statistical significance, cite "
+            "specific evidence from context. Do not use markdown tables or code blocks."
+        )
+        user_prompt = (
+            "Grounding context (JSON):\n"
+            f"{json.dumps(context, ensure_ascii=False)}\n\n"
+            "Question:\n"
+            f"{question}"
+        )
+    else:
+        system_prompt = (
+            "Ban la AI chatbot phan tich du lieu Bitlysis. Du lieu nen tang (grounding) la ket qua "
+            "phan tich da thuc hien duoc cung cap ben duoi. Chi tra loi dua tren ket qua kiem dinh gia "
+            "thuyet, chi so thong ke, tom tat AI, profiling cot, va sample rows duoc cung cap — "
+            "KHONG tu them so lieu hoac ket qua moi. Neu cau hoi can thong tin chinh xac hon context "
+            "co, hay noi ro va goi y nguoi dung mo chi tiet. Tra loi bang tieng Viet ro rang, "
+            "uu tien giai thich y nghia thong ke, trich dan bang chung cu the tu context. "
+            "Khong dung markdown table hoac code block."
+        )
+        user_prompt = (
+            "Grounding context (JSON):\n"
+            f"{json.dumps(context, ensure_ascii=False)}\n\n"
+            "Cau hoi:\n"
+            f"{question}"
+        )
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
 
-def _fallback_file_chat_answer(raw_job: dict[str, Any], dataframe: pd.DataFrame, question: str) -> str:
+def _fallback_file_chat_answer(
+    raw_job: dict[str, Any],
+    dataframe: pd.DataFrame,
+    question: str,
+    language: str = "vi",
+) -> str:
     filename = str(raw_job.get("original_filename") or raw_job.get("stored_as") or "file")
     columns = ", ".join(str(col) for col in list(dataframe.columns)[:8])
     result_summary = raw_job.get("result_summary")
@@ -203,7 +226,16 @@ def _fallback_file_chat_answer(raw_job: dict[str, Any], dataframe: pd.DataFrame,
     if isinstance(result_summary, dict):
         ai_summary = result_summary.get("ai_summary") or result_summary.get("summary")
         if isinstance(ai_summary, str) and ai_summary.strip():
-            summary_hint = f" Ket qua hien co ghi nhan: {_clean_text(ai_summary)[:360]}"
+            if language == "en":
+                summary_hint = f" Current result notes: {_clean_text(ai_summary)[:360]}"
+            else:
+                summary_hint = f" Ket qua hien co ghi nhan: {_clean_text(ai_summary)[:360]}"
+    if language == "en":
+        return (
+            f"I am focused on file {filename}. The file has {len(dataframe)} rows and "
+            f"{len(dataframe.columns)} columns ({columns}).{summary_hint} "
+            "You can ask about columns, unusual values, what results mean, or which chart to create next."
+        )
     return (
         f"Toi dang bam theo file {filename}. File hien doc duoc {len(dataframe)} dong va "
         f"{len(dataframe.columns)} cot ({columns}).{summary_hint} "
@@ -217,6 +249,7 @@ def answer_file_job_question(
     raw_job: dict[str, Any],
     dataframe: pd.DataFrame,
     question: str,
+    language: str = "vi",
 ) -> FileAnalysisChatResponse:
     cleaned_question = _clean_text(question)
     if not cleaned_question:
@@ -226,6 +259,7 @@ def answer_file_job_question(
         raw_job=raw_job,
         dataframe=dataframe,
         question=cleaned_question,
+        language=language,
     )
     answer: str | None = None
 
@@ -242,7 +276,7 @@ def answer_file_job_question(
                 logger.warning("file_chat_openrouter_fallback: %s", type(exc).__name__)
 
     if not answer:
-        answer = _fallback_file_chat_answer(raw_job, dataframe, cleaned_question)
+        answer = _fallback_file_chat_answer(raw_job, dataframe, cleaned_question, language)
     else:
         answer = _strip_chat_markdown(answer)
 

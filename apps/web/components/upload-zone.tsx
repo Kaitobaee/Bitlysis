@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { analyzeAcademicContent } from "@/lib/academic-api";
+import { extractContentFile } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import type { AcademicAnalyzeResponse, WebAnalysisMode, WebAnalysisResponse } from "@/lib/types";
 
@@ -93,7 +94,9 @@ const composerCopy = {
     dataFileTypeError: "Please upload CSV, XLS, XLSX, or XLSM.",
     contentFileTypeError: "Please upload DOC, DOCX, DOCM, TXT, MD, or Markdown.",
     wordNeedsText:
-      "Word files are selected, but this frontend cannot read Word content yet. Please paste the text or add a backend Word parser.",
+      "File .doc (old Word format) is not supported directly. Please open it in Word and save as .docx, then upload again.",
+    wordExtracting: "Reading Word file...",
+    wordExtractError: "Could not read the Word file.",
     invalidUrl: "Enter a valid http or https website URL.",
     contentTooShort: "Paste at least 50 characters for content analysis.",
     assistantHello:
@@ -128,7 +131,9 @@ const composerCopy = {
     dataFileTypeError: "Vui lòng tải CSV, XLS, XLSX hoặc XLSM.",
     contentFileTypeError: "Vui lòng tải DOC, DOCX, DOCM, TXT, MD hoặc Markdown.",
     wordNeedsText:
-      "File Word đã được chọn, nhưng frontend hiện chưa đọc được nội dung Word. Hãy dán nội dung hoặc bổ sung parser Word ở backend.",
+      "File .doc (định dạng Word cũ) chưa được hỗ trợ trực tiếp. Vui lòng mở trong Word, lưu lại dưới dạng .docx rồi tải lên lại.",
+    wordExtracting: "Đang đọc file Word...",
+    wordExtractError: "Không thể đọc nội dung file Word.",
     invalidUrl: "Hãy nhập URL website hợp lệ bắt đầu bằng http hoặc https.",
     contentTooShort: "Dán ít nhất 50 ký tự để phân tích nội dung.",
     assistantHello:
@@ -354,14 +359,48 @@ export function UploadZone({
 
     addMessage({ role: "user", content: `${c.fileSelected}: ${file.name}` });
     setSelectedFile(file);
-    if (WORD_FILE_EXTS.has(ext)) {
-      addMessage({ role: "assistant", content: c.wordNeedsText });
+
+    if (TEXT_FILE_EXTS.has(ext)) {
+      const text = await file.text();
+      setSourceValue(text);
+      addMessage({ role: "assistant", content: c.fileReady });
       return;
     }
 
-    const text = await file.text();
-    setSourceValue(text);
-    addMessage({ role: "assistant", content: c.fileReady });
+    // Word file (.docx / .docm / .doc) — extract via backend
+    addMessage({ role: "assistant", content: c.wordExtracting });
+    setBusy(true);
+    try {
+      const result = await extractContentFile(file);
+      setSourceValue(result.text);
+      // Replace the "reading…" message with the ready confirmation
+      setMessages((current) => {
+        const updated = [...current];
+        const lastIdx = updated.length - 1;
+        if (updated[lastIdx]?.content === c.wordExtracting) {
+          updated[lastIdx] = { role: "assistant", content: c.fileReady };
+        } else {
+          updated.push({ role: "assistant", content: c.fileReady });
+        }
+        return updated;
+      });
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : c.wordExtractError;
+      setMessages((current) => {
+        const updated = [...current];
+        const lastIdx = updated.length - 1;
+        if (updated[lastIdx]?.content === c.wordExtracting) {
+          updated[lastIdx] = { role: "assistant", content: detail };
+        } else {
+          updated.push({ role: "assistant", content: detail });
+        }
+        return updated;
+      });
+      setSelectedFile(null);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const processSelectedFile = async (file: File) => {
