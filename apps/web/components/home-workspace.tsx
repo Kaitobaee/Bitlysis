@@ -623,13 +623,15 @@ export function HomeWorkspace() {
         setJob(null);
         setAcademicResult(null);
         setQuickChart(null);
+        setSelectedChartColumn("");
+        syncUrlJob(null);
       } catch (error) {
         toastApiError(error, (key) => key, "Could not analyze this source.");
       } finally {
         setBusyPrompt(false);
       }
     },
-    [labels.apiText, labels.apiTitle, webAnalysisMode],
+    [labels.apiText, labels.apiTitle, syncUrlJob, webAnalysisMode],
   );
 
   const onAskAssistant = useCallback(
@@ -774,13 +776,31 @@ export function HomeWorkspace() {
     }
   }, [job, selectedChartColumn, selectedChartKind]);
 
+  const onAcademicAnalysisResult = useCallback(
+    (result: AcademicAnalyzeResponse) => {
+      setAcademicResult(result);
+      setJob(null);
+      setWebAnalysis(null);
+      setQuickChart(null);
+      setSelectedChartColumn("");
+      syncUrlJob(null);
+    },
+    [syncUrlJob],
+  );
+
   const onReset = useCallback(() => {
     pollAbortRef.current?.abort();
+    pollAbortRef.current = null;
     setJob(null);
     setWebAnalysis(null);
     setAcademicResult(null);
     setQuickChart(null);
     setSelectedChartColumn("");
+    setSelectedChartKind("bar");
+    setBusyAnalyze(false);
+    setBusyPrompt(false);
+    setBusyExport(false);
+    setChartBusy(false);
     syncUrlJob(null);
   }, [syncUrlJob]);
 
@@ -797,6 +817,7 @@ export function HomeWorkspace() {
   const canRunAnalyze =
     job && (job.status === "uploaded" || job.status === "failed") && !busyAnalyze;
   const jobInsight = buildJobInsight(job, locale);
+  const hasCompletedOutput = Boolean(webAnalysis || academicResult || job?.status === "succeeded");
 
   return (
     <div className="min-h-screen bg-(--page-bg) text-(--fg)">
@@ -817,46 +838,71 @@ export function HomeWorkspace() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)] lg:px-8">
-        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-          <section className="rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <p className="text-label text-(--accent)">{labels.modeLabel}</p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight">{labels.title}</h1>
-                <p className="mt-3 text-sm leading-relaxed text-(--muted)">{labels.subtitle}</p>
+      <main
+        className={[
+          "mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8",
+          hasCompletedOutput ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]",
+        ].join(" ")}
+      >
+        {!hasCompletedOutput ? (
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <section className="rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <p className="text-label text-(--accent)">{labels.modeLabel}</p>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight">{labels.title}</h1>
+                  <p className="mt-3 text-sm leading-relaxed text-(--muted)">{labels.subtitle}</p>
+                </div>
+                <Image
+                  src="/svg/robot-researching.svg"
+                  alt=""
+                  width={96}
+                  height={96}
+                  className="hidden h-20 w-20 object-contain opacity-80 sm:block"
+                />
               </div>
-              <Image
-                src="/svg/robot-researching.svg"
-                alt=""
-                width={96}
-                height={96}
-                className="hidden h-20 w-20 object-contain opacity-80 sm:block"
-              />
-            </div>
 
-            {!apiBase.trim() ? (
-              <div className="mt-5 rounded-2xl border border-[rgba(146,64,14,0.28)] bg-[rgba(251,191,36,0.12)] p-4 text-sm text-(--amber-fg)">
-                <strong>{labels.apiTitle}</strong>
-                <p className="mt-1 leading-relaxed">{labels.apiText}</p>
-              </div>
-            ) : null}
+              {!apiBase.trim() ? (
+                <div className="mt-5 rounded-2xl border border-[rgba(146,64,14,0.28)] bg-[rgba(251,191,36,0.12)] p-4 text-sm text-(--amber-fg)">
+                  <strong>{labels.apiTitle}</strong>
+                  <p className="mt-1 leading-relaxed">{labels.apiText}</p>
+                </div>
+              ) : null}
 
-          </section>
+            </section>
 
-          <UploadZone
-            disabled={!apiBase.trim()}
-            analysis={webAnalysis}
-            analysisMode={webAnalysisMode}
-            onAnalysisModeChange={setWebAnalysisMode}
-            onAnalyzePrompt={onAnalyzeWebsite}
-            onAskAssistant={onAskAssistant}
-            onUploadDataFile={onUploadDataFile}
-            onAcademicResult={setAcademicResult}
-          />
-        </aside>
+            <UploadZone
+              disabled={!apiBase.trim()}
+              analysis={webAnalysis}
+              analysisMode={webAnalysisMode}
+              onAnalysisModeChange={setWebAnalysisMode}
+              onAnalyzePrompt={onAnalyzeWebsite}
+              onAskAssistant={onAskAssistant}
+              onUploadDataFile={onUploadDataFile}
+              onAcademicResult={onAcademicAnalysisResult}
+            />
+          </aside>
+        ) : null}
 
         <div className="space-y-5">
+          {hasCompletedOutput ? (
+            <section className="rounded-[28px] border border-(--border) bg-(--surface) p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-label text-(--accent)">{labels.explanation}</p>
+                  <h1 className="mt-2 text-2xl font-semibold tracking-tight">{labels.title}</h1>
+                </div>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="rounded-full border border-[#161615] bg-[#0f766e] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:bg-[#0f766e]/90"
+                >
+                  {labels.reset}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
           {showProgress ? <ProgressAnalysis messages={labels.progress} /> : null}
 
           {!webAnalysis && !job && !academicResult ? (
@@ -926,13 +972,15 @@ export function HomeWorkspace() {
                     >
                       {labels.copyId}
                     </button>
-                    <button
-                      type="button"
-                      onClick={onReset}
-                      className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615]"
-                    >
-                      {labels.reset}
-                    </button>
+                    {!hasCompletedOutput ? (
+                      <button
+                        type="button"
+                        onClick={onReset}
+                        className="rounded-full border border-[#161615] bg-[#f6f0e6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#161615]"
+                      >
+                        {labels.reset}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
